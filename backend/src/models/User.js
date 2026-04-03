@@ -1,0 +1,25 @@
+const mongoose = require("mongoose");
+
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true },
+    college: { type: String, default: "General" },
+    email: { type: String, trim: true, lowercase: true, unique: true, sparse: true },
+    passwordHash: { type: String, default: "" },
+    authToken: { type: String, default: "" },
+    xp: { type: Number, default: 0, min: 0 },
+    level: { type: Number, default: 1, min: 1 },
+    badges: [{ type: String }],
+    friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    preferredStudyTime: { type: String, default: "20:00" },
+    goalConfig: {
+      dailyMinutes: { type: Number, default: 180 },
+      weeklyTargetMinutes: { type: Number, default: 1200 },
+      weeklySessionTarget: { type: Number, default: 7 }
+    },
+    roastMode: { type: Boolean, default: true }
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("User", userSchema);

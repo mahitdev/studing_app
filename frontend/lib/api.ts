@@ -1,0 +1,144 @@
+import { Dashboard, LeaderboardEntry, LiveFriend, StudySession, User } from "./types";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers || {})
+    },
+    cache: "no-store"
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(errorText || "Request failed");
+  }
+
+  return res.json() as Promise<T>;
+}
+
+export async function bootstrapUser(name: string, college: string): Promise<{ user: User; dashboard: Dashboard }> {
+  return request("/users/bootstrap", {
+    method: "POST",
+    body: JSON.stringify({ name, college })
+  });
+}
+
+export async function registerUser(
+  name: string,
+  email: string,
+  password: string,
+  college: string
+): Promise<{ user: User; token: string; dashboard: Dashboard }> {
+  return request("/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ name, email, password, college })
+  });
+}
+
+export async function loginUser(
+  email: string,
+  password: string
+): Promise<{ user: User; token: string; dashboard: Dashboard }> {
+  return request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ email, password })
+  });
+}
+
+export async function fetchDashboard(userId: string): Promise<Dashboard> {
+  return request(`/users/${userId}/dashboard`);
+}
+
+export async function setTodayGoal(userId: string, targetMinutes: number): Promise<{ dashboard: Dashboard }> {
+  return request(`/users/${userId}/goals/today`, {
+    method: "PUT",
+    body: JSON.stringify({ targetMinutes })
+  });
+}
+
+export async function setGoalConfig(
+  userId: string,
+  payload: { dailyMinutes?: number; weeklyTargetMinutes?: number; weeklySessionTarget?: number }
+): Promise<{ dashboard: Dashboard }> {
+  return request(`/users/${userId}/goals/config`, {
+    method: "PUT",
+    body: JSON.stringify(payload)
+  });
+}
+
+export async function setModes(userId: string, roastMode: boolean): Promise<{ dashboard: Dashboard }> {
+  return request(`/users/${userId}/modes`, {
+    method: "PUT",
+    body: JSON.stringify({ roastMode })
+  });
+}
+
+export async function startSession(userId: string, subject = "General"): Promise<{ session: StudySession }> {
+  return request(`/users/${userId}/sessions/start`, {
+    method: "POST",
+    body: JSON.stringify({ subject })
+  });
+}
+
+export async function pauseSession(userId: string, sessionId: string, reason = "manual"): Promise<{ session: StudySession }> {
+  return request(`/users/${userId}/sessions/${sessionId}/pause`, {
+    method: "POST",
+    body: JSON.stringify({ reason })
+  });
+}
+
+export async function resumeSession(userId: string, sessionId: string): Promise<{ session: StudySession }> {
+  return request(`/users/${userId}/sessions/${sessionId}/resume`, {
+    method: "POST"
+  });
+}
+
+export async function endSession(
+  userId: string,
+  sessionId: string,
+  inactiveSeconds: number,
+  notes = "",
+  subject = ""
+): Promise<{ session: StudySession; dashboard: Dashboard }> {
+  return request(`/users/${userId}/sessions/${sessionId}/end`, {
+    method: "POST",
+    body: JSON.stringify({ inactiveSeconds, notes, subject })
+  });
+}
+
+export async function resetSession(
+  userId: string,
+  sessionId: string
+): Promise<{ session: StudySession; dashboard: Dashboard }> {
+  return request(`/users/${userId}/sessions/${sessionId}/reset`, {
+    method: "POST"
+  });
+}
+
+export async function getTodaySessions(userId: string): Promise<{ sessions: StudySession[] }> {
+  return request(`/users/${userId}/sessions/today`);
+}
+
+export async function getLeaderboard(college: string): Promise<{ leaderboard: LeaderboardEntry[] }> {
+  return request(`/leaderboard?college=${encodeURIComponent(college)}`);
+}
+
+export async function addFriend(
+  userId: string,
+  friendEmail: string
+): Promise<{ friends: LiveFriend[] }> {
+  return request(`/users/${userId}/friends/add`, {
+    method: "POST",
+    body: JSON.stringify({ friendEmail })
+  });
+}
+
+export async function getLiveFriends(
+  userId: string
+): Promise<{ friends: LiveFriend[]; studyingNowCount: number; liveMessage: string }> {
+  return request(`/users/${userId}/friends/live`);
+}
