@@ -116,11 +116,12 @@ export async function endSession(
   notes = "",
   subject = "",
   stopReason = "",
-  antiCheatFlags = 0
+  antiCheatFlags = 0,
+  sessionQualityTag: "deep" | "average" | "distracted" | "" = ""
 ): Promise<{ session: StudySession; dashboard: Dashboard }> {
   return request(`/users/${userId}/sessions/${sessionId}/end`, {
     method: "POST",
-    body: JSON.stringify({ inactiveSeconds, notes, subject, stopReason, antiCheatFlags })
+    body: JSON.stringify({ inactiveSeconds, notes, subject, stopReason, antiCheatFlags, sessionQualityTag })
   });
 }
 

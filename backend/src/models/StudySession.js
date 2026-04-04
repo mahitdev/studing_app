@@ -24,7 +24,12 @@ const studySessionSchema = new mongoose.Schema(
     subject: { type: String, default: "General" },
     notes: { type: String, default: "" },
     stopReason: { type: String, default: "" },
-    antiCheatFlags: { type: Number, default: 0, min: 0 }
+    antiCheatFlags: { type: Number, default: 0, min: 0 },
+    sessionQualityTag: {
+      type: String,
+      enum: ["deep", "average", "distracted", ""],
+      default: ""
+    }
   },
   { timestamps: true }
 );

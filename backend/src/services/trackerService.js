@@ -340,6 +340,136 @@ const quitReasonsSummary = (sessions) => {
     .sort((a, b) => b.count - a.count);
 };
 
+const computeMomentum = (goals) => {
+  if (!goals.length) return { score: 0, state: "cold", message: "Momentum is cold. Start moving." };
+  let score = 0;
+  let run = 0;
+  goals.forEach((g) => {
+    if (g.completed) {
+      run += 1;
+      score += 1;
+      if (run >= 3) score += 1;
+    } else {
+      run = 0;
+      score -= 0.4;
+    }
+  });
+  score = Math.max(0, Math.min(100, Math.round(score * 5)));
+  const state = score >= 70 ? "on-fire" : score >= 40 ? "stable" : "cold";
+  return {
+    score,
+    state,
+    message: state === "on-fire" ? "You are on a roll." : state === "stable" ? "Momentum is building." : "Momentum is low. Win today."
+  };
+};
+
+const microGoalsFromTarget = (targetMinutes, studiedMinutes) => {
+  const step = Math.max(20, Math.round(targetMinutes / 3));
+  const milestones = [step, step * 2, targetMinutes];
+  return milestones.map((m, idx) => ({
+    label: `${idx + 1}h checkpoint`,
+    targetMinutes: m,
+    done: studiedMinutes >= m
+  }));
+};
+
+const qualityBreakdown = (sessions) => {
+  const total = sessions.length || 1;
+  const deep = sessions.filter((s) => s.sessionQualityTag === "deep").length;
+  const average = sessions.filter((s) => s.sessionQualityTag === "average").length;
+  const distracted = sessions.filter((s) => s.sessionQualityTag === "distracted").length;
+  return {
+    deepPercent: Math.round((deep / total) * 100),
+    averagePercent: Math.round((average / total) * 100),
+    distractedPercent: Math.round((distracted / total) * 100)
+  };
+};
+
+const weeklyRealityReport = (goals) => {
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(from.getDate() - 6);
+  const fromKey = from.toISOString().slice(0, 10);
+  const weekly = goals.filter((g) => g.date >= fromKey && g.date <= todayKey());
+  if (!weekly.length) {
+    return { available: now.getDay() === 0, message: "No weekly data yet." };
+  }
+  const totalHours = +(weekly.reduce((s, g) => s + (g.studiedMinutes || 0), 0) / 60).toFixed(1);
+  const missedDays = weekly.filter((g) => !g.completed).length;
+  const best = [...weekly].sort((a, b) => (b.studiedMinutes || 0) - (a.studiedMinutes || 0))[0];
+  const worst = [...weekly].sort((a, b) => (a.studiedMinutes || 0) - (b.studiedMinutes || 0))[0];
+  return {
+    available: now.getDay() === 0,
+    totalHours,
+    missedDays,
+    bestDay: best?.date || "",
+    worstDay: worst?.date || "",
+    message: `You wasted ${missedDays} days this week.`
+  };
+};
+
+const futureProjection = (weeklyHours, consistencyScore) => {
+  if (consistencyScore < 45) {
+    return "If you repeat this week for 6 months -> you'll fall behind.";
+  }
+  if (consistencyScore >= 75 && weeklyHours >= 18) {
+    return "Keep this up -> you're ahead of 90% students.";
+  }
+  return "You're improving. Increase one more focused block daily.";
+};
+
+const habitBuilderPlan = (streak, deep) => {
+  const ready = streak.current >= 5;
+  return {
+    ready,
+    suggestedTime: deep.bestStudyTime || "20:00",
+    message: ready ? `Auto routine: study daily at ${deep.bestStudyTime}.` : "Build a 5-day streak to unlock auto routine."
+  };
+};
+
+const comebackModeData = (goals, dailyMinutes) => {
+  const recent = goals.slice(-3);
+  const missed = recent.filter((g) => !g.completed).length;
+  const active = missed >= 2;
+  return {
+    active,
+    reducedGoalMinutes: active ? Math.max(60, Math.round(dailyMinutes * 0.6)) : dailyMinutes,
+    message: active ? "Start small. Build back." : ""
+  };
+};
+
+const softLockData = (todayGoal, preferredTime) => {
+  const now = new Date();
+  const current = now.getHours() * 60 + now.getMinutes();
+  const [h, m] = (preferredTime || "20:00").split(":").map(Number);
+  const pref = (h * 60) + (m || 0);
+  const active = current >= pref && !todayGoal?.completed && (todayGoal?.studiedMinutes || 0) < 30;
+  return {
+    active,
+    message: active ? "You planned to study. Continue?" : ""
+  };
+};
+
+const energyPattern = (sessions) => {
+  if (!sessions.length) {
+    return { strongestWindow: "No data", quitWindow: "No data", message: "No energy pattern yet." };
+  }
+  const byHour = new Array(24).fill(0);
+  const quitByHour = new Array(24).fill(0);
+  sessions.forEach((s) => {
+    const hr = new Date(s.startedAt).getHours();
+    byHour[hr] += s.focusedMinutes || 0;
+    if ((s.stopReason || "").toLowerCase() && (s.focusedMinutes || 0) < 30) quitByHour[hr] += 1;
+  });
+  const strong = byHour.indexOf(Math.max(...byHour));
+  const quit = quitByHour.indexOf(Math.max(...quitByHour));
+  return {
+    strongestWindow: `${String(strong).padStart(2, "0")}:00`,
+    quitWindow: `${String(quit).padStart(2, "0")}:00`,
+    message: `You're strong around ${String(strong).padStart(2, "0")}:00 and tend to quit around ${String(quit).padStart(2, "0")}:00.`
+  };
+};
+
 const applyXpAndBadges = async (userId) => {
   const user = await User.findById(userId);
   if (!user) return null;
@@ -415,6 +545,15 @@ const dashboardForUser = async (userId) => {
   const motivationReminder = user?.motivationWhy
     ? `You said you are studying for: ${user.motivationWhy}. Act like it.`
     : "";
+  const momentum = computeMomentum(goals);
+  const comebackMode = comebackModeData(goals, user?.goalConfig?.dailyMinutes || 180);
+  const microGoals = microGoalsFromTarget(todayGoal?.targetMinutes || 180, todayGoal?.studiedMinutes || 0);
+  const sessionQuality = qualityBreakdown(sessions.slice(0, 60));
+  const weeklyReality = weeklyRealityReport(goals);
+  const futureYou = futureProjection(weekly.weeklyStudyHours, consistencyScore7d);
+  const habitBuilder = habitBuilderPlan(streak, deep);
+  const softLockMode = softLockData(todayGoal, user?.preferredStudyTime || "20:00");
+  const energyPatternTracking = energyPattern(sessions.slice(0, 120));
 
   return {
     todayGoal,
@@ -442,12 +581,21 @@ const dashboardForUser = async (userId) => {
     timePressure,
     smartReminder,
     endOfDayReport: endReport,
+    weeklyRealityReport: weeklyReality,
+    futureYouReminder: futureYou,
     motivationReminder,
     habitLoop: {
       trigger: "Reminder",
       action: "Start timer",
       reward: "XP + streak pressure"
     },
+    momentum,
+    comebackMode,
+    microGoals,
+    sessionQuality,
+    autoHabitBuilder: habitBuilder,
+    softLockMode,
+    energyPatternTracking,
     focusScore: focusToday,
     gamification: {
       xp: user?.xp || 0,

@@ -254,7 +254,14 @@ router.post("/users/:userId/sessions/:sessionId/resume", async (req, res, next) 
 router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => {
   try {
     const { userId, sessionId } = req.params;
-    const { inactiveSeconds = 0, notes = "", subject = "", stopReason = "", antiCheatFlags = 0 } = req.body;
+    const {
+      inactiveSeconds = 0,
+      notes = "",
+      subject = "",
+      stopReason = "",
+      antiCheatFlags = 0,
+      sessionQualityTag = ""
+    } = req.body;
 
     const session = await StudySession.findOne({ _id: sessionId, userId });
     if (!session) {
@@ -290,6 +297,7 @@ router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => 
     session.notes = notes;
     session.stopReason = stopReason;
     session.antiCheatFlags = antiCheatFlags;
+    session.sessionQualityTag = sessionQualityTag;
     if (subject) session.subject = subject;
     session.status = "completed";
     await session.save();
@@ -389,7 +397,7 @@ router.get("/users/:userId/friends/live", async (req, res, next) => {
       friends: liveFriends,
       studyingNowCount: liveFriends.filter((f) => f.studyingNow).length,
       liveMessage: liveFriends.find((f) => f.studyingNow)
-        ? `${liveFriends.find((f) => f.studyingNow).name} is studying right now ??`
+        ? `${liveFriends.find((f) => f.studyingNow).name} is studying right now`
         : "No friends live right now"
     });
   } catch (err) {

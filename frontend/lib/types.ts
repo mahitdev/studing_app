@@ -69,6 +69,15 @@ export type Dashboard = {
     message: string;
   };
   smartReminder: string;
+  weeklyRealityReport: {
+    available: boolean;
+    totalHours?: number;
+    missedDays?: number;
+    bestDay?: string;
+    worstDay?: string;
+    message: string;
+  };
+  futureYouReminder: string;
   endOfDayReport: {
     available: boolean;
     success?: boolean;
@@ -81,6 +90,40 @@ export type Dashboard = {
     trigger: string;
     action: string;
     reward: string;
+  };
+  momentum: {
+    score: number;
+    state: string;
+    message: string;
+  };
+  comebackMode: {
+    active: boolean;
+    reducedGoalMinutes: number;
+    message: string;
+  };
+  microGoals: Array<{
+    label: string;
+    targetMinutes: number;
+    done: boolean;
+  }>;
+  sessionQuality: {
+    deepPercent: number;
+    averagePercent: number;
+    distractedPercent: number;
+  };
+  autoHabitBuilder: {
+    ready: boolean;
+    suggestedTime: string;
+    message: string;
+  };
+  softLockMode: {
+    active: boolean;
+    message: string;
+  };
+  energyPatternTracking: {
+    strongestWindow: string;
+    quitWindow: string;
+    message: string;
   };
   focusScore: {
     score: number;
@@ -147,6 +190,7 @@ export type StudySession = {
   inactiveSeconds: number;
   subject?: string;
   notes?: string;
+  sessionQualityTag?: "deep" | "average" | "distracted" | "";
   date: string;
 };
 

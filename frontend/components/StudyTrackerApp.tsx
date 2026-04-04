@@ -88,6 +88,7 @@ export default function StudyTrackerApp() {
   const [ritualDoneToday, setRitualDoneToday] = useState(false);
   const [antiCheatFlags, setAntiCheatFlags] = useState(0);
   const [stopReason, setStopReason] = useState("");
+  const [sessionQualityTag, setSessionQualityTag] = useState<"deep" | "average" | "distracted" | "">("");
   const [nameInput, setNameInput] = useState(DEFAULT_NAME);
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
@@ -343,6 +344,10 @@ export default function StudyTrackerApp() {
 
     try {
       setError("");
+      if (dashboard?.softLockMode.active) {
+        const proceed = window.confirm(dashboard.softLockMode.message || "You planned to study. Continue?");
+        if (!proceed) return;
+      }
       const { session } = await startSession(user._id, subject);
       setActiveSession(session);
       setInactiveSeconds(0);
@@ -389,7 +394,8 @@ export default function StudyTrackerApp() {
         notes,
         subject,
         reason,
-        antiCheatFlags
+        antiCheatFlags,
+        sessionQualityTag
       );
       setDashboard(updated);
       setActiveSession(null);
@@ -397,6 +403,7 @@ export default function StudyTrackerApp() {
       setAntiCheatFlags(0);
       setNotes("");
       setStopReason("");
+      setSessionQualityTag("");
       await refreshAll(user._id);
     } catch (err) {
       setError((err as Error).message);
@@ -420,6 +427,7 @@ export default function StudyTrackerApp() {
       setAntiCheatFlags(0);
       setNotes("");
       setStopReason("");
+      setSessionQualityTag("");
       setTimerAlert("Timer reset.");
       await refreshAll(user._id);
     } catch (err) {
@@ -578,14 +586,26 @@ export default function StudyTrackerApp() {
             <article><p>Consistency (7d)</p><h3>{dashboard.consistencyScore7d}%</h3></article>
           </div>
           <p className="motivation">{dashboard.identity.message}</p>
+          <p className="muted">Momentum: {dashboard.momentum.score}% ({dashboard.momentum.state})</p>
+          <p className="muted">{dashboard.momentum.message}</p>
           <p className="motivation">{dashboard.focusScore.message}</p>
           {dashboard.motivationReminder && <p className="timer-alert">{dashboard.motivationReminder}</p>}
+          <p className="timer-alert">{dashboard.futureYouReminder}</p>
+          {dashboard.comebackMode.active && (
+            <p className="timer-alert">Comeback Mode: {dashboard.comebackMode.message} Suggested goal {dashboard.comebackMode.reducedGoalMinutes} min.</p>
+          )}
           <div className="progress-wrap">
             <div className="progress"><span style={{ width: `${progressPercent}%` }} /></div>
             <p>{progressPercent}% complete</p>
           </div>
+          <ul className="stats">
+            {dashboard.microGoals.map((m) => (
+              <li key={m.targetMinutes}>{m.done ? "✅" : "🎯"} {m.targetMinutes} min</li>
+            ))}
+          </ul>
           <p className="timer-alert">{dashboard.timePressure.message}</p>
           <p className="muted">{dashboard.smartReminder}</p>
+          {dashboard.softLockMode.active && <p className="timer-alert">{dashboard.softLockMode.message}</p>}
 
           <div className="row wrap">
             <input placeholder="Add friend by email" value={friendEmail} onChange={(e) => setFriendEmail(e.target.value)} />
@@ -656,6 +676,13 @@ export default function StudyTrackerApp() {
           {timerAlert && <p className="timer-alert">{timerAlert}</p>}
           <p className="muted">Inactive deduction: {Math.round(inactiveSeconds / 60)} min</p>
           <p className="muted">Anti-cheat flags today: {antiCheatFlags}</p>
+          <p className="muted">Quality tagging (after session):</p>
+          <select value={sessionQualityTag} onChange={(e) => setSessionQualityTag(e.target.value as "deep" | "average" | "distracted" | "")}>
+            <option value="">Select quality</option>
+            <option value="deep">Deep focus</option>
+            <option value="average">Average</option>
+            <option value="distracted">Distracted</option>
+          </select>
           <p className="timer-alert">{dashboard.timePressure.message}</p>
           <div className="row wrap">
             <button onClick={handleStart} disabled={Boolean(activeSession)}>Start</button>
@@ -694,6 +721,26 @@ export default function StudyTrackerApp() {
             <article><p>Trend</p><h3>{dashboard.deepAnalytics.trendDirection}</h3></article>
             <article className="missed"><p>Missed Goals</p><h3>{dashboard.streak.missed}</h3></article>
           </div>
+          <article className="card">
+            <h3>Session Quality</h3>
+            <p>Deep: {dashboard.sessionQuality.deepPercent}%</p>
+            <p>Average: {dashboard.sessionQuality.averagePercent}%</p>
+            <p>Distracted: {dashboard.sessionQuality.distractedPercent}%</p>
+          </article>
+          <article className="card">
+            <h3>Energy Pattern</h3>
+            <p>{dashboard.energyPatternTracking.message}</p>
+          </article>
+          {dashboard.weeklyRealityReport.available && (
+            <article className="card">
+              <h3>Weekly Reality Report</h3>
+              <p>Total hours: {dashboard.weeklyRealityReport.totalHours}</p>
+              <p>Missed days: {dashboard.weeklyRealityReport.missedDays}</p>
+              <p>Best day: {dashboard.weeklyRealityReport.bestDay}</p>
+              <p>Worst day: {dashboard.weeklyRealityReport.worstDay}</p>
+              <p className="timer-alert">{dashboard.weeklyRealityReport.message}</p>
+            </article>
+          )}
 
           <h3>Subject Tracking</h3>
           <ul className="stats">
@@ -762,6 +809,10 @@ export default function StudyTrackerApp() {
           {dashboard.premiumHooks.lockedAiInsights && (
             <p className="muted">Premium: unlock advanced AI strategy plans.</p>
           )}
+          <article className="card">
+            <h3>Auto Habit Builder</h3>
+            <p>{dashboard.autoHabitBuilder.message}</p>
+          </article>
 
           <div className="streak-protection">
             <p>Streak protection (once/week): {streakProtectedThisWeek ? "Used" : "Available"}</p>
