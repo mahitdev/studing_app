@@ -636,7 +636,7 @@ export default function StudyTrackerApp() {
 
           <article className="card">
             <h3>Habit Loop</h3>
-            <p>{dashboard.habitLoop.trigger} -> {dashboard.habitLoop.action} -> {dashboard.habitLoop.reward}</p>
+            <p>{`${dashboard.habitLoop.trigger} -> ${dashboard.habitLoop.action} -> ${dashboard.habitLoop.reward}`}</p>
           </article>
         </section>
       )}
