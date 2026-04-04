@@ -22,7 +22,9 @@ const studySessionSchema = new mongoose.Schema(
     focusedMinutes: { type: Number, min: 0, default: 0 },
     inactiveSeconds: { type: Number, min: 0, default: 0 },
     subject: { type: String, default: "General" },
-    notes: { type: String, default: "" }
+    notes: { type: String, default: "" },
+    stopReason: { type: String, default: "" },
+    antiCheatFlags: { type: Number, default: 0, min: 0 }
   },
   { timestamps: true }
 );

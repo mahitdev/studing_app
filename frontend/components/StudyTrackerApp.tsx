@@ -83,15 +83,22 @@ export default function StudyTrackerApp() {
   const [goalDaily, setGoalDaily] = useState(180);
   const [goalWeekly, setGoalWeekly] = useState(1200);
   const [goalSessions, setGoalSessions] = useState(7);
+  const [identityType, setIdentityType] = useState<"Casual" | "Serious" | "Hardcore">("Serious");
+  const [motivationWhy, setMotivationWhy] = useState("");
+  const [ritualDoneToday, setRitualDoneToday] = useState(false);
+  const [antiCheatFlags, setAntiCheatFlags] = useState(0);
+  const [stopReason, setStopReason] = useState("");
   const [nameInput, setNameInput] = useState(DEFAULT_NAME);
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [error, setError] = useState("");
 
   const hiddenAt = useRef<number | null>(null);
+  const lastActivityAt = useRef<number>(Date.now());
 
   const userKey = useMemo(() => "study-tracker-user-id", []);
   const settingsKey = useMemo(() => "study-tracker-settings", []);
+  const ritualKey = useMemo(() => `study-tracker-ritual-${new Date().toISOString().slice(0, 10)}`, []);
 
   const refreshAll = async (userId: string) => {
     const [dash, todaySessions, live] = await Promise.all([
@@ -104,6 +111,7 @@ export default function StudyTrackerApp() {
     setGoalDaily(dash.goalTypes.dailyMinutes);
     setGoalWeekly(dash.goalTypes.weeklyTargetMinutes);
     setGoalSessions(dash.goalTypes.weeklySessionTarget);
+    setIdentityType(dash.identity.type);
     setSessions(todaySessions.sessions);
     setLiveFriends(live.friends || []);
     setLiveMessage(live.liveMessage || "");
@@ -153,6 +161,10 @@ export default function StudyTrackerApp() {
   }, [settings, settingsKey]);
 
   useEffect(() => {
+    setRitualDoneToday(localStorage.getItem(ritualKey) === "done");
+  }, [ritualKey]);
+
+  useEffect(() => {
     if (!activeSession) {
       setElapsedSeconds(0);
       return;
@@ -187,12 +199,63 @@ export default function StudyTrackerApp() {
       if (!document.hidden && hiddenAt.current) {
         const delta = Math.round((Date.now() - hiddenAt.current) / 1000);
         setInactiveSeconds((prev) => prev + Math.max(0, delta));
+        setAntiCheatFlags((prev) => prev + 1);
         hiddenAt.current = null;
       }
     };
 
     document.addEventListener("visibilitychange", onVisibility);
     return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [activeSession, user]);
+
+  useEffect(() => {
+    const record = () => {
+      lastActivityAt.current = Date.now();
+    };
+    window.addEventListener("mousemove", record);
+    window.addEventListener("keydown", record);
+    window.addEventListener("click", record);
+    return () => {
+      window.removeEventListener("mousemove", record);
+      window.removeEventListener("keydown", record);
+      window.removeEventListener("click", record);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeSession || activeSession.status !== "running" || !user) return;
+    const idleTimer = setInterval(async () => {
+      const idleFor = Math.floor((Date.now() - lastActivityAt.current) / 1000);
+      if (idleFor >= 120) {
+        try {
+          const { session } = await pauseSession(user._id, activeSession._id, "idle-detected");
+          setActiveSession(session);
+          setTimerAlert("Paused for inactivity. Are you still studying?");
+          setAntiCheatFlags((prev) => prev + 1);
+        } catch {
+          setTimerAlert("Inactivity detected.");
+        }
+      }
+    }, 15000);
+
+    const randomCheck = setInterval(async () => {
+      const ok = window.confirm("Are you still studying?");
+      if (!ok) {
+        try {
+          const { session } = await pauseSession(user._id, activeSession._id, "random-check-fail");
+          setActiveSession(session);
+          setTimerAlert("Session paused by anti-cheat check.");
+          setAntiCheatFlags((prev) => prev + 1);
+        } catch {
+          setTimerAlert("Anti-cheat check triggered.");
+        }
+      }
+    }, 360000 + Math.floor(Math.random() * 180000));
+
+    return () => {
+      clearInterval(idleTimer);
+      clearInterval(randomCheck);
+    };
   }, [activeSession, user]);
 
   useEffect(() => {
@@ -218,7 +281,7 @@ export default function StudyTrackerApp() {
 
       const remaining = target - studied;
       if (remaining > 0 && remaining <= 60 && now.getHours() >= 20) {
-        new Notification("1 hour left to complete goal");
+        new Notification(dashboard.smartReminder || "1 hour left to complete goal");
       }
     }, 1800000);
 
@@ -232,14 +295,23 @@ export default function StudyTrackerApp() {
   const submitOnboarding = async () => {
     try {
       setError("");
-      let response;
+      let response: { user: User; dashboard: Dashboard };
 
       if (authMode === "quick") {
-        response = await bootstrapUser(nameInput, DEFAULT_COLLEGE);
+        response = await bootstrapUser(nameInput, DEFAULT_COLLEGE, identityType, motivationWhy);
       } else if (authMode === "register") {
-        response = await registerUser(nameInput, emailInput, passwordInput, DEFAULT_COLLEGE);
+        const registerResponse = await registerUser(
+          nameInput,
+          emailInput,
+          passwordInput,
+          DEFAULT_COLLEGE,
+          identityType,
+          motivationWhy
+        );
+        response = { user: registerResponse.user, dashboard: registerResponse.dashboard };
       } else {
-        response = await loginUser(emailInput, passwordInput);
+        const loginResponse = await loginUser(emailInput, passwordInput);
+        response = { user: loginResponse.user, dashboard: loginResponse.dashboard };
       }
 
       localStorage.setItem(userKey, response.user._id);
@@ -303,11 +375,28 @@ export default function StudyTrackerApp() {
     if (!user || !activeSession) return;
 
     try {
-      const { dashboard: updated } = await endSession(user._id, activeSession._id, inactiveSeconds, notes, subject);
+      const earlyStop = elapsedSeconds < 1800 || (dashboard && dashboard.todayGoal.completionPercent < 50);
+      let reason = stopReason;
+      if (earlyStop && !reason) {
+        const picked = window.prompt("Why did you stop? (Tired / Distracted / Bored)", "Distracted");
+        reason = picked || "";
+        setStopReason(reason);
+      }
+      const { dashboard: updated } = await endSession(
+        user._id,
+        activeSession._id,
+        inactiveSeconds,
+        notes,
+        subject,
+        reason,
+        antiCheatFlags
+      );
       setDashboard(updated);
       setActiveSession(null);
       setInactiveSeconds(0);
+      setAntiCheatFlags(0);
       setNotes("");
+      setStopReason("");
       await refreshAll(user._id);
     } catch (err) {
       setError((err as Error).message);
@@ -318,12 +407,19 @@ export default function StudyTrackerApp() {
     if (!user || !activeSession) return;
 
     try {
-      const { dashboard: updated } = await resetSession(user._id, activeSession._id);
+      let reason = stopReason;
+      if (!reason) {
+        const picked = window.prompt("Why did you stop? (Tired / Distracted / Bored)", "Distracted");
+        reason = picked || "";
+      }
+      const { dashboard: updated } = await resetSession(user._id, activeSession._id, reason);
       setDashboard(updated);
       setActiveSession(null);
       setElapsedSeconds(0);
       setInactiveSeconds(0);
+      setAntiCheatFlags(0);
       setNotes("");
+      setStopReason("");
       setTimerAlert("Timer reset.");
       await refreshAll(user._id);
     } catch (err) {
@@ -352,11 +448,27 @@ export default function StudyTrackerApp() {
     if (!user) return;
     saveSettings({ roastMode: enabled });
     try {
-      const { dashboard: updated } = await setModes(user._id, enabled);
+      const { dashboard: updated } = await setModes(user._id, enabled, identityType, motivationWhy);
       setDashboard(updated);
     } catch (err) {
       setError((err as Error).message);
     }
+  };
+
+  const handleIdentityUpdate = async () => {
+    if (!user) return;
+    try {
+      const { dashboard: updated } = await setModes(user._id, settings.roastMode, identityType, motivationWhy);
+      setDashboard(updated);
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleStartRitual = () => {
+    localStorage.setItem(ritualKey, "done");
+    setRitualDoneToday(true);
+    setScreen("timer");
   };
 
   if (loading) return <main className="shell">Loading...</main>;
@@ -392,6 +504,16 @@ export default function StudyTrackerApp() {
 
           <label>Daily goal (minutes)
             <input type="number" min={30} max={960} value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} />
+          </label>
+          <label>User type
+            <select value={identityType} onChange={(e) => setIdentityType(e.target.value as "Casual" | "Serious" | "Hardcore")}>
+              <option value="Casual">Casual</option>
+              <option value="Serious">Serious</option>
+              <option value="Hardcore">Hardcore</option>
+            </select>
+          </label>
+          <label>Why are you studying? (Job / Exam / Skill / Salary target)
+            <input value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} placeholder="Example: Job - 8 LPA" />
           </label>
           <label>Preferred study time
             <input type="time" value={settings.preferredStudyTime} onChange={(e) => saveSettings({ preferredStudyTime: e.target.value })} />
@@ -439,6 +561,13 @@ export default function StudyTrackerApp() {
       {screen === "dashboard" && (
         <section className="card page">
           <h2>Dashboard</h2>
+          {!ritualDoneToday && (
+            <article className="card">
+              <p className="muted">Daily Start Ritual</p>
+              <h3>Today's goal: {dashboard.startRitual.goalMinutes} min</h3>
+              <button onClick={handleStartRitual}>{dashboard.startRitual.title}</button>
+            </article>
+          )}
           <div className="kpi-grid">
             <article><p>Today's Goal</p><h3>{dashboard.todayGoal.targetMinutes} min</h3></article>
             <article><p>Studied Today</p><h3>{dashboard.todayGoal.studiedMinutes} min</h3></article>
@@ -446,12 +575,17 @@ export default function StudyTrackerApp() {
             <article><p>Focus Score</p><h3>{dashboard.focusScore.score}%</h3><small>{dashboard.focusScore.label}</small></article>
             <article><p>XP</p><h3>{dashboard.gamification.xp}</h3></article>
             <article><p>Level</p><h3>{dashboard.gamification.level}/50</h3></article>
+            <article><p>Consistency (7d)</p><h3>{dashboard.consistencyScore7d}%</h3></article>
           </div>
+          <p className="motivation">{dashboard.identity.message}</p>
           <p className="motivation">{dashboard.focusScore.message}</p>
+          {dashboard.motivationReminder && <p className="timer-alert">{dashboard.motivationReminder}</p>}
           <div className="progress-wrap">
             <div className="progress"><span style={{ width: `${progressPercent}%` }} /></div>
             <p>{progressPercent}% complete</p>
           </div>
+          <p className="timer-alert">{dashboard.timePressure.message}</p>
+          <p className="muted">{dashboard.smartReminder}</p>
 
           <div className="row wrap">
             <input placeholder="Add friend by email" value={friendEmail} onChange={(e) => setFriendEmail(e.target.value)} />
@@ -467,7 +601,23 @@ export default function StudyTrackerApp() {
             </ul>
           )}
 
-          <button onClick={() => setScreen("timer")}>Start Study</button>
+          <button onClick={() => setScreen("timer")}>Start Studying</button>
+
+          {dashboard.endOfDayReport.available && (
+            <article className="card">
+              <h3>End-of-Day Report</h3>
+              <p>Total hours: {dashboard.endOfDayReport.totalHours}</p>
+              <p>Streak: {dashboard.endOfDayReport.streak}</p>
+              <p className={dashboard.endOfDayReport.success ? "muted" : "timer-alert"}>
+                {dashboard.endOfDayReport.message}
+              </p>
+            </article>
+          )}
+
+          <article className="card">
+            <h3>Habit Loop</h3>
+            <p>{dashboard.habitLoop.trigger} -> {dashboard.habitLoop.action} -> {dashboard.habitLoop.reward}</p>
+          </article>
         </section>
       )}
 
@@ -496,8 +646,17 @@ export default function StudyTrackerApp() {
               <textarea rows={3} value={notes} placeholder="What are you covering this session?" onChange={(e) => setNotes(e.target.value)} />
             </div>
           </div>
+          <label>Why might you stop? (Reflection)</label>
+          <select value={stopReason} onChange={(e) => setStopReason(e.target.value)}>
+            <option value="">Select reason</option>
+            <option value="Tired">Tired</option>
+            <option value="Distracted">Distracted</option>
+            <option value="Bored">Bored</option>
+          </select>
           {timerAlert && <p className="timer-alert">{timerAlert}</p>}
           <p className="muted">Inactive deduction: {Math.round(inactiveSeconds / 60)} min</p>
+          <p className="muted">Anti-cheat flags today: {antiCheatFlags}</p>
+          <p className="timer-alert">{dashboard.timePressure.message}</p>
           <div className="row wrap">
             <button onClick={handleStart} disabled={Boolean(activeSession)}>Start</button>
             <button onClick={handlePauseResume} disabled={!activeSession}>{activeSession?.status === "paused" ? "Resume" : "Pause"}</button>
@@ -545,6 +704,25 @@ export default function StudyTrackerApp() {
           {dashboard.subjectTracking.weakAlerts.length > 0 && (
             <p className="timer-alert">Weak alert: {dashboard.subjectTracking.weakAlerts[0]}</p>
           )}
+
+          {dashboard.distractionReflection.reasons.length > 0 && (
+            <article className="card">
+              <h3>Distraction Reflection</h3>
+              <p>Top quit reason: {dashboard.distractionReflection.topReason}</p>
+              <ul className="stats">
+                {dashboard.distractionReflection.reasons.map((r) => (
+                  <li key={r.reason}>{r.reason}: {r.count}</li>
+                ))}
+              </ul>
+            </article>
+          )}
+
+          {dashboard.premiumHooks.lockedAnalytics && (
+            <article className="card premium-tease">
+              <h3>Premium Insight Locked</h3>
+              <p>Unlock deep trend forecasting and monthly consistency projections.</p>
+            </article>
+          )}
         </section>
       )}
 
@@ -581,6 +759,9 @@ export default function StudyTrackerApp() {
           <ul className="stats">
             {dashboard.aiCoach.map((tip) => <li key={tip}>{tip}</li>)}
           </ul>
+          {dashboard.premiumHooks.lockedAiInsights && (
+            <p className="muted">Premium: unlock advanced AI strategy plans.</p>
+          )}
 
           <div className="streak-protection">
             <p>Streak protection (once/week): {streakProtectedThisWeek ? "Used" : "Available"}</p>
@@ -618,6 +799,19 @@ export default function StudyTrackerApp() {
             <label className="toggle-row">Roast mode
               <input type="checkbox" checked={settings.roastMode} onChange={(e) => handleRoastMode(e.target.checked)} />
             </label>
+            <label>
+              Identity type
+              <select value={identityType} onChange={(e) => setIdentityType(e.target.value as "Casual" | "Serious" | "Hardcore")}>
+                <option value="Casual">Casual</option>
+                <option value="Serious">Serious</option>
+                <option value="Hardcore">Hardcore</option>
+              </select>
+            </label>
+            <label>
+              Why are you studying?
+              <input value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} placeholder="Job / Exam / Skill / salary target" />
+            </label>
+            <button onClick={handleIdentityUpdate}>Update Identity & Motivation</button>
             <label>
               Preferred study time
               <input type="time" value={settings.preferredStudyTime} onChange={(e) => saveSettings({ preferredStudyTime: e.target.value })} />

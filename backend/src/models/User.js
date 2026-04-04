@@ -17,7 +17,9 @@ const userSchema = new mongoose.Schema(
       weeklyTargetMinutes: { type: Number, default: 1200 },
       weeklySessionTarget: { type: Number, default: 7 }
     },
-    roastMode: { type: Boolean, default: true }
+    roastMode: { type: Boolean, default: true },
+    identityType: { type: String, enum: ["Casual", "Serious", "Hardcore"], default: "Serious" },
+    motivationWhy: { type: String, default: "" }
   },
   { timestamps: true }
 );

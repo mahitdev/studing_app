@@ -369,6 +369,11 @@ button:disabled {
   background: var(--danger-bg);
 }
 
+.premium-tease {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line) 50%);
+}
+
 .onboarding-screen {
   min-height: 100vh;
   display: grid;

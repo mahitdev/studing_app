@@ -20,6 +20,15 @@ export type DailyGoal = {
 
 export type Dashboard = {
   todayGoal: DailyGoal;
+  identity: {
+    type: "Casual" | "Serious" | "Hardcore";
+    strictness: number;
+    message: string;
+  };
+  startRitual: {
+    title: string;
+    goalMinutes: number;
+  };
   streak: {
     current: number;
     longest: number;
@@ -54,6 +63,25 @@ export type Dashboard = {
     avgInactiveMinutes: number;
   };
   complianceRate: number;
+  consistencyScore7d: number;
+  timePressure: {
+    remainingMinutes: number;
+    message: string;
+  };
+  smartReminder: string;
+  endOfDayReport: {
+    available: boolean;
+    success?: boolean;
+    totalHours?: number;
+    streak?: number;
+    message: string;
+  };
+  motivationReminder: string;
+  habitLoop: {
+    trigger: string;
+    action: string;
+    reward: string;
+  };
   focusScore: {
     score: number;
     label: string;
@@ -90,9 +118,22 @@ export type Dashboard = {
     trendDirection: string;
     weekendConsistency: string;
   };
+  distractionReflection: {
+    reasons: Array<{ reason: string; count: number }>;
+    topReason: string;
+  };
   aiCoach: string[];
   roastMessage: string;
   aiSuggestions: string[];
+  antiCheat: {
+    tabSwitchDetected: boolean;
+    idleDetected: boolean;
+    randomCheckEnabled: boolean;
+  };
+  premiumHooks: {
+    lockedAnalytics: boolean;
+    lockedAiInsights: boolean;
+  };
   brutalMessage: string;
 };
 

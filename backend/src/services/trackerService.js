@@ -294,6 +294,52 @@ const coachSuggestions = (sessions, deep, weakAlerts) => {
   return suggestions.slice(0, 4);
 };
 
+const identityMessaging = (identityType, completedToday) => {
+  if (identityType === "Hardcore") {
+    return {
+      strictness: 1,
+      line: completedToday ? "You executed. Repeat tomorrow." : "No excuses. Finish your goal."
+    };
+  }
+  if (identityType === "Casual") {
+    return {
+      strictness: 3,
+      line: completedToday ? "Nice consistency today." : "Take one focused step right now."
+    };
+  }
+  return {
+    strictness: 2,
+    line: completedToday ? "Solid work. Keep momentum." : "Stay disciplined. Hit your target."
+  };
+};
+
+const endOfDayReport = (todayGoal, streak) => {
+  const hour = new Date().getHours();
+  if (hour < 21) {
+    return { available: false, message: "" };
+  }
+
+  const success = Boolean(todayGoal?.completed);
+  return {
+    available: true,
+    success,
+    totalHours: +((todayGoal?.studiedMinutes || 0) / 60).toFixed(1),
+    streak: streak.current,
+    message: success ? "Solid work. Repeat tomorrow." : "You slipped. Fix it tomorrow."
+  };
+};
+
+const quitReasonsSummary = (sessions) => {
+  const map = new Map();
+  sessions.forEach((s) => {
+    if (!s.stopReason) return;
+    map.set(s.stopReason, (map.get(s.stopReason) || 0) + 1);
+  });
+  return [...map.entries()]
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+};
+
 const applyXpAndBadges = async (userId) => {
   const user = await User.findById(userId);
   if (!user) return null;
@@ -340,7 +386,8 @@ const dashboardForUser = async (userId) => {
 
   const sessions = await StudySession.find({ userId, status: "completed" }).sort({ startedAt: -1 }).limit(120);
   const totalMinutes = goals.reduce((sum, g) => sum + (g.studiedMinutes || 0), 0);
-  const punishmentActive = !todayGoal?.completed && streak.missed > 0;
+  const identity = identityMessaging(user?.identityType || "Serious", Boolean(todayGoal?.completed));
+  const punishmentActive = !todayGoal?.completed && streak.missed >= identity.strictness;
   const history = dailyHistory(goals, 60);
   const pulse = focusPulse(sessions.slice(0, 40));
   const complianceRate = goals.length
@@ -352,9 +399,34 @@ const dashboardForUser = async (userId) => {
   const focusToday = focusScoreForToday(todaySessions);
   const challenges = challengeProgress(goals, sessions, streak);
   const aiCoach = coachSuggestions(sessions, deep, subjectStats.weakAlerts);
+  const consistencyScore7d = weekly.weeklyCompletionPercent;
+  const remainingMinutes = Math.max(0, (todayGoal?.targetMinutes || 0) - (todayGoal?.studiedMinutes || 0));
+  const timePressure = {
+    remainingMinutes,
+    message: remainingMinutes > 0
+      ? `${Math.ceil(remainingMinutes / 60)} hours left to finish goal`
+      : "Goal completed for today"
+  };
+  const smartReminder = remainingMinutes > 0
+    ? `You're ${Math.ceil(remainingMinutes / 60)} hour behind today.`
+    : "You're on track today.";
+  const quitReasons = quitReasonsSummary(sessions.slice(0, 60));
+  const endReport = endOfDayReport(todayGoal, streak);
+  const motivationReminder = user?.motivationWhy
+    ? `You said you are studying for: ${user.motivationWhy}. Act like it.`
+    : "";
 
   return {
     todayGoal,
+    identity: {
+      type: user?.identityType || "Serious",
+      strictness: identity.strictness,
+      message: identity.line
+    },
+    startRitual: {
+      title: "START YOUR DAY",
+      goalMinutes: todayGoal?.targetMinutes || 0
+    },
     streak,
     punishmentActive,
     totals: {
@@ -366,6 +438,16 @@ const dashboardForUser = async (userId) => {
     history,
     pulse,
     complianceRate,
+    consistencyScore7d,
+    timePressure,
+    smartReminder,
+    endOfDayReport: endReport,
+    motivationReminder,
+    habitLoop: {
+      trigger: "Reminder",
+      action: "Start timer",
+      reward: "XP + streak pressure"
+    },
     focusScore: focusToday,
     gamification: {
       xp: user?.xp || 0,
@@ -382,11 +464,24 @@ const dashboardForUser = async (userId) => {
     },
     subjectTracking: subjectStats,
     deepAnalytics: deep,
+    distractionReflection: {
+      reasons: quitReasons,
+      topReason: quitReasons[0]?.reason || ""
+    },
     aiCoach,
     roastMessage: punishmentActive && user?.roastMode
       ? roastLines[Math.floor(Math.random() * roastLines.length)]
       : "",
     aiSuggestions: aiCoach,
+    antiCheat: {
+      tabSwitchDetected: todaySessions.some((s) => (s.pauseCount || 0) > 0),
+      idleDetected: todaySessions.some((s) => (s.inactiveSeconds || 0) > 0),
+      randomCheckEnabled: true
+    },
+    premiumHooks: {
+      lockedAnalytics: true,
+      lockedAiInsights: true
+    },
     brutalMessage: weekly.weeklyWastedHours > 0
       ? `You wasted ${weekly.weeklyWastedHours} hours this week. Discipline up.`
       : "No wasted hours this week. Stay ruthless."

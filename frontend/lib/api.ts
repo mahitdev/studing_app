@@ -20,10 +20,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export async function bootstrapUser(name: string, college: string): Promise<{ user: User; dashboard: Dashboard }> {
+export async function bootstrapUser(
+  name: string,
+  college: string,
+  identityType = "Serious",
+  motivationWhy = ""
+): Promise<{ user: User; dashboard: Dashboard }> {
   return request("/users/bootstrap", {
     method: "POST",
-    body: JSON.stringify({ name, college })
+    body: JSON.stringify({ name, college, identityType, motivationWhy })
   });
 }
 
@@ -31,11 +36,13 @@ export async function registerUser(
   name: string,
   email: string,
   password: string,
-  college: string
+  college: string,
+  identityType = "Serious",
+  motivationWhy = ""
 ): Promise<{ user: User; token: string; dashboard: Dashboard }> {
   return request("/auth/register", {
     method: "POST",
-    body: JSON.stringify({ name, email, password, college })
+    body: JSON.stringify({ name, email, password, college, identityType, motivationWhy })
   });
 }
 
@@ -70,10 +77,15 @@ export async function setGoalConfig(
   });
 }
 
-export async function setModes(userId: string, roastMode: boolean): Promise<{ dashboard: Dashboard }> {
+export async function setModes(
+  userId: string,
+  roastMode: boolean,
+  identityType?: "Casual" | "Serious" | "Hardcore",
+  motivationWhy?: string
+): Promise<{ dashboard: Dashboard }> {
   return request(`/users/${userId}/modes`, {
     method: "PUT",
-    body: JSON.stringify({ roastMode })
+    body: JSON.stringify({ roastMode, identityType, motivationWhy })
   });
 }
 
@@ -102,20 +114,24 @@ export async function endSession(
   sessionId: string,
   inactiveSeconds: number,
   notes = "",
-  subject = ""
+  subject = "",
+  stopReason = "",
+  antiCheatFlags = 0
 ): Promise<{ session: StudySession; dashboard: Dashboard }> {
   return request(`/users/${userId}/sessions/${sessionId}/end`, {
     method: "POST",
-    body: JSON.stringify({ inactiveSeconds, notes, subject })
+    body: JSON.stringify({ inactiveSeconds, notes, subject, stopReason, antiCheatFlags })
   });
 }
 
 export async function resetSession(
   userId: string,
-  sessionId: string
+  sessionId: string,
+  stopReason = ""
 ): Promise<{ session: StudySession; dashboard: Dashboard }> {
   return request(`/users/${userId}/sessions/${sessionId}/reset`, {
-    method: "POST"
+    method: "POST",
+    body: JSON.stringify({ stopReason })
   });
 }
 

@@ -20,7 +20,7 @@ router.get("/health", (_req, res) => {
 
 router.post("/auth/register", async (req, res, next) => {
   try {
-    const { name, email, password, college = "General" } = req.body;
+    const { name, email, password, college = "General", identityType = "Serious", motivationWhy = "" } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: "email and password are required" });
     }
@@ -33,6 +33,8 @@ router.post("/auth/register", async (req, res, next) => {
     const user = await User.create({
       name: name?.trim() || "Focused Student",
       college,
+      identityType,
+      motivationWhy,
       email: email.toLowerCase(),
       passwordHash: hash(password),
       authToken: crypto.randomBytes(24).toString("hex")
@@ -67,10 +69,12 @@ router.post("/auth/login", async (req, res, next) => {
 
 router.post("/users/bootstrap", async (req, res, next) => {
   try {
-    const { name, college } = req.body;
+    const { name, college, identityType = "Serious", motivationWhy = "" } = req.body;
     const user = await User.create({
       name: name?.trim() || "Focused Student",
-      college: college?.trim() || "General"
+      college: college?.trim() || "General",
+      identityType,
+      motivationWhy
     });
 
     await ensureDailyGoal(user._id);
@@ -132,11 +136,17 @@ router.put("/users/:userId/goals/config", async (req, res, next) => {
   }
 });
 
+
 router.put("/users/:userId/modes", async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { roastMode } = req.body;
-    const user = await User.findByIdAndUpdate(userId, { $set: { roastMode: Boolean(roastMode) } }, { new: true });
+    const { roastMode, identityType, motivationWhy } = req.body;
+    const patch = {};
+    if (typeof roastMode !== "undefined") patch.roastMode = Boolean(roastMode);
+    if (identityType) patch.identityType = identityType;
+    if (typeof motivationWhy === "string") patch.motivationWhy = motivationWhy;
+
+    const user = await User.findByIdAndUpdate(userId, { $set: patch }, { new: true });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const dashboard = await dashboardForUser(userId);
@@ -244,7 +254,7 @@ router.post("/users/:userId/sessions/:sessionId/resume", async (req, res, next) 
 router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => {
   try {
     const { userId, sessionId } = req.params;
-    const { inactiveSeconds = 0, notes = "", subject = "" } = req.body;
+    const { inactiveSeconds = 0, notes = "", subject = "", stopReason = "", antiCheatFlags = 0 } = req.body;
 
     const session = await StudySession.findOne({ _id: sessionId, userId });
     if (!session) {
@@ -278,6 +288,8 @@ router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => 
     session.focusedMinutes = focusedMinutes;
     session.inactiveSeconds = inactiveSeconds;
     session.notes = notes;
+    session.stopReason = stopReason;
+    session.antiCheatFlags = antiCheatFlags;
     if (subject) session.subject = subject;
     session.status = "completed";
     await session.save();
@@ -294,6 +306,7 @@ router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => 
 router.post("/users/:userId/sessions/:sessionId/reset", async (req, res, next) => {
   try {
     const { userId, sessionId } = req.params;
+    const { stopReason = "" } = req.body;
 
     const session = await StudySession.findOne({ _id: sessionId, userId });
     if (!session) {
@@ -315,6 +328,7 @@ router.post("/users/:userId/sessions/:sessionId/reset", async (req, res, next) =
     session.focusedMinutes = 0;
     session.inactiveSeconds = 0;
     session.notes = "Session reset by user";
+    session.stopReason = stopReason;
     session.status = "completed";
     await session.save();
 
