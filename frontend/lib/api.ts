@@ -1,16 +1,27 @@
 import { Dashboard, LeaderboardEntry, LiveFriend, StudySession, User } from "./types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+function normalizeApiBase(raw?: string) {
+  const fallback = "http://localhost:5000/api";
+  const value = (raw || fallback).trim();
+  return value.replace(/\/+$/, "");
+}
+
+const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.headers || {})
-    },
-    cache: "no-store"
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.headers || {})
+      },
+      cache: "no-store"
+    });
+  } catch {
+    throw new Error(`Unable to reach API at ${API_BASE}. Check NEXT_PUBLIC_API_URL.`);
+  }
 
   if (!res.ok) {
     const errorText = await res.text();
