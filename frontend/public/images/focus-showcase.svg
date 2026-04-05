@@ -1,0 +1,16 @@
+﻿<svg width="900" height="520" viewBox="0 0 900 520" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="900" height="520" rx="24" fill="#070A12"/>
+  <circle cx="450" cy="260" r="170" fill="#0E1A2A" stroke="#2C4669"/>
+  <circle cx="450" cy="260" r="130" fill="none" stroke="#3A77EF" stroke-width="24" stroke-dasharray="480 340" stroke-linecap="round"/>
+  <circle cx="450" cy="260" r="96" fill="#0A1320" stroke="#223B5E"/>
+  <text x="450" y="254" text-anchor="middle" fill="#DCE8FF" font-size="28" font-family="Arial">01:42:28</text>
+  <text x="450" y="284" text-anchor="middle" fill="#77A5FF" font-size="12" font-family="Arial">FOCUS SESSION</text>
+  <rect x="90" y="98" width="220" height="120" rx="14" fill="#111C2E" stroke="#2D4060"/>
+  <rect x="590" y="98" width="220" height="120" rx="14" fill="#111C2E" stroke="#2D4060"/>
+  <rect x="90" y="302" width="220" height="120" rx="14" fill="#111C2E" stroke="#2D4060"/>
+  <rect x="590" y="302" width="220" height="120" rx="14" fill="#111C2E" stroke="#2D4060"/>
+  <rect x="116" y="134" width="172" height="12" rx="6" fill="#355FBC"/>
+  <rect x="616" y="134" width="172" height="12" rx="6" fill="#2FD2A5"/>
+  <rect x="116" y="338" width="172" height="12" rx="6" fill="#4D89FF"/>
+  <rect x="616" y="338" width="172" height="12" rx="6" fill="#2FD2A5"/>
+</svg>
