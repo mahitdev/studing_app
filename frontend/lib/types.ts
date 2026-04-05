@@ -46,6 +46,8 @@ export type Dashboard = {
     weeklyWastedHours: number;
     weeklyCompletionPercent: number;
     completedDays: number;
+    weeklyGoalTypeTargetHours: number;
+    weeklyGoalTypeCompletionPercent: number;
   };
   history: Array<{
     date: string;

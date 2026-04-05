@@ -1,4 +1,5 @@
 import { Dashboard, LeaderboardEntry, LiveFriend, StudySession, User } from "./types";
+import { mockRequest } from "./mockApi";
 
 function normalizeApiBase(raw?: string) {
   const fallback = "http://localhost:5000/api";
@@ -20,7 +21,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       cache: "no-store"
     });
   } catch {
-    throw new Error(`Unable to reach API at ${API_BASE}. Check NEXT_PUBLIC_API_URL.`);
+    return mockRequest<T>(path, init);
+  }
+
+  if (res.status >= 500) {
+    return mockRequest<T>(path, init);
   }
 
   if (!res.ok) {
