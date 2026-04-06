@@ -1,122 +1,147 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import LandingClient from "../components/LandingClient";
 
 export default function Home() {
   return (
-    <main className="landing dark-landing long-landing">
-      <header className="landing-nav">
-        <h1 className="glow-title text-3d">FocusFlow</h1>
-        <div className="nav-links">
+    <main className="premium-landing">
+      <header className="premium-nav reveal">
+        <div className="brand">GrindLock</div>
+        <div className="premium-links">
+          <a href="#features">Features</a>
+          <a href="#how">How It Works</a>
+          <a href="#testimonials">Testimonials</a>
           <Link href="/signin">Sign In</Link>
-          <Link href="/signup">Sign Up</Link>
           <LandingClient />
         </div>
       </header>
 
-      <section className="hero-wrap">
-        <div className="hero-copy">
-          <p className="chip">Student Accountability Platform</p>
-          <h2 className="glow-headline text-3d">Track Hard. Stay Ruthless. Win Consistently.</h2>
-          <p>
-            Built for discipline, not excuses. Daily goals, momentum, reality reports, streak pressure,
-            deep analytics, and behavior systems that keep you locked in.
-          </p>
-          <div className="cta-row">
-            <Link className="cta" href="/signup">Start Free</Link>
-            <Link className="ghost" href="/signin">I already have an account</Link>
+      <section className="premium-hero reveal">
+        <div className="hero-content">
+          <p className="hero-label">Student Productivity Tracker</p>
+          <h1>Discipline your time. Own your future.</h1>
+          <p className="hero-sub">Track, focus, and stay consistent with GrindLock.</p>
+          <div className="hero-cta">
+            <Link className="cta" href="/signup">Start Tracking</Link>
+            <Link className="ghost" href="/dashboard">View Demo</Link>
           </div>
         </div>
 
-        <div className="hero-visual">
-          <img src="/images/study-hero.svg" alt="Study dashboard illustration" />
-          <div className="mini-graph">
-            <span style={{ height: "35%" }} />
-            <span style={{ height: "54%" }} />
-            <span style={{ height: "48%" }} />
-            <span style={{ height: "72%" }} />
-            <span style={{ height: "92%" }} />
-          </div>
+        <div className="hero-mockup-wrap">
+          <article className="hero-mockup">
+            <div className="mockup-top">
+              <span className="dot" />
+              <span className="dot" />
+              <span className="dot" />
+            </div>
+            <div className="mockup-grid">
+              <div className="mock-timer">
+                <p>Focus Timer</p>
+                <h3>45:00</h3>
+              </div>
+              <div className="mock-streak">
+                <p>Streak</p>
+                <h3>12 days</h3>
+              </div>
+              <div className="mock-ring">
+                <div>
+                  <strong>78%</strong>
+                  <span>Goal</span>
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
       </section>
 
-      <section className="feature-grid">
-        <article>
-          <h3>Momentum Engine</h3>
-          <p>Streak + momentum + comeback mode to prevent drop-off.</p>
-        </article>
-        <article>
-          <h3>Reality Analytics</h3>
-          <p>Heatmaps, weekly reports, quality tags, and energy patterns.</p>
-        </article>
-        <article>
-          <h3>Behavior Change</h3>
-          <p>Start ritual, time pressure, reflection loops, and anti-cheat focus checks.</p>
-        </article>
-      </section>
-
-      <section className="showcase-row">
-        <article className="showcase-card">
-          <h3 className="glow-sub">Ritual-First Dashboard</h3>
-          <p>Start your day ritual, time pressure cues, and consistency score all above the fold.</p>
-          <img src="/images/dashboard-showcase.svg" alt="Dashboard showcase" />
-        </article>
-        <article className="showcase-card">
-          <h3 className="glow-sub">Focused Session Arena</h3>
-          <p>Animated timer, anti-cheat checks, pause penalties, and session quality grading.</p>
-          <img src="/images/focus-showcase.svg" alt="Focus session showcase" />
-        </article>
-      </section>
-
-      <section className="metrics-band">
-        <article>
-          <h4>Weekly Reality Report</h4>
-          <p>You wasted 2 days this week.</p>
-        </article>
-        <article>
-          <h4>Future Projection</h4>
-          <p>Keep this up and you are ahead of 90% students.</p>
-        </article>
-        <article>
-          <h4>Energy Pattern</h4>
-          <p>You are strongest at 10 PM and quit most at 6 PM.</p>
-        </article>
-      </section>
-
-      <section className="wide-visual">
-        <div className="wide-copy">
-          <p className="chip">Analytics + Accountability</p>
-          <h3 className="glow-sub">From Random Effort To Structured Progress</h3>
-          <p>
-            Heatmap trends, quality tags, comeback mode, micro-goals, and social pressure keep your system honest.
-          </p>
-          <div className="cta-row">
-            <Link className="cta" href="/signup">Create My Plan</Link>
-            <Link className="ghost" href="/dashboard">Preview Dashboard</Link>
-          </div>
+      <section id="features" className="premium-section reveal">
+        <div className="section-head">
+          <p>Core Features</p>
+          <h2>Built for consistency, not motivation spikes</h2>
         </div>
-        <img src="/images/analytics-showcase.svg" alt="Analytics showcase" />
+        <div className="feature-cards">
+          <article>
+            <span>?</span>
+            <h3>Focus Tracking</h3>
+            <p>Track real deep-work time with session quality and anti-cheat checks.</p>
+          </article>
+          <article>
+            <span>?</span>
+            <h3>Streak System</h3>
+            <p>Use momentum, recovery mode, and streak pressure to stay accountable.</p>
+          </article>
+          <article>
+            <span>?</span>
+            <h3>Smart Analytics</h3>
+            <p>See weak days, effort vs result, and long-term trend insights.</p>
+          </article>
+          <article>
+            <span>?</span>
+            <h3>Session Replay</h3>
+            <p>Review exact daily blocks to understand where focus was won or lost.</p>
+          </article>
+        </div>
       </section>
 
-      <section className="feature-grid">
-        <article>
-          <h3>Glow UI + Dark Mode</h3>
-          <p>Night-first visuals built for long study hours with less eye strain.</p>
-        </article>
-        <article>
-          <h3>Behavior Loop</h3>
-          <p>Trigger to action to reward loop engineered for discipline retention.</p>
-        </article>
-        <article>
-          <h3>Social Pressure</h3>
-          <p>See who is studying now, add friends, and convert peer pressure into output.</p>
-        </article>
+      <section id="how" className="premium-section reveal">
+        <div className="section-head">
+          <p>How It Works</p>
+          <h2>Three steps. One disciplined system.</h2>
+        </div>
+        <div className="how-grid">
+          <article>
+            <span>1</span>
+            <h3>Set your goal</h3>
+            <p>Choose daily targets and lock in your preferred study window.</p>
+          </article>
+          <article>
+            <span>2</span>
+            <h3>Start focus sessions</h3>
+            <p>Run Pomodoro, deep work, or custom sessions with precision tracking.</p>
+          </article>
+          <article>
+            <span>3</span>
+            <h3>Build streak</h3>
+            <p>Use pressure, analytics, and weekly reports to stay consistent.</p>
+          </article>
+        </div>
       </section>
 
-      <footer className="landing-footer">
-          <p>FocusFlow is a system. Build it daily.</p>
-        <div className="cta-row">
-          <Link className="cta" href="/signup">Start Now</Link>
-          <Link className="ghost" href="/signin">Continue</Link>
+      <section id="testimonials" className="premium-section reveal">
+        <div className="section-head">
+          <p>Testimonials</p>
+          <h2>Used by students who execute daily</h2>
+        </div>
+        <div className="testimonials-grid">
+          <article>
+            <p>"The streak pressure is exactly what I needed to stop skipping study days."</p>
+            <h4>Priya, CS Student</h4>
+          </article>
+          <article>
+            <p>"Effort vs result made me realize I was studying long but not studying smart."</p>
+            <h4>Rohit, UPSC Aspirant</h4>
+          </article>
+          <article>
+            <p>"Clean UI, fast timer, and recovery mode kept me from quitting after bad days."</p>
+            <h4>Aman, Engineering Student</h4>
+          </article>
+        </div>
+      </section>
+
+      <footer className="premium-footer reveal">
+        <div>
+          <h3>GrindLock</h3>
+          <p>Discipline-first productivity tracker.</p>
+        </div>
+        <div className="footer-links">
+          <Link href="/signup">Start Tracking</Link>
+          <Link href="/signin">Sign In</Link>
+          <a href="#features">Features</a>
+          <a href="#how">How It Works</a>
+        </div>
+        <div className="footer-social">
+          <a href="/">X</a>
+          <a href="/">In</a>
+          <a href="/">Gh</a>
         </div>
       </footer>
     </main>

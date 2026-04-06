@@ -6,8 +6,8 @@ const bodyFont = Manrope({ subsets: ["latin"], variable: "--font-body" });
 const displayFont = Orbitron({ subsets: ["latin"], variable: "--font-display", weight: ["600", "700"] });
 
 export const metadata: Metadata = {
-  title: "FocusFlow | Discipline Mode",
-  description: "FocusFlow is a brutal accountability tracker for focused students"
+  title: "GrindLock | Discipline Mode",
+  description: "GrindLock is a discipline-first productivity tracker for focused students"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
