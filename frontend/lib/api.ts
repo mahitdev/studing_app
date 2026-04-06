@@ -132,10 +132,16 @@ export async function setModes(
   });
 }
 
-export async function startSession(userId: string, subject = "General"): Promise<{ session: StudySession }> {
+export async function startSession(
+  userId: string,
+  subject = "General",
+  studyMode: "pomodoro" | "deep" | "custom" = "custom",
+  plannedDurationMinutes = 0,
+  riskMode = false
+): Promise<{ session: StudySession }> {
   return request(`/users/${userId}/sessions/start`, {
     method: "POST",
-    body: JSON.stringify({ subject })
+    body: JSON.stringify({ subject, studyMode, plannedDurationMinutes, riskMode })
   });
 }
 
@@ -160,11 +166,24 @@ export async function endSession(
   subject = "",
   stopReason = "",
   antiCheatFlags = 0,
-  sessionQualityTag: "deep" | "average" | "distracted" | "" = ""
+  sessionQualityTag: "deep" | "average" | "distracted" | "" = "",
+  studyMode: "pomodoro" | "deep" | "custom" = "custom",
+  plannedDurationMinutes = 0,
+  riskMode = false
 ): Promise<{ session: StudySession; dashboard: Dashboard }> {
   return request(`/users/${userId}/sessions/${sessionId}/end`, {
     method: "POST",
-    body: JSON.stringify({ inactiveSeconds, notes, subject, stopReason, antiCheatFlags, sessionQualityTag })
+    body: JSON.stringify({
+      inactiveSeconds,
+      notes,
+      subject,
+      stopReason,
+      antiCheatFlags,
+      sessionQualityTag,
+      studyMode,
+      plannedDurationMinutes,
+      riskMode
+    })
   });
 }
 
@@ -201,4 +220,28 @@ export async function getLiveFriends(
   userId: string
 ): Promise<{ friends: LiveFriend[]; studyingNowCount: number; liveMessage: string }> {
   return request(`/users/${userId}/friends/live`);
+}
+
+export async function syncOfflineSessions(
+  userId: string,
+  sessions: Array<{
+    startedAt: string;
+    endedAt: string;
+    focusedMinutes: number;
+    inactiveSeconds?: number;
+    pauseCount?: number;
+    subject?: string;
+    studyMode?: "pomodoro" | "deep" | "custom";
+    plannedDurationMinutes?: number;
+    riskMode?: boolean;
+    notes?: string;
+    stopReason?: string;
+    sessionQualityTag?: "deep" | "average" | "distracted" | "";
+    date?: string;
+  }>
+): Promise<{ synced: number; dashboard: Dashboard }> {
+  return request(`/users/${userId}/sessions/offline-sync`, {
+    method: "POST",
+    body: JSON.stringify({ sessions })
+  });
 }

@@ -34,6 +34,12 @@ export type Dashboard = {
     longest: number;
     missed: number;
   };
+  recovery?: {
+    eligible: boolean;
+    requiredMinutes: number;
+    completed: boolean;
+    message: string;
+  };
   punishmentActive: boolean;
   totals: {
     totalStudyHours: number;
@@ -66,6 +72,17 @@ export type Dashboard = {
   };
   complianceRate: number;
   consistencyScore7d: number;
+  effortVsResult?: {
+    studiedHours: number;
+    completionRate: number;
+    message: string;
+  };
+  weakDayDetection?: {
+    weakDay: string;
+    misses: number;
+    reminder: string;
+  };
+  pressureNotifications?: string[];
   timePressure: {
     remainingMinutes: number;
     message: string;
@@ -127,6 +144,31 @@ export type Dashboard = {
     quitWindow: string;
     message: string;
   };
+  lazyPattern?: {
+    earlyQuitCount: number;
+    message: string;
+  };
+  weeklySelfRank?: {
+    rank: string;
+    deltaMinutes: number;
+    message: string;
+  };
+  longTermProgress?: {
+    monthlyHours: number;
+    growthPercent: number;
+    trend: string;
+  };
+  sessionReplay?: Array<{
+    sessionId: string;
+    start: string;
+    end?: string | null;
+    minutes: number;
+    subject: string;
+    studyMode: "pomodoro" | "deep" | "custom";
+    riskMode: boolean;
+    status: "running" | "paused" | "completed";
+  }>;
+  identityReminder?: string;
   focusScore: {
     score: number;
     label: string;
@@ -178,6 +220,7 @@ export type Dashboard = {
   premiumHooks: {
     lockedAnalytics: boolean;
     lockedAiInsights: boolean;
+    lockedAdvancedReports?: boolean;
   };
   brutalMessage: string;
 };
@@ -191,6 +234,9 @@ export type StudySession = {
   pauseCount: number;
   inactiveSeconds: number;
   subject?: string;
+  studyMode?: "pomodoro" | "deep" | "custom";
+  plannedDurationMinutes?: number;
+  riskMode?: boolean;
   notes?: string;
   sessionQualityTag?: "deep" | "average" | "distracted" | "";
   date: string;

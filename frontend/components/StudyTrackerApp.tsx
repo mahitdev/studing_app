@@ -13,7 +13,8 @@ import {
   resumeSession,
   setGoalConfig,
   setModes,
-  startSession
+  startSession,
+  syncOfflineSessions
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 
@@ -27,6 +28,22 @@ type AppSettings = {
   streakProtectionWeek: string;
   streakProtectionUsed: boolean;
   roastMode: boolean;
+};
+
+type OfflineSessionPayload = {
+  startedAt: string;
+  endedAt: string;
+  focusedMinutes: number;
+  inactiveSeconds?: number;
+  pauseCount?: number;
+  subject?: string;
+  studyMode?: "pomodoro" | "deep" | "custom";
+  plannedDurationMinutes?: number;
+  riskMode?: boolean;
+  notes?: string;
+  stopReason?: string;
+  sessionQualityTag?: "deep" | "average" | "distracted" | "";
+  date?: string;
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -71,6 +88,9 @@ export default function StudyTrackerApp() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [inactiveSeconds, setInactiveSeconds] = useState(0);
   const [subject, setSubject] = useState("General");
+  const [studyMode, setStudyMode] = useState<"pomodoro" | "deep" | "custom">("custom");
+  const [plannedDuration, setPlannedDuration] = useState(45);
+  const [riskMode, setRiskMode] = useState(false);
   const [notes, setNotes] = useState("");
   const [timerAlert, setTimerAlert] = useState("");
   const [goalDaily, setGoalDaily] = useState(180);
@@ -83,6 +103,7 @@ export default function StudyTrackerApp() {
   const [stopReason, setStopReason] = useState("");
   const [sessionQualityTag, setSessionQualityTag] = useState<"deep" | "average" | "distracted" | "">("");
   const [error, setError] = useState("");
+  const [isOfflineSession, setIsOfflineSession] = useState(false);
 
   const hiddenAt = useRef<number | null>(null);
   const lastActivityAt = useRef<number>(Date.now());
@@ -90,6 +111,7 @@ export default function StudyTrackerApp() {
   const userKey = useMemo(() => "study-tracker-user-id", []);
   const authTokenKey = useMemo(() => "study-tracker-auth-token", []);
   const settingsKey = useMemo(() => "study-tracker-settings", []);
+  const offlineQueueKey = useMemo(() => "study-tracker-offline-session-queue", []);
   const ritualKey = useMemo(() => `study-tracker-ritual-${new Date().toISOString().slice(0, 10)}`, []);
 
   const refreshAll = async (userId: string) => {
@@ -111,6 +133,9 @@ export default function StudyTrackerApp() {
     const running = todaySessions.sessions.find((s) => s.status === "running" || s.status === "paused") || null;
     setActiveSession(running);
     if (running?.subject) setSubject(running.subject);
+    if (running?.studyMode) setStudyMode(running.studyMode);
+    if (running?.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
+    if (typeof running?.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
   };
 
   useEffect(() => {
@@ -232,6 +257,51 @@ export default function StudyTrackerApp() {
     return () => clearInterval(idleTimer);
   }, [activeSession, user]);
 
+  useEffect(() => {
+    if (!dashboard || !settings.notifications || typeof window === "undefined") return;
+    if (!("Notification" in window)) return;
+
+    const pushPressure = async () => {
+      if (Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+      if (Notification.permission !== "granted") return;
+
+      const first = dashboard.pressureNotifications?.[0];
+      if (first) {
+        new Notification("FocusFlow Pressure", { body: first });
+      }
+    };
+
+    pushPressure();
+  }, [dashboard, settings.notifications]);
+
+  useEffect(() => {
+    if (!user) return;
+    const flush = async () => {
+      try {
+        const raw = localStorage.getItem(offlineQueueKey);
+        if (!raw) return;
+        const pending = JSON.parse(raw) as OfflineSessionPayload[];
+        if (!pending.length) return;
+        const { dashboard: updated } = await syncOfflineSessions(user._id, pending);
+        setDashboard(updated);
+        localStorage.removeItem(offlineQueueKey);
+        setTimerAlert("Offline sessions synced successfully.");
+      } catch {
+        // keep queue for next online event
+      }
+    };
+
+    const handleOnline = () => {
+      flush();
+    };
+
+    window.addEventListener("online", handleOnline);
+    flush();
+    return () => window.removeEventListener("online", handleOnline);
+  }, [offlineQueueKey, user]);
+
   const saveSettings = (next: Partial<AppSettings>) => {
     setSettings((prev) => ({ ...prev, ...next }));
   };
@@ -254,18 +324,46 @@ export default function StudyTrackerApp() {
         const proceed = window.confirm(dashboard.softLockMode.message || "You planned to study. Continue?");
         if (!proceed) return;
       }
-      const { session } = await startSession(user._id, subject);
+      const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
+      const { session } = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
       setActiveSession(session);
       setInactiveSeconds(0);
+      setIsOfflineSession(false);
       setTimerAlert("");
       await refreshAll(user._id);
     } catch (err) {
-      setError((err as Error).message);
+      const offlineId = `offline-${Date.now()}`;
+      const startedAt = new Date().toISOString();
+      const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
+      setActiveSession({
+        _id: offlineId,
+        status: "running",
+        startedAt,
+        focusedMinutes: 0,
+        pauseCount: 0,
+        inactiveSeconds: 0,
+        subject,
+        studyMode,
+        plannedDurationMinutes: modeMinutes,
+        riskMode,
+        date: startedAt.slice(0, 10)
+      });
+      setElapsedSeconds(0);
+      setInactiveSeconds(0);
+      setIsOfflineSession(true);
+      setTimerAlert("Offline mode active. Session will sync when internet is back.");
     }
   };
 
   const handlePauseResume = async () => {
     if (!user || !activeSession) return;
+    if (isOfflineSession) {
+      setActiveSession((prev) => {
+        if (!prev) return prev;
+        return { ...prev, status: prev.status === "running" ? "paused" : "running" };
+      });
+      return;
+    }
 
     try {
       if (activeSession.status === "running") {
@@ -286,6 +384,40 @@ export default function StudyTrackerApp() {
     if (!user || !activeSession) return;
 
     try {
+      const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
+      if (isOfflineSession) {
+        const started = new Date(activeSession.startedAt).getTime();
+        const endedAt = new Date().toISOString();
+        const focusedMinutes = Math.max(0, Math.round((Date.now() - started) / 60000) - Math.round(inactiveSeconds / 60));
+        const raw = localStorage.getItem(offlineQueueKey);
+        const queue = (raw ? JSON.parse(raw) : []) as OfflineSessionPayload[];
+        queue.push({
+          startedAt: activeSession.startedAt,
+          endedAt,
+          focusedMinutes,
+          inactiveSeconds,
+          pauseCount: activeSession.pauseCount || 0,
+          subject,
+          studyMode,
+          plannedDurationMinutes: modeMinutes,
+          riskMode,
+          notes,
+          stopReason,
+          sessionQualityTag,
+          date: activeSession.date
+        });
+        localStorage.setItem(offlineQueueKey, JSON.stringify(queue));
+        setActiveSession(null);
+        setInactiveSeconds(0);
+        setAntiCheatFlags(0);
+        setNotes("");
+        setStopReason("");
+        setSessionQualityTag("");
+        setIsOfflineSession(false);
+        setTimerAlert("Offline session saved. It will sync automatically.");
+        return;
+      }
+
       const { dashboard: updated } = await endSession(
         user._id,
         activeSession._id,
@@ -294,7 +426,10 @@ export default function StudyTrackerApp() {
         subject,
         stopReason,
         antiCheatFlags,
-        sessionQualityTag
+        sessionQualityTag,
+        studyMode,
+        modeMinutes,
+        riskMode
       );
       setDashboard(updated);
       setActiveSession(null);
@@ -303,6 +438,7 @@ export default function StudyTrackerApp() {
       setNotes("");
       setStopReason("");
       setSessionQualityTag("");
+      setIsOfflineSession(false);
       await refreshAll(user._id);
     } catch (err) {
       setError((err as Error).message);
@@ -311,6 +447,17 @@ export default function StudyTrackerApp() {
 
   const handleReset = async () => {
     if (!user || !activeSession) return;
+    if (isOfflineSession) {
+      setActiveSession(null);
+      setElapsedSeconds(0);
+      setInactiveSeconds(0);
+      setAntiCheatFlags(0);
+      setNotes("");
+      setStopReason("");
+      setSessionQualityTag("");
+      setIsOfflineSession(false);
+      return;
+    }
     const { dashboard: updated } = await resetSession(user._id, activeSession._id, stopReason);
     setDashboard(updated);
     setActiveSession(null);
@@ -320,6 +467,7 @@ export default function StudyTrackerApp() {
     setNotes("");
     setStopReason("");
     setSessionQualityTag("");
+    setIsOfflineSession(false);
     await refreshAll(user._id);
   };
 
@@ -344,6 +492,40 @@ export default function StudyTrackerApp() {
     localStorage.setItem(ritualKey, "done");
     setRitualDoneToday(true);
     setScreen("timer");
+  };
+
+  const quickStartPomodoro = async () => {
+    setStudyMode("pomodoro");
+    setPlannedDuration(25);
+    setScreen("timer");
+    if (!user) return;
+    try {
+      const { session } = await startSession(user._id, subject, "pomodoro", 25, riskMode);
+      setActiveSession(session);
+      setInactiveSeconds(0);
+      setIsOfflineSession(false);
+      setTimerAlert("");
+      await refreshAll(user._id);
+    } catch {
+      const startedAt = new Date().toISOString();
+      setActiveSession({
+        _id: `offline-${Date.now()}`,
+        status: "running",
+        startedAt,
+        focusedMinutes: 0,
+        pauseCount: 0,
+        inactiveSeconds: 0,
+        subject,
+        studyMode: "pomodoro",
+        plannedDurationMinutes: 25,
+        riskMode,
+        date: startedAt.slice(0, 10)
+      });
+      setElapsedSeconds(0);
+      setInactiveSeconds(0);
+      setIsOfflineSession(true);
+      setTimerAlert("Offline mode active. Session will sync when internet is back.");
+    }
   };
 
   if (loading) return <main className="shell">Loading...</main>;
@@ -391,6 +573,7 @@ export default function StudyTrackerApp() {
       {screen === "dashboard" && (
         <section className="card page">
           {!ritualDoneToday && <button onClick={handleStartRitual}>{dashboard.startRitual.title}</button>}
+          <button onClick={quickStartPomodoro}>Start 25 min focus</button>
           <div className="kpi-grid">
             <article><p>Goal</p><h3>{dashboard.todayGoal.targetMinutes} min</h3></article>
             <article><p>Studied</p><h3>{dashboard.todayGoal.studiedMinutes} min</h3></article>
@@ -399,6 +582,16 @@ export default function StudyTrackerApp() {
           </div>
           <div className="progress"><span style={{ width: `${progressPercent}%` }} /></div>
           <p className="muted">{dashboard.timePressure.message}</p>
+          {dashboard.recovery?.eligible && <p className="timer-alert">{dashboard.recovery.message}</p>}
+          {dashboard.identityReminder && <p>{dashboard.identityReminder}</p>}
+          {dashboard.pressureNotifications?.length ? (
+            <article className="card">
+              <h3>Pressure</h3>
+              <div className="stats">
+                {dashboard.pressureNotifications.map((item, idx) => <p key={`${item}-${idx}`}>{item}</p>)}
+              </div>
+            </article>
+          ) : null}
           <div className="row wrap">
             <input placeholder="Add friend by email" value={friendEmail} onChange={(e) => setFriendEmail(e.target.value)} />
             <button onClick={handleAddFriend}>Add Friend</button>
@@ -413,6 +606,15 @@ export default function StudyTrackerApp() {
           <div className="timer-center">
             <div className="timer-ring big" style={{ ["--ring-fill" as string]: `${timerProgress}%` }}><span>{formatHMS(elapsedSeconds)}</span></div>
           </div>
+          <div className="row wrap">
+            <button type="button" className={studyMode === "pomodoro" ? "nav-btn active" : "nav-btn"} onClick={() => { setStudyMode("pomodoro"); setPlannedDuration(25); }}>25m Pomodoro</button>
+            <button type="button" className={studyMode === "deep" ? "nav-btn active" : "nav-btn"} onClick={() => { setStudyMode("deep"); setPlannedDuration(50); }}>50m Deep Work</button>
+            <button type="button" className={studyMode === "custom" ? "nav-btn active" : "nav-btn"} onClick={() => setStudyMode("custom")}>Custom</button>
+          </div>
+          {studyMode === "custom" && (
+            <label>Custom duration (minutes)<input type="number" min={10} max={240} value={plannedDuration} onChange={(e) => setPlannedDuration(Number(e.target.value))} /></label>
+          )}
+          <label className="toggle-row">Risk mode (double XP if completed)<input type="checkbox" checked={riskMode} onChange={(e) => setRiskMode(e.target.checked)} /></label>
           <div className="grid two">
             <div><label>Subject</label><select value={subject} onChange={(e) => setSubject(e.target.value)}><option>General</option><option>Math</option><option>Science</option><option>Programming</option></select></div>
             <div><label>Notes</label><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
@@ -443,6 +645,22 @@ export default function StudyTrackerApp() {
               <div key={day.date} className="trend-col"><div className={day.completed ? "target-bar ok" : "target-bar bad"}><span style={{ height: `${Math.min(100, day.completionPercent)}%` }} /></div><p>{compactDate(day.date)}</p></div>
             ))}
           </div>
+          {dashboard.effortVsResult && <article className="card"><h3>Effort vs Result</h3><p>{dashboard.effortVsResult.message}</p></article>}
+          {dashboard.weakDayDetection && <article className="card"><h3>Weak Day Detection</h3><p>{dashboard.weakDayDetection.reminder}</p></article>}
+          {dashboard.lazyPattern && <article className="card"><h3>Lazy Pattern</h3><p>{dashboard.lazyPattern.message}</p></article>}
+          {dashboard.longTermProgress && <article className="card"><h3>Long-Term Progress</h3><p>{`This month: ${dashboard.longTermProgress.monthlyHours}h | Growth: ${dashboard.longTermProgress.growthPercent}%`}</p></article>}
+          {dashboard.sessionReplay?.length ? (
+            <article className="card">
+              <h3>Session History Replay</h3>
+              <div className="stats">
+                {dashboard.sessionReplay.map((s) => (
+                  <p key={s.sessionId}>
+                    {new Date(s.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {s.minutes}m - {s.subject} - {s.studyMode}{s.riskMode ? " (Risk)" : ""}
+                  </p>
+                ))}
+              </div>
+            </article>
+          ) : null}
           <article className="card"><h3>Energy Pattern</h3><p>{dashboard.energyPatternTracking.message}</p></article>
         </section>
       )}
@@ -455,6 +673,7 @@ export default function StudyTrackerApp() {
             <article><p>Consistency</p><h3>{dashboard.consistencyScore7d}%</h3></article>
           </div>
           <article className="card"><h3>Auto Habit Builder</h3><p>{dashboard.autoHabitBuilder.message}</p></article>
+          {dashboard.weeklySelfRank && <article className="card"><h3>Weekly Rank (Self)</h3><p>{`${dashboard.weeklySelfRank.rank} rank - ${dashboard.weeklySelfRank.message}`}</p></article>}
         </section>
       )}
 
@@ -464,6 +683,7 @@ export default function StudyTrackerApp() {
           <label>Weekly target<input type="number" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} /></label>
           <label>Session target<input type="number" value={goalSessions} onChange={(e) => setGoalSessions(Number(e.target.value))} /></label>
           <label className="toggle-row">Dark mode<input type="checkbox" checked={settings.darkMode} onChange={(e) => saveSettings({ darkMode: e.target.checked })} /></label>
+          <label className="toggle-row">Pressure notifications<input type="checkbox" checked={settings.notifications} onChange={(e) => saveSettings({ notifications: e.target.checked })} /></label>
           <label>Identity<select value={identityType} onChange={(e) => setIdentityType(e.target.value as "Casual" | "Serious" | "Hardcore")}><option value="Casual">Casual</option><option value="Serious">Serious</option><option value="Hardcore">Hardcore</option></select></label>
           <label>Motivation<input value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} /></label>
           <button onClick={handleGoalUpdate}>Apply Goals</button>

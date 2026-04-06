@@ -244,7 +244,7 @@ router.get("/users/:userId/sessions/today", async (req, res, next) => {
 router.post("/users/:userId/sessions/start", async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { subject = "General" } = req.body;
+    const { subject = "General", studyMode = "custom", plannedDurationMinutes = 0, riskMode = false } = req.body;
     const existing = await StudySession.findOne({ userId, status: { $in: ["running", "paused"] } });
 
     if (existing) {
@@ -256,7 +256,10 @@ router.post("/users/:userId/sessions/start", async (req, res, next) => {
       date: todayKey(),
       startedAt: new Date(),
       status: "running",
-      subject: subject || "General"
+      subject: subject || "General",
+      studyMode: ["pomodoro", "deep", "custom"].includes(studyMode) ? studyMode : "custom",
+      plannedDurationMinutes: Math.max(0, Number(plannedDurationMinutes || 0)),
+      riskMode: Boolean(riskMode)
     });
 
     res.status(201).json({ session });
@@ -324,7 +327,10 @@ router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => 
       subject = "",
       stopReason = "",
       antiCheatFlags = 0,
-      sessionQualityTag = ""
+      sessionQualityTag = "",
+      studyMode = "",
+      plannedDurationMinutes = 0,
+      riskMode = false
     } = req.body;
 
     const session = await StudySession.findOne({ _id: sessionId, userId });
@@ -363,6 +369,9 @@ router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => 
     session.antiCheatFlags = antiCheatFlags;
     session.sessionQualityTag = sessionQualityTag;
     if (subject) session.subject = subject;
+    if (studyMode && ["pomodoro", "deep", "custom"].includes(studyMode)) session.studyMode = studyMode;
+    if (plannedDurationMinutes > 0) session.plannedDurationMinutes = plannedDurationMinutes;
+    if (typeof riskMode === "boolean") session.riskMode = riskMode;
     session.status = "completed";
     await session.save();
 
@@ -370,6 +379,58 @@ router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => 
     const dashboard = await dashboardForUser(userId);
 
     res.json({ session, goal, dashboard });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/users/:userId/sessions/offline-sync", async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const {
+      sessions = []
+    } = req.body;
+
+    if (!Array.isArray(sessions) || !sessions.length) {
+      return res.json({ synced: 0 });
+    }
+
+    let synced = 0;
+    const touchedDates = new Set();
+    for (const item of sessions) {
+      const startedAt = item.startedAt ? new Date(item.startedAt) : new Date();
+      const endedAt = item.endedAt ? new Date(item.endedAt) : new Date();
+      const focusedMinutes = Math.max(0, Number(item.focusedMinutes || 0));
+      const date = item.date || startedAt.toISOString().slice(0, 10);
+      touchedDates.add(date);
+
+      await StudySession.create({
+        userId,
+        date,
+        startedAt,
+        endedAt,
+        status: "completed",
+        focusedMinutes,
+        inactiveSeconds: Math.max(0, Number(item.inactiveSeconds || 0)),
+        pauseCount: Math.max(0, Number(item.pauseCount || 0)),
+        subject: item.subject || "General",
+        studyMode: ["pomodoro", "deep", "custom"].includes(item.studyMode) ? item.studyMode : "custom",
+        plannedDurationMinutes: Math.max(0, Number(item.plannedDurationMinutes || 0)),
+        riskMode: Boolean(item.riskMode),
+        notes: item.notes || "",
+        stopReason: item.stopReason || "",
+        sessionQualityTag: ["deep", "average", "distracted", ""].includes(item.sessionQualityTag) ? item.sessionQualityTag : "",
+        offlineSynced: true
+      });
+      synced += 1;
+    }
+
+    for (const date of touchedDates) {
+      await recalculateDailyTotals(userId, date);
+    }
+    await recalculateDailyTotals(userId, todayKey());
+    const dashboard = await dashboardForUser(userId);
+    return res.json({ synced, dashboard });
   } catch (err) {
     next(err);
   }

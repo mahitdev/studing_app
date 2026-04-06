@@ -291,6 +291,9 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
     const existing = store.sessions.find((s) => s.status === "running" || s.status === "paused");
     if (existing) return { session: existing } as T;
     const session = newSession(store, body.subject || "General");
+    session.studyMode = body.studyMode || "custom";
+    session.plannedDurationMinutes = Number(body.plannedDurationMinutes || 0);
+    session.riskMode = Boolean(body.riskMode);
     store.sessions.unshift(session);
     saveStore(store);
     return { session } as T;
@@ -327,10 +330,38 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
       s.endedAt = new Date().toISOString();
       s.notes = body.notes || "";
       s.subject = body.subject || s.subject;
+      s.studyMode = body.studyMode || s.studyMode || "custom";
+      s.plannedDurationMinutes = Number(body.plannedDurationMinutes || s.plannedDurationMinutes || 0);
+      s.riskMode = typeof body.riskMode === "boolean" ? body.riskMode : Boolean(s.riskMode);
       s.sessionQualityTag = body.sessionQualityTag || "";
       saveStore(store);
     }
     return { session: s, dashboard: defaultDashboard(store) } as T;
+  }
+
+  const offlineSync = path.match(/^\/users\/([^/]+)\/sessions\/offline-sync$/);
+  if (offlineSync && method === "POST") {
+    const incoming = Array.isArray(body.sessions) ? body.sessions : [];
+    incoming.forEach((item: any) => {
+      store.sessions.unshift({
+        _id: `offline-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        status: "completed",
+        startedAt: item.startedAt || new Date().toISOString(),
+        endedAt: item.endedAt || new Date().toISOString(),
+        focusedMinutes: Number(item.focusedMinutes || 0),
+        pauseCount: Number(item.pauseCount || 0),
+        inactiveSeconds: Number(item.inactiveSeconds || 0),
+        subject: item.subject || "General",
+        notes: item.notes || "",
+        studyMode: item.studyMode || "custom",
+        plannedDurationMinutes: Number(item.plannedDurationMinutes || 0),
+        riskMode: Boolean(item.riskMode),
+        sessionQualityTag: item.sessionQualityTag || "",
+        date: item.date || todayKey()
+      });
+    });
+    saveStore(store);
+    return { synced: incoming.length, dashboard: defaultDashboard(store) } as T;
   }
 
   const reset = path.match(/^\/users\/([^/]+)\/sessions\/([^/]+)\/reset$/);

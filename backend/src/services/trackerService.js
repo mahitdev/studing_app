@@ -71,6 +71,12 @@ const streakFromGoals = (goals) => {
   return { current, longest, missed };
 };
 
+const yesterdayKey = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+};
+
 const weeklyMetrics = (goals, weeklyTargetMinutes = 1200) => {
   const now = new Date();
   const from = new Date(now);
@@ -97,6 +103,24 @@ const weeklyMetrics = (goals, weeklyTargetMinutes = 1200) => {
       ? Math.round((studiedMinutes / weeklyTargetMinutes) * 100)
       : 0
   };
+};
+
+const twoWeekSlices = (goals) => {
+  const now = new Date();
+  const startCurrent = new Date(now);
+  startCurrent.setDate(startCurrent.getDate() - 6);
+  const endPrevious = new Date(startCurrent);
+  endPrevious.setDate(endPrevious.getDate() - 1);
+  const startPrevious = new Date(endPrevious);
+  startPrevious.setDate(startPrevious.getDate() - 6);
+
+  const currentFrom = startCurrent.toISOString().slice(0, 10);
+  const previousFrom = startPrevious.toISOString().slice(0, 10);
+  const previousTo = endPrevious.toISOString().slice(0, 10);
+
+  const current = goals.filter((g) => g.date >= currentFrom && g.date <= todayKey());
+  const previous = goals.filter((g) => g.date >= previousFrom && g.date <= previousTo);
+  return { current, previous };
 };
 
 const scoreLabel = (score) => {
@@ -408,6 +432,144 @@ const weeklyRealityReport = (goals) => {
   };
 };
 
+const missedDayRecovery = (goals, todayGoal) => {
+  const yKey = yesterdayKey();
+  const yGoal = goals.find((g) => g.date === yKey);
+  const yesterdayMissed = Boolean(yGoal) && !yGoal.completed;
+  const requiredMinutes = Math.max(60, (todayGoal?.targetMinutes || 0) * 2);
+  const completed = (todayGoal?.studiedMinutes || 0) >= requiredMinutes;
+  return {
+    eligible: yesterdayMissed,
+    requiredMinutes,
+    completed,
+    message: yesterdayMissed
+      ? completed
+        ? "Recovery complete. Your streak is protected."
+        : `Recovery chance active: complete ${requiredMinutes} minutes today to save streak.`
+      : "No recovery needed today."
+  };
+};
+
+const effortVsResult = (goals) => {
+  const studiedMinutes = goals.reduce((sum, g) => sum + (g.studiedMinutes || 0), 0);
+  const completedDays = goals.filter((g) => g.completed).length;
+  const completionRate = goals.length ? Math.round((completedDays / goals.length) * 100) : 0;
+  const studiedHours = +(studiedMinutes / 60).toFixed(1);
+  return {
+    studiedHours,
+    completionRate,
+    message: `You studied ${studiedHours} hrs and completed ${completionRate}% of goals.`
+  };
+};
+
+const weakDayDetection = (goals) => {
+  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const missCount = new Array(7).fill(0);
+  goals.forEach((g) => {
+    if (g.completed) return;
+    const idx = new Date(g.date).getDay();
+    missCount[idx] += 1;
+  });
+  const worstIdx = missCount.indexOf(Math.max(...missCount));
+  const worstCount = missCount[worstIdx] || 0;
+  const weakDay = worstCount > 0 ? days[worstIdx] : "No weak day yet";
+  return {
+    weakDay,
+    misses: worstCount,
+    reminder: worstCount > 0 ? `You fail mostly on ${weakDay}. Protect that day.` : "No weak-day pattern yet."
+  };
+};
+
+const lazyPattern = (sessions) => {
+  const now = new Date();
+  const from = new Date(now);
+  from.setDate(from.getDate() - 6);
+  const fromKey = from.toISOString().slice(0, 10);
+  const weekly = sessions.filter((s) => (s.date || "").slice(0, 10) >= fromKey);
+  const earlyQuitCount = weekly.filter(
+    (s) => s.stopReason || ((s.plannedDurationMinutes || 0) > 0 && (s.focusedMinutes || 0) < Math.round((s.plannedDurationMinutes || 0) * 0.5))
+  ).length;
+  return {
+    earlyQuitCount,
+    message: `You quit ${earlyQuitCount} sessions early this week.`
+  };
+};
+
+const weeklySelfRank = (goals) => {
+  const { current, previous } = twoWeekSlices(goals);
+  const currentMinutes = current.reduce((sum, g) => sum + (g.studiedMinutes || 0), 0);
+  const previousMinutes = previous.reduce((sum, g) => sum + (g.studiedMinutes || 0), 0);
+  const delta = currentMinutes - previousMinutes;
+  const rank = delta > 120 ? "A" : delta > 0 ? "B" : delta === 0 ? "C" : "D";
+  return {
+    rank,
+    deltaMinutes: delta,
+    message: delta >= 0
+      ? `You are outperforming last week by ${Math.round(delta / 60)}h.`
+      : `You are behind last week by ${Math.round(Math.abs(delta) / 60)}h.`
+  };
+};
+
+const monthlyProgress = (goals) => {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  const prevMonthDate = new Date(currentYear, currentMonth - 1, 1);
+  const prevMonth = prevMonthDate.getMonth();
+  const prevYear = prevMonthDate.getFullYear();
+
+  const thisMonthGoals = goals.filter((g) => {
+    const d = new Date(g.date);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  });
+  const prevMonthGoals = goals.filter((g) => {
+    const d = new Date(g.date);
+    return d.getMonth() === prevMonth && d.getFullYear() === prevYear;
+  });
+
+  const monthlyHours = +(thisMonthGoals.reduce((s, g) => s + (g.studiedMinutes || 0), 0) / 60).toFixed(1);
+  const prevHours = +(prevMonthGoals.reduce((s, g) => s + (g.studiedMinutes || 0), 0) / 60).toFixed(1);
+  const growthPercent = prevHours > 0 ? Math.round(((monthlyHours - prevHours) / prevHours) * 100) : 0;
+
+  return {
+    monthlyHours,
+    growthPercent,
+    trend: growthPercent > 5 ? "up" : growthPercent < -5 ? "down" : "flat"
+  };
+};
+
+const sessionReplay = (todaySessions) =>
+  todaySessions
+    .slice()
+    .sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime())
+    .map((s) => ({
+      sessionId: String(s._id),
+      start: new Date(s.startedAt).toISOString(),
+      end: s.endedAt ? new Date(s.endedAt).toISOString() : null,
+      minutes: s.focusedMinutes || 0,
+      subject: s.subject || "General",
+      studyMode: s.studyMode || "custom",
+      riskMode: Boolean(s.riskMode),
+      status: s.status
+    }));
+
+const pressureNotifications = (remainingMinutes, streak, weakDay, recovery) => {
+  const list = [];
+  if (remainingMinutes > 0) {
+    list.push(`You're behind by ${(remainingMinutes / 60).toFixed(1)} hrs today.`);
+  }
+  if (streak.current >= 2 && remainingMinutes > 0) {
+    list.push("Your streak is at risk.");
+  }
+  if (weakDay?.weakDay && weakDay.weakDay !== "No weak day yet") {
+    list.push(`High-risk day pattern: ${weakDay.weakDay}.`);
+  }
+  if (recovery?.eligible && !recovery.completed) {
+    list.push("Recovery chance is active today. Don't waste it.");
+  }
+  return list.slice(0, 3);
+};
+
 const futureProjection = (weeklyHours, consistencyScore) => {
   if (consistencyScore < 45) {
     return "If you repeat this week for 6 months -> you'll fall behind.";
@@ -480,7 +642,14 @@ const applyXpAndBadges = async (userId) => {
 
   const totalFocusedMinutes = sessions.reduce((sum, s) => sum + (s.focusedMinutes || 0), 0);
   const totalHours = Math.floor(totalFocusedMinutes / 60);
-  const baseXp = totalFocusedMinutes;
+  const riskBonus = sessions.reduce((sum, s) => {
+    const planned = s.plannedDurationMinutes || 0;
+    if (s.riskMode && planned > 0 && (s.focusedMinutes || 0) >= planned) {
+      return sum + (s.focusedMinutes || 0);
+    }
+    return sum;
+  }, 0);
+  const baseXp = totalFocusedMinutes + riskBonus;
   const streakXp = streak.current * 20;
   let xp = baseXp + streakXp;
 
@@ -554,6 +723,14 @@ const dashboardForUser = async (userId) => {
   const habitBuilder = habitBuilderPlan(streak, deep);
   const softLockMode = softLockData(todayGoal, user?.preferredStudyTime || "20:00");
   const energyPatternTracking = energyPattern(sessions.slice(0, 120));
+  const recovery = missedDayRecovery(goals, todayGoal);
+  const effortResult = effortVsResult(goals);
+  const weakDay = weakDayDetection(goals);
+  const lazy = lazyPattern(sessions);
+  const selfRank = weeklySelfRank(goals);
+  const monthly = monthlyProgress(goals);
+  const replay = sessionReplay(todaySessions);
+  const pressure = pressureNotifications(remainingMinutes, streak, weakDay, recovery);
 
   return {
     todayGoal,
@@ -567,6 +744,7 @@ const dashboardForUser = async (userId) => {
       goalMinutes: todayGoal?.targetMinutes || 0
     },
     streak,
+    recovery,
     punishmentActive,
     totals: {
       totalStudyHours: +(totalMinutes / 60).toFixed(1),
@@ -578,6 +756,9 @@ const dashboardForUser = async (userId) => {
     pulse,
     complianceRate,
     consistencyScore7d,
+    effortVsResult: effortResult,
+    weakDayDetection: weakDay,
+    pressureNotifications: pressure,
     timePressure,
     smartReminder,
     endOfDayReport: endReport,
@@ -596,6 +777,11 @@ const dashboardForUser = async (userId) => {
     autoHabitBuilder: habitBuilder,
     softLockMode,
     energyPatternTracking,
+    lazyPattern: lazy,
+    weeklySelfRank: selfRank,
+    longTermProgress: monthly,
+    sessionReplay: replay,
+    identityReminder: `You chose to be ${user?.identityType || "Serious"}. Act like it.`,
     focusScore: focusToday,
     gamification: {
       xp: user?.xp || 0,
@@ -628,7 +814,8 @@ const dashboardForUser = async (userId) => {
     },
     premiumHooks: {
       lockedAnalytics: true,
-      lockedAiInsights: true
+      lockedAiInsights: true,
+      lockedAdvancedReports: true
     },
     brutalMessage: weekly.weeklyWastedHours > 0
       ? `You wasted ${weekly.weeklyWastedHours} hours this week. Discipline up.`
