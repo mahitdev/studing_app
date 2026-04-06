@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <main className="landing dark-landing long-landing">
       <header className="landing-nav">
-        <h1 className="glow-title">Discipline OS</h1>
+        <h1 className="glow-title text-3d">FocusFlow</h1>
         <div className="nav-links">
           <Link href="/signin">Sign In</Link>
           <Link href="/signup">Sign Up</Link>
@@ -16,7 +16,7 @@ export default function Home() {
       <section className="hero-wrap">
         <div className="hero-copy">
           <p className="chip">Student Accountability Platform</p>
-          <h2 className="glow-headline">Track Hard. Stay Ruthless. Win Consistently.</h2>
+          <h2 className="glow-headline text-3d">Track Hard. Stay Ruthless. Win Consistently.</h2>
           <p>
             Built for discipline, not excuses. Daily goals, momentum, reality reports, streak pressure,
             deep analytics, and behavior systems that keep you locked in.
@@ -113,7 +113,7 @@ export default function Home() {
       </section>
 
       <footer className="landing-footer">
-        <p>Discipline is a system. Build it daily.</p>
+          <p>FocusFlow is a system. Build it daily.</p>
         <div className="cta-row">
           <Link className="cta" href="/signup">Start Now</Link>
           <Link className="ghost" href="/signin">Continue</Link>

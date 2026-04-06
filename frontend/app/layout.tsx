@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, Bebas_Neue } from "next/font/google";
+import { Manrope, Orbitron } from "next/font/google";
 import "./globals.css";
 
-const bodyFont = Space_Grotesk({ subsets: ["latin"], variable: "--font-body" });
-const displayFont = Bebas_Neue({ subsets: ["latin"], variable: "--font-display", weight: "400" });
+const bodyFont = Manrope({ subsets: ["latin"], variable: "--font-body" });
+const displayFont = Orbitron({ subsets: ["latin"], variable: "--font-display", weight: ["600", "700"] });
 
 export const metadata: Metadata = {
-  title: "Study Tracker | Discipline Mode",
-  description: "Brutal accountability tracker for focused students"
+  title: "FocusFlow | Discipline Mode",
+  description: "FocusFlow is a brutal accountability tracker for focused students"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
