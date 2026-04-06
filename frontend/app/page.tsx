@@ -4,6 +4,9 @@ import LandingClient from "../components/LandingClient";
 export default function Home() {
   return (
     <main className="premium-landing">
+      <div className="bg-blob blob-a" />
+      <div className="bg-blob blob-b" />
+      <div className="bg-blob blob-c" />
       <header className="premium-nav reveal">
         <div className="brand">GrindLock</div>
         <div className="premium-links">
@@ -18,11 +21,15 @@ export default function Home() {
       <section className="premium-hero reveal">
         <div className="hero-content">
           <p className="hero-label">Student Productivity Tracker</p>
-          <h1>Discipline your time. Own your future.</h1>
-          <p className="hero-sub">Track, focus, and stay consistent with GrindLock.</p>
+          <h1>Build focus. Stay consistent. Grow daily.</h1>
+          <p className="hero-sub">A calm space to track your progress and stay on track.</p>
           <div className="hero-cta">
-            <Link className="cta" href="/signup">Start Tracking</Link>
-            <Link className="ghost" href="/dashboard">View Demo</Link>
+            <Link className="cta" href="/signup">Start Your Journey</Link>
+            <Link className="ghost" href="#how">See How It Works</Link>
+          </div>
+          <div className="hero-input">
+            <input type="email" placeholder="your@email.com" />
+            <button type="button">Get Early Access</button>
           </div>
         </div>
 
@@ -60,22 +67,22 @@ export default function Home() {
         </div>
         <div className="feature-cards">
           <article>
-            <span>?</span>
+            <span className="icon-chip">FT</span>
             <h3>Focus Tracking</h3>
             <p>Track real deep-work time with session quality and anti-cheat checks.</p>
           </article>
           <article>
-            <span>?</span>
+            <span className="icon-chip">SS</span>
             <h3>Streak System</h3>
             <p>Use momentum, recovery mode, and streak pressure to stay accountable.</p>
           </article>
           <article>
-            <span>?</span>
+            <span className="icon-chip">SA</span>
             <h3>Smart Analytics</h3>
             <p>See weak days, effort vs result, and long-term trend insights.</p>
           </article>
           <article>
-            <span>?</span>
+            <span className="icon-chip">SR</span>
             <h3>Session Replay</h3>
             <p>Review exact daily blocks to understand where focus was won or lost.</p>
           </article>
