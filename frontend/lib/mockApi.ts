@@ -227,7 +227,7 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
     store.identityType = body.identityType || "Serious";
     store.motivationWhy = body.motivationWhy || "";
     saveStore(store);
-    return { user, dashboard: defaultDashboard(store) } as T;
+    return { user, token: "mock-token", dashboard: defaultDashboard(store) } as T;
   }
 
   if (path === "/auth/register" && method === "POST") {

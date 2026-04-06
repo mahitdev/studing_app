@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { registerUser } from "../../lib/api";
+import { registerUser, saveAuthSession } from "../../lib/api";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -18,7 +18,7 @@ export default function SignUpPage() {
     try {
       setError("");
       const response = await registerUser(name, email, password, "General", identity, why);
-      localStorage.setItem("study-tracker-user-id", response.user._id);
+      saveAuthSession(response.user._id, response.token);
       router.push("/dashboard");
     } catch (err) {
       setError((err as Error).message || "Sign up failed");

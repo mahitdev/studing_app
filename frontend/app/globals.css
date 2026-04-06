@@ -1,17 +1,4 @@
 :root,
-body[data-theme="light"] {
-  --bg: #f2f5fc;
-  --panel: #ffffff;
-  --ink: #121826;
-  --muted: #5f6880;
-  --line: #dce4f4;
-  --accent: #1976ff;
-  --accent-2: #0bd3ff;
-  --danger: #e11d48;
-  --danger-bg: #ffe8ee;
-  --ok: #16a34a;
-}
-
 body[data-theme="dark"] {
   --bg: #0f1627;
   --panel: #171f34;
@@ -23,6 +10,19 @@ body[data-theme="dark"] {
   --danger: #ff5d79;
   --danger-bg: #3b1721;
   --ok: #3ddc84;
+}
+
+body[data-theme="light"] {
+  --bg: #f2f5fc;
+  --panel: #ffffff;
+  --ink: #121826;
+  --muted: #5f6880;
+  --line: #dce4f4;
+  --accent: #1976ff;
+  --accent-2: #0bd3ff;
+  --danger: #e11d48;
+  --danger-bg: #ffe8ee;
+  --ok: #16a34a;
 }
 
 * {

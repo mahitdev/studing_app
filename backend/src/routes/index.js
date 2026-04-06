@@ -1,5 +1,7 @@
 const crypto = require("crypto");
+const bcrypt = require("bcryptjs");
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const DailyGoal = require("../models/DailyGoal");
 const StudySession = require("../models/StudySession");
@@ -12,7 +14,57 @@ const {
 
 const router = express.Router();
 
-const hash = (input) => crypto.createHash("sha256").update(input).digest("hex");
+const legacyHash = (input) => crypto.createHash("sha256").update(input).digest("hex");
+const JWT_SECRET = process.env.JWT_SECRET || "focusflow-dev-secret-change-in-production";
+
+const sanitizeUser = (userDoc) => {
+  const user = typeof userDoc.toObject === "function" ? userDoc.toObject() : { ...userDoc };
+  delete user.passwordHash;
+  delete user.authToken;
+  return user;
+};
+
+const signToken = (user) =>
+  jwt.sign(
+    {
+      sub: String(user._id),
+      email: user.email || "",
+      name: user.name || "Focused Student"
+    },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+
+const verifyPassword = async (user, password) => {
+  if (!user?.passwordHash) return false;
+  if (user.passwordHash.startsWith("$2")) {
+    return bcrypt.compare(password, user.passwordHash);
+  }
+  return user.passwordHash === legacyHash(password);
+};
+
+const requireAuth = (req, res, next) => {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (!token) {
+    return res.status(401).json({ message: "Authentication required" });
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET);
+    req.auth = payload;
+    return next();
+  } catch (_err) {
+    return res.status(401).json({ message: "Invalid or expired token" });
+  }
+};
+
+const requireSelf = (req, res, next) => {
+  if (String(req.auth?.sub || "") !== String(req.params.userId || "")) {
+    return res.status(403).json({ message: "Forbidden: user mismatch" });
+  }
+  return next();
+};
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true, service: "study-tracker-backend" });
@@ -23,6 +75,9 @@ router.post("/auth/register", async (req, res, next) => {
     const { name, email, password, college = "General", identityType = "Serious", motivationWhy = "" } = req.body;
     if (!email || !password) {
       return res.status(400).json({ message: "email and password are required" });
+    }
+    if (password.length < 8) {
+      return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
 
     const exists = await User.findOne({ email: email.toLowerCase() });
@@ -36,14 +91,14 @@ router.post("/auth/register", async (req, res, next) => {
       identityType,
       motivationWhy,
       email: email.toLowerCase(),
-      passwordHash: hash(password),
-      authToken: crypto.randomBytes(24).toString("hex")
+      passwordHash: await bcrypt.hash(password, 12)
     });
 
     await ensureDailyGoal(user._id);
     const dashboard = await dashboardForUser(user._id);
+    const token = signToken(user);
 
-    return res.status(201).json({ user, token: user.authToken, dashboard });
+    return res.status(201).json({ user: sanitizeUser(user), token, dashboard });
   } catch (err) {
     next(err);
   }
@@ -53,15 +108,20 @@ router.post("/auth/login", async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: (email || "").toLowerCase() });
-    if (!user || user.passwordHash !== hash(password || "")) {
+    const valid = await verifyPassword(user, password || "");
+    if (!user || !valid) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    user.authToken = crypto.randomBytes(24).toString("hex");
-    await user.save();
+    // Upgrade legacy SHA-256 hashes to bcrypt on successful login.
+    if (user.passwordHash && !user.passwordHash.startsWith("$2")) {
+      user.passwordHash = await bcrypt.hash(password, 12);
+      await user.save();
+    }
 
     const dashboard = await dashboardForUser(user._id);
-    return res.json({ user, token: user.authToken, dashboard });
+    const token = signToken(user);
+    return res.json({ user: sanitizeUser(user), token, dashboard });
   } catch (err) {
     next(err);
   }
@@ -79,12 +139,16 @@ router.post("/users/bootstrap", async (req, res, next) => {
 
     await ensureDailyGoal(user._id);
     const dashboard = await dashboardForUser(user._id);
+    const token = signToken(user);
 
-    res.status(201).json({ user, dashboard });
+    res.status(201).json({ user: sanitizeUser(user), token, dashboard });
   } catch (err) {
     next(err);
   }
 });
+
+router.use("/users/:userId", requireAuth, requireSelf);
+router.use("/leaderboard", requireAuth);
 
 router.put("/users/:userId/goals/today", async (req, res, next) => {
   try {

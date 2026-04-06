@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import { clearAuthSession } from "../../lib/api";
 
 export default function SignOutPage() {
   useEffect(() => {
-    localStorage.removeItem("study-tracker-user-id");
+    clearAuthSession();
   }, []);
 
   return (

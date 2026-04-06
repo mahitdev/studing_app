@@ -88,6 +88,7 @@ export default function StudyTrackerApp() {
   const lastActivityAt = useRef<number>(Date.now());
 
   const userKey = useMemo(() => "study-tracker-user-id", []);
+  const authTokenKey = useMemo(() => "study-tracker-auth-token", []);
   const settingsKey = useMemo(() => "study-tracker-settings", []);
   const ritualKey = useMemo(() => `study-tracker-ritual-${new Date().toISOString().slice(0, 10)}`, []);
 
@@ -126,7 +127,8 @@ export default function StudyTrackerApp() {
       try {
         setLoading(true);
         const userId = localStorage.getItem(userKey);
-        if (!userId) {
+        const authToken = localStorage.getItem(authTokenKey);
+        if (!userId || !authToken) {
           setLoading(false);
           return;
         }
@@ -142,7 +144,7 @@ export default function StudyTrackerApp() {
     };
 
     init();
-  }, [settingsKey, userKey]);
+  }, [authTokenKey, settingsKey, userKey]);
 
   useEffect(() => {
     document.body.dataset.theme = settings.darkMode ? "dark" : "light";

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { bootstrapUser, loginUser } from "../../lib/api";
+import { bootstrapUser, loginUser, saveAuthSession } from "../../lib/api";
 
 export default function SignInPage() {
   const router = useRouter();
@@ -15,7 +15,7 @@ export default function SignInPage() {
     try {
       setError("");
       const response = await loginUser(email, password);
-      localStorage.setItem("study-tracker-user-id", response.user._id);
+      saveAuthSession(response.user._id, response.token);
       router.push("/dashboard");
     } catch (err) {
       setError((err as Error).message || "Login failed");
@@ -26,7 +26,7 @@ export default function SignInPage() {
     try {
       setError("");
       const response = await bootstrapUser("Focused Student", "General", "Serious", "Skill");
-      localStorage.setItem("study-tracker-user-id", response.user._id);
+      saveAuthSession(response.user._id, response.token);
       router.push("/dashboard");
     } catch (err) {
       setError((err as Error).message || "Guest setup failed");

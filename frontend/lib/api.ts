@@ -1,6 +1,9 @@
 import { Dashboard, LeaderboardEntry, LiveFriend, StudySession, User } from "./types";
 import { mockRequest } from "./mockApi";
 
+const AUTH_TOKEN_KEY = "study-tracker-auth-token";
+const USER_ID_KEY = "study-tracker-user-id";
+
 function normalizeApiBase(raw?: string) {
   const fallback = "http://localhost:5000/api";
   const value = (raw || fallback).trim();
@@ -9,13 +12,32 @@ function normalizeApiBase(raw?: string) {
 
 const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
 
+function getAuthToken() {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(AUTH_TOKEN_KEY) || "";
+}
+
+export function saveAuthSession(userId: string, token: string) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(USER_ID_KEY, userId);
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+export function clearAuthSession() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(USER_ID_KEY);
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  const token = getAuthToken();
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(init?.headers || {})
       },
       cache: "no-store"
@@ -30,7 +52,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const errorText = await res.text();
-    throw new Error(errorText || "Request failed");
+    try {
+      const parsed = JSON.parse(errorText) as { message?: string };
+      throw new Error(parsed.message || "Request failed");
+    } catch {
+      throw new Error(errorText || "Request failed");
+    }
   }
 
   return res.json() as Promise<T>;
@@ -41,7 +68,7 @@ export async function bootstrapUser(
   college: string,
   identityType = "Serious",
   motivationWhy = ""
-): Promise<{ user: User; dashboard: Dashboard }> {
+): Promise<{ user: User; token: string; dashboard: Dashboard }> {
   return request("/users/bootstrap", {
     method: "POST",
     body: JSON.stringify({ name, college, identityType, motivationWhy })
