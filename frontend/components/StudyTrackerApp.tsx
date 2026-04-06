@@ -277,6 +277,39 @@ export default function StudyTrackerApp() {
   }, [dashboard, settings.notifications]);
 
   useEffect(() => {
+    const onMove = (event: MouseEvent) => {
+      const x = (event.clientX / window.innerWidth) * 100;
+      const y = (event.clientY / window.innerHeight) * 100;
+      document.documentElement.style.setProperty("--mx", `${x}%`);
+      document.documentElement.style.setProperty("--my", `${y}%`);
+      document.documentElement.style.setProperty("--cursor-x", `${event.clientX}px`);
+      document.documentElement.style.setProperty("--cursor-y", `${event.clientY}px`);
+    };
+
+    const onClickRipple = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target) return;
+      const button = target.closest("button, .cta, .nav-btn") as HTMLElement | null;
+      if (!button) return;
+
+      const ripple = document.createElement("span");
+      ripple.className = "ripple";
+      const rect = button.getBoundingClientRect();
+      ripple.style.left = `${event.clientX - rect.left}px`;
+      ripple.style.top = `${event.clientY - rect.top}px`;
+      button.appendChild(ripple);
+      window.setTimeout(() => ripple.remove(), 500);
+    };
+
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("click", onClickRipple);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("click", onClickRipple);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!user) return;
     const flush = async () => {
       try {
@@ -528,7 +561,15 @@ export default function StudyTrackerApp() {
     }
   };
 
-  if (loading) return <main className="shell">Loading...</main>;
+  if (loading) {
+    return (
+      <main className="shell shimmer-wrap">
+        <div className="shimmer-block" />
+        <div className="shimmer-block" />
+        <div className="shimmer-block" />
+      </main>
+    );
+  }
 
   if (!user) {
     return (
@@ -559,21 +600,42 @@ export default function StudyTrackerApp() {
   ];
 
   return (
-    <main className={`shell ${punishmentActive ? "punishment-screen" : ""}`}>
-      <header className="top-nav card">
-        <h1>Study Dashboard</h1>
-        <nav>
+    <main className={`shell app-shell ${punishmentActive ? "punishment-screen" : ""}`}>
+      <div className="cursor-glow" aria-hidden />
+      <aside className="card sidebar">
+        <h1>GrindLock</h1>
+        <p className="muted">Discipline Driven OS</p>
+        <nav className="sidebar-nav">
           {nav.map((item) => (
             <button key={item.id} className={screen === item.id ? "nav-btn active" : "nav-btn"} onClick={() => setScreen(item.id)}>{item.label}</button>
           ))}
           <Link href="/signout" className="nav-btn">Sign Out</Link>
         </nav>
-      </header>
+      </aside>
 
+      <div className="main-column">
+        <header className="topbar card">
+          <div>
+            <h2>Performance Console</h2>
+            <p className="muted">Stay locked in. No excuses.</p>
+          </div>
+          <div className="topbar-stats">
+            <span>XP: {dashboard.gamification.xp}</span>
+            <span>Level: {dashboard.gamification.level}</span>
+            <button onClick={quickStartPomodoro}>Start 25m Focus</button>
+          </div>
+        </header>
+
+        <div className="page-stage">
       {screen === "dashboard" && (
-        <section className="card page">
+        <section className="card page screen-panel">
           {!ritualDoneToday && <button onClick={handleStartRitual}>{dashboard.startRitual.title}</button>}
-          <button onClick={quickStartPomodoro}>Start 25 min focus</button>
+          <div className="goal-ring-wrap">
+            <div className="goal-ring" style={{ ["--ring-fill" as string]: `${progressPercent}%` }}>
+              <span>{progressPercent}%</span>
+              <small>Goal</small>
+            </div>
+          </div>
           <div className="kpi-grid">
             <article><p>Goal</p><h3>{dashboard.todayGoal.targetMinutes} min</h3></article>
             <article><p>Studied</p><h3>{dashboard.todayGoal.studiedMinutes} min</h3></article>
@@ -602,9 +664,9 @@ export default function StudyTrackerApp() {
       )}
 
       {screen === "timer" && (
-        <section className="card page">
+        <section className="card page screen-panel timer-screen">
           <div className="timer-center">
-            <div className="timer-ring big" style={{ ["--ring-fill" as string]: `${timerProgress}%` }}><span>{formatHMS(elapsedSeconds)}</span></div>
+            <div className={`timer-ring big ${activeSession?.status === "running" ? "pulse-active" : ""}`} style={{ ["--ring-fill" as string]: `${timerProgress}%` }}><span>{formatHMS(elapsedSeconds)}</span></div>
           </div>
           <div className="row wrap">
             <button type="button" className={studyMode === "pomodoro" ? "nav-btn active" : "nav-btn"} onClick={() => { setStudyMode("pomodoro"); setPlannedDuration(25); }}>25m Pomodoro</button>
@@ -634,7 +696,7 @@ export default function StudyTrackerApp() {
       )}
 
       {screen === "analytics" && (
-        <section className="card page">
+        <section className="card page screen-panel">
           <div className="calendar-grid">
             {dashboard.history.slice(-56).map((day) => (
               <span key={day.date} className={`heat ${day.color}`} title={`${day.date}: ${day.studiedMinutes} min`} />
@@ -666,11 +728,21 @@ export default function StudyTrackerApp() {
       )}
 
       {screen === "streak" && (
-        <section className="card page">
+        <section className="card page screen-panel">
+          <div className="streak-flame">🔥</div>
           <div className="kpi-grid">
             <article><p>Current Streak</p><h3>{dashboard.streak.current}</h3></article>
             <article><p>Longest</p><h3>{dashboard.streak.longest}</h3></article>
             <article><p>Consistency</p><h3>{dashboard.consistencyScore7d}%</h3></article>
+          </div>
+          <div className="badges">
+            {(dashboard.gamification.badges || []).length ? (
+              dashboard.gamification.badges.map((badge) => (
+                <span key={badge} className="badge unlocked">{badge}</span>
+              ))
+            ) : (
+              <span className="badge">No badges yet</span>
+            )}
           </div>
           <article className="card"><h3>Auto Habit Builder</h3><p>{dashboard.autoHabitBuilder.message}</p></article>
           {dashboard.weeklySelfRank && <article className="card"><h3>Weekly Rank (Self)</h3><p>{`${dashboard.weeklySelfRank.rank} rank - ${dashboard.weeklySelfRank.message}`}</p></article>}
@@ -678,7 +750,7 @@ export default function StudyTrackerApp() {
       )}
 
       {screen === "settings" && (
-        <section className="card page">
+        <section className="card page screen-panel">
           <label>Daily goal<input type="number" value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} /></label>
           <label>Weekly target<input type="number" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} /></label>
           <label>Session target<input type="number" value={goalSessions} onChange={(e) => setGoalSessions(Number(e.target.value))} /></label>
@@ -692,6 +764,8 @@ export default function StudyTrackerApp() {
       )}
 
       {error && <p className="error">{error}</p>}
+        </div>
+      </div>
     </main>
   );
 }
