@@ -661,7 +661,11 @@ button:disabled {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.3rem 0.7rem;
-  background: rgba(10, 16, 30, 0.7);
+  background: rgba(10, 16, 30, 0.92);
+  color: #eaf4ff;
+  font-weight: 700;
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15), 0 0 16px rgba(59, 130, 246, 0.18);
 }
 
 .page-stage {
@@ -695,7 +699,7 @@ button:disabled {
   position: absolute;
   inset: 14px;
   border-radius: inherit;
-  background: rgba(8, 10, 17, 0.92);
+  background: radial-gradient(circle at 30% 20%, rgba(24, 36, 62, 0.98), rgba(7, 10, 18, 0.98));
 }
 
 .goal-ring span,
@@ -706,11 +710,14 @@ button:disabled {
 .goal-ring span {
   font-size: 2rem;
   font-weight: 800;
+  color: #f5fbff;
+  text-shadow: 0 0 14px rgba(56, 189, 248, 0.45);
 }
 
 .goal-ring small {
-  color: var(--muted);
+  color: #b8c7e6;
   letter-spacing: 0.06em;
+  font-weight: 600;
 }
 
 .timer-screen::before {
