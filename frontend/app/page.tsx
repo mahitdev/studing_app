@@ -24,12 +24,16 @@ export default function Home() {
           <h1>Build focus. Stay consistent. Grow daily.</h1>
           <p className="hero-sub">A calm space to track your progress and stay on track.</p>
           <div className="hero-cta">
-            <Link className="cta" href="/signup">Start Your Journey</Link>
-            <Link className="ghost" href="#how">See How It Works</Link>
+            <Link className="cta magnetic pulse-focus" href="/signup">Start Your Journey</Link>
+            <Link className="ghost magnetic" href="#how">See How It Works</Link>
+            <span className="cta-sparkle" aria-hidden>✦</span>
           </div>
-          <div className="hero-input">
-            <input type="email" placeholder="your@email.com" />
-            <button type="button">Get Early Access</button>
+          <div className="hero-input smart-inputs">
+            <label className="input-field">
+              <input type="email" placeholder=" " />
+              <span>Email Address</span>
+            </label>
+            <button type="button" className="magnetic">Get Early Access</button>
           </div>
         </div>
 
@@ -51,9 +55,13 @@ export default function Home() {
               </div>
               <div className="mock-ring">
                 <div>
-                  <strong>78%</strong>
+                  <strong className="countup" data-target="78">0%</strong>
                   <span>Goal</span>
                 </div>
+              </div>
+              <div className="mock-progress">
+                <p>Progress</p>
+                <div><span /></div>
               </div>
             </div>
           </article>
@@ -66,22 +74,22 @@ export default function Home() {
           <h2>Built for consistency, not motivation spikes</h2>
         </div>
         <div className="feature-cards">
-          <article>
+          <article className="interactive-card">
             <span className="icon-chip">FT</span>
             <h3>Focus Tracking</h3>
             <p>Track real deep-work time with session quality and anti-cheat checks.</p>
           </article>
-          <article>
+          <article className="interactive-card">
             <span className="icon-chip">SS</span>
             <h3>Streak System</h3>
             <p>Use momentum, recovery mode, and streak pressure to stay accountable.</p>
           </article>
-          <article>
+          <article className="interactive-card">
             <span className="icon-chip">SA</span>
             <h3>Smart Analytics</h3>
             <p>See weak days, effort vs result, and long-term trend insights.</p>
           </article>
-          <article>
+          <article className="interactive-card">
             <span className="icon-chip">SR</span>
             <h3>Session Replay</h3>
             <p>Review exact daily blocks to understand where focus was won or lost.</p>

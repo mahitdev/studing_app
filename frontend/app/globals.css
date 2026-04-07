@@ -1380,6 +1380,195 @@ html {
   }
 }
 
+/* Landing Interaction & Depth Additions */
+.premium-landing {
+  padding: 1.4rem 1rem 3rem;
+}
+
+.premium-section,
+.premium-footer,
+.premium-nav {
+  position: relative;
+}
+
+.premium-section::after,
+.premium-footer::after,
+.premium-nav::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.26), rgba(251, 182, 206, 0.2), rgba(96, 165, 250, 0.24));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+  opacity: 0.7;
+}
+
+.bg-blob {
+  position: fixed;
+  border-radius: 999px;
+  filter: blur(50px);
+  opacity: 0.22;
+  pointer-events: none;
+  z-index: 0;
+  animation: blobFloat 20s ease-in-out infinite alternate;
+}
+
+.blob-a {
+  width: 260px;
+  height: 260px;
+  left: 4%;
+  top: 14%;
+  background: linear-gradient(140deg, #a78bfa, #60a5fa);
+}
+
+.blob-b {
+  width: 220px;
+  height: 220px;
+  right: 6%;
+  top: 22%;
+  background: linear-gradient(140deg, #f9a8d4, #a78bfa);
+  animation-delay: 3s;
+}
+
+.blob-c {
+  width: 280px;
+  height: 280px;
+  right: 20%;
+  bottom: 6%;
+  background: linear-gradient(140deg, #fde68a, #fbcfe8);
+  animation-delay: 6s;
+}
+
+.hero-cta {
+  align-items: center;
+  position: relative;
+}
+
+.magnetic {
+  --mag-x: 0px;
+  --mag-y: 0px;
+  transform: translate(var(--mag-x), var(--mag-y));
+  transition: transform 130ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+
+.pulse-focus {
+  animation: focusPulse 2.8s ease-in-out infinite;
+}
+
+.cta-sparkle {
+  position: absolute;
+  right: -0.35rem;
+  top: -0.35rem;
+  color: rgba(255, 228, 230, 0.9);
+  text-shadow: 0 0 14px rgba(244, 163, 203, 0.42);
+  animation: sparkle 2.4s ease-in-out infinite;
+  font-size: 0.95rem;
+}
+
+.smart-inputs {
+  align-items: end;
+}
+
+.input-field {
+  position: relative;
+  width: min(280px, 100%);
+}
+
+.input-field input {
+  max-width: 280px;
+  border-radius: 999px;
+  background: rgba(27, 34, 55, 0.72);
+  border: 1px solid rgba(178, 188, 215, 0.34);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  padding: 1rem 0.95rem 0.45rem;
+}
+
+.input-field span {
+  position: absolute;
+  left: 0.95rem;
+  top: 0.68rem;
+  color: #9fb0d1;
+  pointer-events: none;
+  transition: transform 160ms ease, color 160ms ease, font-size 160ms ease;
+}
+
+.input-field input:focus,
+.input-field input:not(:placeholder-shown) {
+  outline: none;
+  border-color: rgba(167, 139, 250, 0.78);
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.16);
+  transform: translateY(-1px);
+}
+
+.input-field input:focus + span,
+.input-field input:not(:placeholder-shown) + span {
+  transform: translateY(-0.52rem);
+  font-size: 0.72rem;
+  color: #d7c6ff;
+}
+
+.mock-progress {
+  grid-column: 1 / -1;
+  border: 1px solid rgba(173, 185, 215, 0.22);
+  border-radius: 14px;
+  padding: 0.65rem;
+  background: rgba(25, 32, 52, 0.72);
+}
+
+.mock-progress p {
+  color: #9aa8c4;
+  font-size: 0.78rem;
+}
+
+.mock-progress div {
+  margin-top: 0.4rem;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(68, 80, 110, 0.5);
+  overflow: hidden;
+}
+
+.mock-progress span {
+  display: block;
+  height: 100%;
+  width: 0%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.95), rgba(96, 165, 250, 0.95));
+  animation: progressFill 2.6s ease forwards;
+}
+
+.interactive-card:hover .icon-chip {
+  transform: rotate(4deg) scale(1.04);
+}
+
+.reveal {
+  transition: opacity 560ms ease, transform 560ms ease, filter 560ms ease;
+}
+
+@keyframes blobFloat {
+  0% { transform: translateY(0) translateX(0); }
+  100% { transform: translateY(-16px) translateX(8px); }
+}
+
+@keyframes focusPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(167, 139, 250, 0.14); }
+  50% { box-shadow: 0 0 0 12px rgba(167, 139, 250, 0); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0.35; transform: scale(0.95); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes progressFill {
+  to { width: 78%; }
+}
+
 /* Cozy Premium Landing Refresh */
 .premium-landing {
   max-width: 1160px;
