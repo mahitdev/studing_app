@@ -1617,6 +1617,51 @@ html {
   to { width: 78%; }
 }
 
+/* Dashboard Contrast Hardening */
+.app-shell,
+.app-shell .card,
+.app-shell .page,
+.app-shell .screen-panel {
+  color: #f5f9ff;
+}
+
+.app-shell .muted,
+.app-shell p.muted,
+.app-shell .kpi-grid p,
+.app-shell .trend-col p,
+.app-shell .badge {
+  color: #cfdbf6;
+  text-shadow: 0 0 8px rgba(115, 141, 255, 0.2);
+}
+
+.app-shell .nav-btn {
+  background: linear-gradient(180deg, rgba(31, 41, 64, 0.95), rgba(24, 32, 52, 0.95));
+  color: #ecf2ff;
+}
+
+.app-shell .nav-btn.active {
+  color: #ffffff;
+}
+
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  color: #f4f8ff;
+  border-color: rgba(186, 202, 240, 0.45);
+  background: rgba(20, 28, 46, 0.72);
+}
+
+.app-shell input::placeholder,
+.app-shell textarea::placeholder {
+  color: #b9c8ea;
+  opacity: 1;
+}
+
+.app-shell a,
+.app-shell .ghost {
+  color: #edf3ff;
+}
+
 /* Cozy Premium Landing Refresh */
 .premium-landing {
   max-width: 1160px;
