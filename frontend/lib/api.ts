@@ -255,3 +255,13 @@ export async function subscribeWaitlist(
     body: JSON.stringify({ email, source })
   });
 }
+
+export async function sendProgressEmail(
+  userId: string,
+  email: string
+): Promise<{ ok: boolean; message: string; summary?: { todayMinutes: number; weeklyHours: number; totalHours: number; completionRate: number } }> {
+  return request(`/users/${userId}/email-summary`, {
+    method: "POST",
+    body: JSON.stringify({ email })
+  });
+}

@@ -11,6 +11,7 @@ import {
   pauseSession,
   resetSession,
   resumeSession,
+  sendProgressEmail,
   setGoalConfig,
   setModes,
   startSession,
@@ -96,6 +97,8 @@ export default function StudyTrackerApp() {
   const [goalDaily, setGoalDaily] = useState(180);
   const [goalWeekly, setGoalWeekly] = useState(1200);
   const [goalSessions, setGoalSessions] = useState(7);
+  const [summaryEmail, setSummaryEmail] = useState("");
+  const [emailStatus, setEmailStatus] = useState("");
   const [identityType, setIdentityType] = useState<"Casual" | "Serious" | "Hardcore">("Serious");
   const [motivationWhy, setMotivationWhy] = useState("");
   const [ritualDoneToday, setRitualDoneToday] = useState(false);
@@ -521,6 +524,17 @@ export default function StudyTrackerApp() {
     setDashboard(updated);
   };
 
+  const handleEmailSummary = async () => {
+    if (!user) return;
+    try {
+      setEmailStatus("");
+      const res = await sendProgressEmail(user._id, summaryEmail.trim());
+      setEmailStatus(res.message);
+    } catch (err) {
+      setEmailStatus((err as Error).message || "Could not send email right now.");
+    }
+  };
+
   const handleStartRitual = () => {
     localStorage.setItem(ritualKey, "done");
     setRitualDoneToday(true);
@@ -758,8 +772,11 @@ export default function StudyTrackerApp() {
           <label className="toggle-row">Pressure notifications<input type="checkbox" checked={settings.notifications} onChange={(e) => saveSettings({ notifications: e.target.checked })} /></label>
           <label>Identity<select value={identityType} onChange={(e) => setIdentityType(e.target.value as "Casual" | "Serious" | "Hardcore")}><option value="Casual">Casual</option><option value="Serious">Serious</option><option value="Hardcore">Hardcore</option></select></label>
           <label>Motivation<input value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} /></label>
+          <label>Email for summary<input type="email" value={summaryEmail} onChange={(e) => setSummaryEmail(e.target.value)} placeholder="you@example.com" /></label>
           <button onClick={handleGoalUpdate}>Apply Goals</button>
           <button onClick={handleIdentityUpdate}>Apply Profile</button>
+          <button onClick={handleEmailSummary}>Send My Progress Email</button>
+          {emailStatus ? <p className="muted">{emailStatus}</p> : null}
         </section>
       )}
 

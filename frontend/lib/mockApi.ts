@@ -263,6 +263,24 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
     return { ok: true, message: "You're in. We'll notify you soon." } as T;
   }
 
+  const emailSummary = path.match(/^\/users\/([^/]+)\/email-summary$/);
+  if (emailSummary && method === "POST") {
+    if (!body.email || !String(body.email).includes("@")) {
+      throw new Error("Please enter a valid email address.");
+    }
+    const totalMinutes = store.sessions.filter((s) => s.status === "completed").reduce((sum, s) => sum + (s.focusedMinutes || 0), 0);
+    return {
+      ok: true,
+      message: "Progress email sent successfully.",
+      summary: {
+        todayMinutes: store.sessions.filter((s) => s.date === todayKey() && s.status === "completed").reduce((sum, s) => sum + (s.focusedMinutes || 0), 0),
+        weeklyHours: +(totalMinutes / 60).toFixed(1),
+        totalHours: +(totalMinutes / 60).toFixed(1),
+        completionRate: 72
+      }
+    } as T;
+  }
+
   const goalToday = path.match(/^\/users\/([^/]+)\/goals\/today$/);
   if (goalToday && method === "PUT") {
     store.dailyMinutes = Math.max(1, Number(body.targetMinutes || store.dailyMinutes));

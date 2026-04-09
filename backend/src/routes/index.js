@@ -6,6 +6,7 @@ const User = require("../models/User");
 const DailyGoal = require("../models/DailyGoal");
 const StudySession = require("../models/StudySession");
 const WaitlistEmail = require("../models/WaitlistEmail");
+const { sendProgressEmail } = require("../services/emailService");
 const {
   todayKey,
   ensureDailyGoal,
@@ -172,6 +173,25 @@ router.post("/users/bootstrap", async (req, res, next) => {
 
 router.use("/users/:userId", requireAuth, requireSelf);
 router.use("/leaderboard", requireAuth);
+
+router.post("/users/:userId/email-summary", async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const targetEmail = String(req.body?.email || "").trim().toLowerCase();
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!validEmail.test(targetEmail)) {
+      return res.status(400).json({ message: "Please enter a valid email address." });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const summary = await sendProgressEmail(user, targetEmail);
+    return res.json({ ok: true, message: "Progress email sent successfully.", summary });
+  } catch (err) {
+    next(err);
+  }
+});
 
 router.put("/users/:userId/goals/today", async (req, res, next) => {
   try {
