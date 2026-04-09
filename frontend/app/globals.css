@@ -277,9 +277,9 @@ nav {
 
 .nav-btn.active {
   border-color: transparent;
-  background: linear-gradient(120deg, var(--accent), #8b5cf6, var(--accent-2));
+  background: linear-gradient(120deg, #3f73f0, #6d60ef, #48a6f8);
   color: #fff;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.45);
+  box-shadow: 0 0 18px rgba(79, 120, 255, 0.38);
 }
 
 button:hover,
@@ -386,10 +386,15 @@ button {
   border-radius: 10px;
   padding: 0.58rem 0.9rem;
   color: white;
-  background: linear-gradient(120deg, var(--accent), #8b5cf6, var(--accent-2));
+  background: linear-gradient(120deg, #3f73f0, #6d60ef, #4ba0f9);
   cursor: pointer;
   position: relative;
   overflow: hidden;
+}
+
+.screen-panel > button:first-of-type {
+  background: linear-gradient(120deg, rgba(63, 115, 240, 0.95), rgba(109, 96, 239, 0.92), rgba(82, 157, 246, 0.95));
+  color: #edf2ff;
 }
 
 button:disabled {
@@ -606,6 +611,13 @@ button:disabled {
   align-items: start;
   gap: 1rem;
   position: relative;
+  padding: 0.25rem;
+  border-radius: 22px;
+  background:
+    radial-gradient(1200px circle at 0% 0%, rgba(84, 110, 255, 0.14), transparent 38%),
+    radial-gradient(1000px circle at 100% 0%, rgba(122, 99, 246, 0.12), transparent 40%),
+    rgba(9, 13, 22, 0.9);
+  box-shadow: 0 22px 54px rgba(1, 5, 14, 0.5);
 }
 
 .sidebar {
@@ -615,7 +627,7 @@ button:disabled {
   display: grid;
   align-content: start;
   gap: 0.8rem;
-  background: rgba(10, 12, 20, 0.75);
+  background: linear-gradient(180deg, rgba(18, 24, 40, 0.94), rgba(13, 19, 32, 0.92));
 }
 
 .sidebar h1 {
@@ -641,7 +653,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  background: rgba(10, 12, 20, 0.72);
+  background: linear-gradient(125deg, rgba(27, 35, 58, 0.95), rgba(20, 27, 46, 0.92));
 }
 
 .topbar h2 {
@@ -673,8 +685,8 @@ button:disabled {
 }
 
 .screen-panel {
-  background: rgba(11, 13, 23, 0.8);
-  border-color: color-mix(in srgb, var(--line) 70%, #6d28d9 30%);
+  background: linear-gradient(165deg, rgba(25, 33, 52, 0.92), rgba(17, 23, 38, 0.95));
+  border-color: color-mix(in srgb, var(--line) 66%, #6a5bd8 34%);
 }
 
 .goal-ring-wrap {
@@ -846,14 +858,14 @@ body[data-theme="dark"] {
   --line: #1b1d22;
   --ink: #f3f7ff;
   --muted: #9ea8bc;
-  --accent: #3b82f6;
-  --accent-2: #10b981;
+  --accent: #4f78ff;
+  --accent-2: #7a63f6;
   --parallax-x: 0;
   --parallax-y: 0;
   background:
-    radial-gradient(circle at 15% 5%, rgba(61, 99, 196, 0.32), transparent 33%),
-    radial-gradient(circle at 85% 15%, rgba(13, 181, 140, 0.2), transparent 34%),
-    #030303;
+    radial-gradient(circle at 15% 5%, rgba(79, 120, 255, 0.26), transparent 34%),
+    radial-gradient(circle at 85% 15%, rgba(122, 99, 246, 0.2), transparent 36%),
+    #070b14;
 }
 
 html {
