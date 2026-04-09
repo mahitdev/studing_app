@@ -288,7 +288,26 @@ router.post("/users/:userId/sessions/start", async (req, res, next) => {
   try {
     const { userId } = req.params;
     const { subject = "General", studyMode = "custom", plannedDurationMinutes = 0, riskMode = false } = req.body;
-    const existing = await StudySession.findOne({ userId, status: { $in: ["running", "paused"] } });
+    const today = todayKey();
+
+    // Auto-close stale active sessions from previous dates so users can start fresh today.
+    await StudySession.updateMany(
+      { userId, status: { $in: ["running", "paused"] }, date: { $ne: today } },
+      {
+        $set: {
+          status: "completed",
+          endedAt: new Date(),
+          focusedMinutes: 0,
+          stopReason: "auto-closed-stale-session"
+        }
+      }
+    );
+
+    const existing = await StudySession.findOne({
+      userId,
+      date: today,
+      status: { $in: ["running", "paused"] }
+    });
 
     if (existing) {
       return res.status(409).json({ message: "A session is already active", session: existing });
@@ -296,7 +315,7 @@ router.post("/users/:userId/sessions/start", async (req, res, next) => {
 
     const session = await StudySession.create({
       userId,
-      date: todayKey(),
+      date: today,
       startedAt: new Date(),
       status: "running",
       subject: subject || "General",

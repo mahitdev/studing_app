@@ -368,6 +368,20 @@ export default function StudyTrackerApp() {
       setTimerAlert("");
       await refreshAll(user._id);
     } catch (err) {
+      const message = (err as Error).message || "";
+      if (message.toLowerCase().includes("already active")) {
+        setTimerAlert("You already have an active session. Resume or finish it first.");
+        await refreshAll(user._id);
+        return;
+      }
+      if (
+        message.toLowerCase().includes("authentication required") ||
+        message.toLowerCase().includes("invalid or expired token")
+      ) {
+        setError("Session expired. Please sign in again.");
+        return;
+      }
+
       const offlineId = `offline-${Date.now()}`;
       const startedAt = new Date().toISOString();
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
@@ -553,7 +567,21 @@ export default function StudyTrackerApp() {
       setIsOfflineSession(false);
       setTimerAlert("");
       await refreshAll(user._id);
-    } catch {
+    } catch (err) {
+      const message = (err as Error).message || "";
+      if (message.toLowerCase().includes("already active")) {
+        setTimerAlert("You already have an active session. Resume or finish it first.");
+        await refreshAll(user._id);
+        return;
+      }
+      if (
+        message.toLowerCase().includes("authentication required") ||
+        message.toLowerCase().includes("invalid or expired token")
+      ) {
+        setError("Session expired. Please sign in again.");
+        return;
+      }
+
       const startedAt = new Date().toISOString();
       setActiveSession({
         _id: `offline-${Date.now()}`,
@@ -604,7 +632,8 @@ export default function StudyTrackerApp() {
 
   const punishmentActive = settings.punishmentMode && dashboard.punishmentActive;
   const progressPercent = dashboard.todayGoal.completionPercent;
-  const timerProgress = Math.min(100, Math.round((elapsedSeconds / Math.max(1, dashboard.todayGoal.targetMinutes * 60)) * 100));
+  const activeDurationMinutes = activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration);
+  const timerProgress = Math.min(100, Math.round((elapsedSeconds / Math.max(1, activeDurationMinutes * 60)) * 100));
   const nav: Array<{ id: Screen; label: string }> = [
     { id: "dashboard", label: "Dashboard" },
     { id: "timer", label: "Timer" },
