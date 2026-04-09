@@ -230,6 +230,11 @@ export type StudySession = {
   status: "running" | "paused" | "completed";
   startedAt: string;
   endedAt?: string;
+  pauses?: Array<{
+    startedAt: string;
+    endedAt?: string;
+    reason?: string;
+  }>;
   focusedMinutes: number;
   pauseCount: number;
   inactiveSeconds: number;

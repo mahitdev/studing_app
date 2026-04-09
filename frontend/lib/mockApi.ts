@@ -203,6 +203,7 @@ function newSession(store: Store, subject = "General"): StudySession {
     _id: `session-${Date.now()}`,
     status: "running",
     startedAt: new Date().toISOString(),
+    pauses: [],
     focusedMinutes: 0,
     pauseCount: 0,
     inactiveSeconds: 0,
@@ -330,6 +331,8 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
     if (s) {
       s.status = "paused";
       s.pauseCount = (s.pauseCount || 0) + 1;
+      s.pauses = s.pauses || [];
+      s.pauses.push({ startedAt: new Date().toISOString(), reason: body.reason || "manual" });
       saveStore(store);
     }
     return { session: s } as T;
@@ -339,6 +342,11 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
   if (resume && method === "POST") {
     const s = store.sessions.find((x) => x._id === resume[2]);
     if (s) {
+      const pauses = s.pauses || [];
+      const lastPause = pauses[pauses.length - 1];
+      if (lastPause && !lastPause.endedAt) {
+        lastPause.endedAt = new Date().toISOString();
+      }
       s.status = "running";
       saveStore(store);
     }
@@ -349,7 +357,13 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
   if (end && method === "POST") {
     const s = store.sessions.find((x) => x._id === end[2]);
     if (s) {
-      const secs = Math.max(0, Math.round((Date.now() - new Date(s.startedAt).getTime()) / 1000) - (body.inactiveSeconds || 0));
+      const now = Date.now();
+      const pausedSecs = (s.pauses || []).reduce((sum, pause) => {
+        const start = new Date(pause.startedAt).getTime();
+        const finish = pause.endedAt ? new Date(pause.endedAt).getTime() : now;
+        return sum + Math.max(0, Math.round((finish - start) / 1000));
+      }, 0);
+      const secs = Math.max(0, Math.round((now - new Date(s.startedAt).getTime()) / 1000) - pausedSecs - (body.inactiveSeconds || 0));
       s.focusedMinutes = Math.round(secs / 60);
       s.status = "completed";
       s.endedAt = new Date().toISOString();

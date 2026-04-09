@@ -52,12 +52,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (!res.ok) {
     const errorText = await res.text();
+    let message = "Request failed";
     try {
       const parsed = JSON.parse(errorText) as { message?: string };
-      throw new Error(parsed.message || "Request failed");
+      message = parsed.message || message;
     } catch {
-      throw new Error(errorText || "Request failed");
+      message = errorText || message;
     }
+    throw new Error(message);
   }
 
   return res.json() as Promise<T>;

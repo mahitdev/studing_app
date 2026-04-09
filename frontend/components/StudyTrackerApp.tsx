@@ -64,6 +64,17 @@ function formatHMS(seconds: number) {
   return `${hrs}:${mins}:${sec}`;
 }
 
+function elapsedForSession(session: StudySession, nowMs = Date.now()) {
+  const startedMs = new Date(session.startedAt).getTime();
+  const totalMs = Math.max(0, nowMs - startedMs);
+  const pausedMs = (session.pauses || []).reduce((sum, pause) => {
+    const pauseStart = new Date(pause.startedAt).getTime();
+    const pauseEnd = pause.endedAt ? new Date(pause.endedAt).getTime() : nowMs;
+    return sum + Math.max(0, pauseEnd - pauseStart);
+  }, 0);
+  return Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
+}
+
 function weekKey(date = new Date()) {
   const start = new Date(date.getFullYear(), 0, 1);
   const day = Math.floor((date.getTime() - start.getTime()) / 86400000);
@@ -189,13 +200,12 @@ export default function StudyTrackerApp() {
       return;
     }
 
-    const started = new Date(activeSession.startedAt).getTime();
     const tick = () => {
-      if (activeSession.status !== "running") return;
-      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - started) / 1000)));
+      setElapsedSeconds(elapsedForSession(activeSession));
     };
 
     tick();
+    if (activeSession.status !== "running") return undefined;
     const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, [activeSession]);
