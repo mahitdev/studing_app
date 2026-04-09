@@ -4,13 +4,11 @@ const DailyGoal = require("../models/DailyGoal");
 let transporter = null;
 
 function createTransporter() {
-  const {
-    SMTP_HOST,
-    SMTP_PORT = "587",
-    SMTP_USER,
-    SMTP_PASS,
-    SMTP_SECURE = "false"
-  } = process.env;
+  const SMTP_HOST = String(process.env.SMTP_HOST || "").trim();
+  const SMTP_PORT = String(process.env.SMTP_PORT || "587").trim();
+  const SMTP_USER = String(process.env.SMTP_USER || "").trim();
+  const SMTP_PASS = String(process.env.SMTP_PASS || "").trim();
+  const SMTP_SECURE = String(process.env.SMTP_SECURE || "false").trim();
 
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     return null;
@@ -70,8 +68,8 @@ async function sendProgressEmail(user, email) {
   }
 
   const summary = await buildUserSummary(user);
-  const fromEmail = process.env.MAIL_FROM || process.env.SMTP_USER;
-  const appUrl = process.env.APP_URL || "https://frontend-alpha-blue-43.vercel.app";
+  const fromEmail = String(process.env.MAIL_FROM || process.env.SMTP_USER || "").trim();
+  const appUrl = String(process.env.APP_URL || "https://frontend-alpha-blue-43.vercel.app").trim();
 
   const subject = `Your GrindLock Progress Summary`;
   const text = [
