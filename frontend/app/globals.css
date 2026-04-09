@@ -405,6 +405,19 @@ button:disabled {
 .timer-center {
   display: grid;
   place-items: center;
+  min-height: 260px;
+  position: relative;
+}
+
+.timer-center::before {
+  content: "";
+  position: absolute;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(93, 124, 255, 0.22), rgba(63, 115, 240, 0.1), transparent 68%);
+  filter: blur(6px);
+  pointer-events: none;
 }
 
 .timer-ring {
@@ -414,8 +427,9 @@ button:disabled {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: conic-gradient(var(--accent) var(--ring-fill), color-mix(in srgb, var(--line) 80%, var(--panel) 20%) 0%);
+  background: conic-gradient(#4f78ff var(--ring-fill), #7a63f6 calc(var(--ring-fill) + 8%), rgba(47, 61, 93, 0.82) 0%);
   position: relative;
+  box-shadow: 0 0 24px rgba(86, 121, 255, 0.34), inset 0 0 18px rgba(66, 89, 140, 0.35);
 }
 
 .timer-ring.big {
@@ -432,14 +446,18 @@ button:disabled {
   position: absolute;
   inset: 12px;
   border-radius: inherit;
-  background: var(--panel);
+  background: radial-gradient(circle at 30% 20%, rgba(19, 27, 45, 0.98), rgba(10, 15, 29, 0.98));
+  border: 1px solid rgba(153, 174, 226, 0.22);
 }
 
 .timer-ring span {
   position: relative;
   z-index: 2;
-  font-size: 1.55rem;
+  font-size: 1.7rem;
   font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #ffffff;
+  text-shadow: 0 0 14px rgba(118, 148, 255, 0.48), 0 0 24px rgba(79, 120, 255, 0.28);
 }
 
 .timer-alert {
