@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const DailyGoal = require("../models/DailyGoal");
 const StudySession = require("../models/StudySession");
+const WaitlistEmail = require("../models/WaitlistEmail");
 const {
   todayKey,
   ensureDailyGoal,
@@ -68,6 +69,28 @@ const requireSelf = (req, res, next) => {
 
 router.get("/health", (_req, res) => {
   res.json({ ok: true, service: "study-tracker-backend" });
+});
+
+router.post("/waitlist/subscribe", async (req, res, next) => {
+  try {
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    const source = String(req.body?.source || "landing").trim();
+    const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!validEmail.test(email)) {
+      return res.status(400).json({ message: "Please enter a valid email address." });
+    }
+
+    const existing = await WaitlistEmail.findOne({ email });
+    if (existing) {
+      return res.status(200).json({ ok: true, message: "You're already on the waitlist." });
+    }
+
+    await WaitlistEmail.create({ email, source });
+    return res.status(201).json({ ok: true, message: "You're in. We'll notify you soon." });
+  } catch (err) {
+    next(err);
+  }
 });
 
 router.post("/auth/register", async (req, res, next) => {
@@ -563,5 +586,7 @@ router.get("/leaderboard", async (req, res, next) => {
     next(err);
   }
 });
+
+
 
 module.exports = router;

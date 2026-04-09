@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LandingClient from "../components/LandingClient";
+import LandingWaitlistForm from "../components/LandingWaitlistForm";
 
 export default function Home() {
   return (
@@ -26,15 +27,9 @@ export default function Home() {
           <div className="hero-cta">
             <Link className="cta magnetic pulse-focus" href="/signup">Start Your Journey</Link>
             <Link className="ghost magnetic" href="#how">See How It Works</Link>
-            <span className="cta-sparkle" aria-hidden>✦</span>
+            <span className="cta-sparkle" aria-hidden>*</span>
           </div>
-          <div className="hero-input smart-inputs">
-            <label className="input-field">
-              <input type="email" placeholder=" " />
-              <span>Email Address</span>
-            </label>
-            <button type="button" className="magnetic">Get Early Access</button>
-          </div>
+          <LandingWaitlistForm />
         </div>
 
         <div className="hero-mockup-wrap">

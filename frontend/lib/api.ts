@@ -245,3 +245,13 @@ export async function syncOfflineSessions(
     body: JSON.stringify({ sessions })
   });
 }
+
+export async function subscribeWaitlist(
+  email: string,
+  source = "landing"
+): Promise<{ ok: boolean; message: string }> {
+  return request("/waitlist/subscribe", {
+    method: "POST",
+    body: JSON.stringify({ email, source })
+  });
+}

@@ -256,6 +256,13 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
     return { user, token: "mock-token", dashboard: defaultDashboard(store) } as T;
   }
 
+  if (path === "/waitlist/subscribe" && method === "POST") {
+    if (!body.email || !String(body.email).includes("@")) {
+      throw new Error("Please enter a valid email address.");
+    }
+    return { ok: true, message: "You're in. We'll notify you soon." } as T;
+  }
+
   const goalToday = path.match(/^\/users\/([^/]+)\/goals\/today$/);
   if (goalToday && method === "PUT") {
     store.dailyMinutes = Math.max(1, Number(body.targetMinutes || store.dailyMinutes));
