@@ -284,6 +284,32 @@ router.get("/users/:userId/sessions/today", async (req, res, next) => {
   }
 });
 
+router.get("/users/:userId/analytics", async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const sessions = await StudySession.find({ userId }).sort({ startedAt: 1 });
+    
+    // Fetch from python microservice
+    const response = await fetch("http://localhost:8000/analyze", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ sessions })
+    });
+
+    if (!response.ok) {
+        return res.status(502).json({ message: "Analytics service unavailable", status: response.status });
+    }
+
+    const analyticsData = await response.json();
+    res.json(analyticsData);
+  } catch (err) {
+    console.error("Analytics Error:", err);
+    res.status(502).json({ message: "Analytics service unavailable", error: err.message });
+  }
+});
+
 router.post("/users/:userId/sessions/start", async (req, res, next) => {
   try {
     const { userId } = req.params;

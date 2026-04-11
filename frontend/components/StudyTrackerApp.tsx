@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -15,7 +15,8 @@ import {
   setGoalConfig,
   setModes,
   startSession,
-  syncOfflineSessions
+  syncOfflineSessions,
+  fetchAnalytics
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 
@@ -118,6 +119,8 @@ export default function StudyTrackerApp() {
   const [sessionQualityTag, setSessionQualityTag] = useState<"deep" | "average" | "distracted" | "">("");
   const [error, setError] = useState("");
   const [isOfflineSession, setIsOfflineSession] = useState(false);
+  const [pythonAnalytics, setPythonAnalytics] = useState<any>(null);
+  const [loadingAnalytics, setLoadingAnalytics] = useState(false);
 
   const hiddenAt = useRef<number | null>(null);
   const lastActivityAt = useRef<number>(Date.now());
@@ -184,6 +187,17 @@ export default function StudyTrackerApp() {
 
     init();
   }, [authTokenKey, settingsKey, userKey]);
+
+  useEffect(() => {
+    if (screen === "analytics" && user && !pythonAnalytics && !loadingAnalytics) {
+      setLoadingAnalytics(true);
+      fetchAnalytics(user._id)
+        .then((data) => setPythonAnalytics(data))
+        .catch((err) => console.error("Analytics fetch error:", err))
+        .finally(() => setLoadingAnalytics(false));
+    }
+  }, [screen, user, pythonAnalytics, loadingAnalytics]);
+
 
   useEffect(() => {
     document.body.dataset.theme = settings.darkMode ? "dark" : "light";
@@ -749,7 +763,84 @@ export default function StudyTrackerApp() {
       )}
 
       {screen === "analytics" && (
-        <section className="card page screen-panel">
+        <section className="card page screen-panel python-analytics-panel">
+          <div style={{ marginBottom: "2rem" }}>
+            <h2 style={{ fontSize: "2rem", background: "linear-gradient(90deg, #7B61FF, #00D4FF)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              Deep Analytics Engine
+            </h2>
+            <p className="muted" style={{ letterSpacing: "1px", textTransform: "uppercase", fontSize: "0.85rem" }}>
+              Powered by Python
+            </p>
+          </div>
+          
+          {loadingAnalytics ? (
+            <div className="shimmer-wrap" style={{ marginTop: '20px' }}>
+              <div className="shimmer-block" style={{ height: "100px" }}></div>
+              <div className="shimmer-block" style={{ height: "100px", marginTop: "1rem" }}></div>
+            </div>
+          ) : pythonAnalytics && !pythonAnalytics.error ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "2rem", marginBottom: "2rem" }}>
+              <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "1rem" }}>
+                <article style={{ background: "rgba(123, 97, 255, 0.1)", border: "1px solid rgba(123, 97, 255, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Avg Session</p>
+                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{pythonAnalytics.average_study_time} <span style={{fontSize:"1rem"}}>min</span></h3>
+                </article>
+                <article style={{ background: "rgba(0, 212, 255, 0.1)", border: "1px solid rgba(0, 212, 255, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Consistency</p>
+                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{pythonAnalytics.consistency_score}%</h3>
+                </article>
+                <article style={{ background: "rgba(255, 215, 0, 0.1)", border: "1px solid rgba(255, 215, 0, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Focus Score</p>
+                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{pythonAnalytics.focus_score}%</h3>
+                </article>
+                <article style={{ background: "rgba(255, 97, 122, 0.1)", border: "1px solid rgba(255, 97, 122, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
+                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Peak Time</p>
+                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{(pythonAnalytics.best_study_time || "").split(' ')[0]}</h3>
+                </article>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
+                <article className="card" style={{ background: "linear-gradient(145deg, #1a1a2e, #16213e)", borderLeft: "4px solid #00D4FF" }}>
+                   <h3 style={{ margin: "0 0 0.5rem", color: "#00D4FF" }}>💡 Data Insight</h3>
+                   <p style={{ margin: 0, fontSize: "1.1rem" }}>{pythonAnalytics.message}</p>
+                </article>
+                <article className="card" style={{ background: "linear-gradient(145deg, #2e1a1a, #3e1616)", borderLeft: "4px solid #FF617A" }}>
+                   <h3 style={{ margin: "0 0 0.5rem", color: "#FF617A" }}>📉 Weak Pattern Detected</h3>
+                   <p style={{ margin: 0, fontSize: "1.1rem" }}>{pythonAnalytics.weak_pattern}</p>
+                </article>
+                {pythonAnalytics.ml_insights && pythonAnalytics.ml_insights.prediction_text && (
+                  <article className="card" style={{ background: "linear-gradient(145deg, #1f2e1a, #1a2516)", borderLeft: "4px solid #00FF88" }}>
+                     <h3 style={{ margin: "0 0 0.5rem", color: "#00FF88" }}>🤖 AI Predictor</h3>
+                     <p style={{ margin: 0, fontSize: "1.1rem" }}>{pythonAnalytics.ml_insights.prediction_text}</p>
+                  </article>
+                )}
+              </div>
+
+              {pythonAnalytics.graphs && Object.keys(pythonAnalytics.graphs).length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {pythonAnalytics.graphs.focus_trend && (
+                    <article className="card" style={{ padding: "1rem", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <img src={`data:image/png;base64,${pythonAnalytics.graphs.focus_trend}`} alt="Focus Trend Graph" style={{ maxWidth: "100%", height: "auto", filter: "drop-shadow(0 0 10px rgba(123,97,255,0.2))" }} />
+                    </article>
+                  )}
+                  {pythonAnalytics.graphs.weekday_performance && (
+                    <article className="card" style={{ padding: "1rem", display: "flex", justifyContent: "center", alignItems: "center" }}>
+                      <img src={`data:image/png;base64,${pythonAnalytics.graphs.weekday_performance}`} alt="Weekday Performance Graph" style={{ maxWidth: "100%", height: "auto", filter: "drop-shadow(0 0 10px rgba(255,97,122,0.2))" }} />
+                    </article>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+             <article className="card" style={{ borderLeft: "4px solid #FF617A", marginBottom: "2rem" }}>
+                <h3>Analytics Engine Offline</h3>
+                <p>{pythonAnalytics?.message || "Could not connect to Python microservice or not enough data."}</p>
+             </article>
+          )}
+
+          <hr style={{ border: 0, height: "1px", background: "var(--border)", margin: "2rem 0" }} />
+          <h3 style={{ marginBottom: "1rem", color: "var(--fg-muted)" }}>Legacy History</h3>
+
           <div className="calendar-grid">
             {dashboard.history.slice(-56).map((day) => (
               <span key={day.date} className={`heat ${day.color}`} title={`${day.date}: ${day.studiedMinutes} min`} />

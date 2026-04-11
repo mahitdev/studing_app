@@ -267,3 +267,7 @@ export async function sendProgressEmail(
     body: JSON.stringify({ email })
   });
 }
+
+export async function fetchAnalytics(userId: string): Promise<any> {
+  return request(`/users/${userId}/analytics`);
+}
