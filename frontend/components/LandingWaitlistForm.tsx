@@ -33,7 +33,7 @@ export default function LandingWaitlistForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Priority access email"
-            className="w-full px-6 py-4 rounded-full glass-light border border-white/5 text-white placeholder-white/30 focus:outline-none focus:border-accent/50 transition-all duration-300 font-medium"
+            className="w-full px-6 py-4 rounded-full glass-light border border-white/10 text-white placeholder-white/50 focus:outline-none focus:border-accent/50 transition-all duration-300 font-medium"
           />
         </div>
         <motion.button

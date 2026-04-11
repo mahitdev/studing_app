@@ -27,7 +27,7 @@ function TimerDisplay() {
       <Text
         fontSize={0.08}
         color="#ffffff"
-        fillOpacity={0.6}
+        fillOpacity={0.9}
         anchorX="left"
         font="https://fonts.gstatic.com/s/outfit/v11/Q_k79pU63_fa7S1chDyk.woff"
       >
@@ -57,7 +57,7 @@ function StreakIndicator() {
       <Text
         fontSize={0.08}
         color="#ffffff"
-        fillOpacity={0.6}
+        fillOpacity={0.9}
         anchorX="left"
         font="https://fonts.gstatic.com/s/outfit/v11/Q_k79pU63_fa7S1chDyk.woff"
       >
@@ -127,22 +127,22 @@ function MainPanel() {
         <MeshTransmissionMaterial
           backside
           samples={16}
-          thickness={0.05}
+          thickness={0.15}
           chromaticAberration={0.05}
           anisotropy={0.1}
           distortion={0.1}
           color="#ffffff"
           transmission={0.95}
-          roughness={0.05}
+          roughness={0.1}
           transparent
-          opacity={0.5}
+          opacity={0.7}
         />
       </mesh>
       
       {/* Glow Border */}
       <mesh position={[0, 0, -0.01]}>
         <planeGeometry args={[3.05, 2.05]} />
-        <meshBasicMaterial color="#4f78ff" transparent opacity={0.1} />
+        <meshBasicMaterial color="#4f78ff" transparent opacity={0.2} />
       </mesh>
 
       <TimerDisplay />
@@ -153,7 +153,7 @@ function MainPanel() {
         <Text
           fontSize={0.08}
           color="#ffffff"
-          fillOpacity={0.6}
+          fillOpacity={0.8}
           anchorX="left"
         >
           UPCOMING OBJECTIVE

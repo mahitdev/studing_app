@@ -11,7 +11,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link 
       href={href} 
-      className="text-xs font-bold uppercase tracking-widest text-white/40 hover:text-white transition-colors duration-300"
+      className="text-xs font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors duration-300"
     >
       {children}
     </Link>
@@ -50,7 +50,7 @@ function FeatureCard({ title, icon, description, delay }: { title: string; icon:
       <div className="relative z-10">
         <div className="text-4xl mb-8 group-hover:scale-110 transition-transform duration-500 ease-out">{icon}</div>
         <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">{title}</h3>
-        <p className="text-white/40 leading-relaxed font-medium">{description}</p>
+        <p className="text-white/60 leading-relaxed font-medium">{description}</p>
       </div>
     </motion.div>
   );
@@ -127,7 +127,7 @@ export default function Home() {
                   Discipline<br />
                   <span className="opacity-90">Your Time.</span>
                 </h1>
-                <p className="text-xl text-white/40 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0">
+                <p className="text-xl text-white/60 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0">
                   The high-end productivity engine for those who refuse to settle. 
                   Atomic focus, iron streaks, and cinematic analytics.
                 </p>
@@ -163,7 +163,7 @@ export default function Home() {
         <Section id="features">
           <div className="text-center mb-24">
             <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-6 gradient-text">ENGINEERED FOR ELITE.</h2>
-            <p className="text-white/30 text-xl font-medium">Tools that force consistency where motivation fails.</p>
+            <p className="text-white/60 text-xl font-medium">Tools that force consistency where motivation fails.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -200,10 +200,10 @@ export default function Home() {
                 { step: "03", title: "Review & Refine", desc: "Analyze every second. Build streaks that are impossible to break." }
               ].map((item, idx) => (
                 <div key={idx} className="flex flex-col md:flex-row items-center gap-10 text-left">
-                  <div className="text-8xl font-black text-white/5">{item.step}</div>
+                  <div className="text-8xl font-black text-white/[0.08]">{item.step}</div>
                   <div>
                     <h3 className="text-4xl font-black mb-4 tracking-tight">{item.title}</h3>
-                    <p className="text-xl text-white/40 leading-relaxed font-medium">{item.desc}</p>
+                    <p className="text-xl text-white/60 leading-relaxed font-medium">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -222,7 +222,7 @@ export default function Home() {
               Get Started Now
             </Link>
             
-            <div className="mt-32 pt-16 border-t border-white/5 flex flex-col md:flex-row items-center justify-between w-full opacity-30 gap-10">
+            <div className="mt-32 pt-16 border-t border-white/15 flex flex-col md:flex-row items-center justify-between w-full opacity-60 gap-10">
               <div className="text-xl font-black tracking-tighter">GRINDLOCK</div>
               <div className="flex gap-12 font-bold tracking-[0.2em] uppercase text-[10px]">
                 <a href="#" className="hover:text-white transition-colors">Twitter</a>
