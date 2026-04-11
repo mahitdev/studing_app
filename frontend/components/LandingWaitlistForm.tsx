@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { subscribeWaitlist } from "../lib/api";
 
 export default function LandingWaitlistForm() {
@@ -25,34 +25,39 @@ export default function LandingWaitlistForm() {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3 items-end max-w-md">
-      <div className="flex-1">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Enter your email"
-          className="w-full px-4 py-3 rounded-full bg-surface/60 border border-border text-primary placeholder-muted focus:outline-none focus:border-accent transition-colors"
-        />
-      </div>
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={onSubmit}
-        disabled={loading}
-        className="px-6 py-3 rounded-full bg-gradient-to-r from-accent to-accent-2 text-white font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? "Joining..." : "Get Early Access"}
-      </motion.button>
-      {status && (
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute mt-2 text-sm text-muted"
+    <div className="relative w-full max-w-md">
+      <div className="flex flex-col sm:flex-row gap-3 items-center">
+        <div className="flex-1 w-full">
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Priority access email"
+            className="w-full px-6 py-4 rounded-full glass-light border border-white/5 text-white placeholder-white/30 focus:outline-none focus:border-accent/50 transition-all duration-300 font-medium"
+          />
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onSubmit}
+          disabled={loading}
+          className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-black font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-white/5 whitespace-nowrap"
         >
-          {status}
-        </motion.p>
-      )}
+          {loading ? "Sychronizing..." : "Join the Elite"}
+        </motion.button>
+      </div>
+      <AnimatePresence>
+        {status && (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute -bottom-8 left-6 text-xs font-bold tracking-widest text-accent uppercase"
+          >
+            {status}
+          </motion.p>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

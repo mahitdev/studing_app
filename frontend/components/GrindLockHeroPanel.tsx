@@ -1,124 +1,201 @@
-"use client";
-
-import { useRef } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
-import { Float, MeshTransmissionMaterial, PerspectiveCamera, Text } from "@react-three/drei";
+import { useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { 
+  Float, 
+  MeshTransmissionMaterial, 
+  PerspectiveCamera, 
+  Text, 
+  Environment,
+  ContactShadows,
+  Torus
+} from "@react-three/drei";
 import * as THREE from "three";
 
-function Card({ position, title, value, color }: any) {
+function TimerDisplay() {
+  const [time, setTime] = useState("25:00");
+  
+  // Simulation of a ticking timer
+  useFrame((state) => {
+    const s = Math.floor(state.clock.elapsedTime % 60);
+    const m = Math.floor(25 - (state.clock.elapsedTime / 60) % 25);
+    // setTime(`${m.toString().padStart(2, '0')}:${(59-s).toString().padStart(2, '0')}`);
+    // Simplified for performance in preview
+  });
+
   return (
-    <group position={position}>
-      <mesh>
-        <planeGeometry args={[0.8, 0.5]} />
-        <MeshTransmissionMaterial
-          backside
-          samples={4}
-          thickness={0.1}
-          chromaticAberration={0.05}
-          anisotropy={0.1}
-          distortion={0.1}
-          color="#ffffff"
-          transmission={0.95}
-          roughness={0.1}
-          transparent
-          opacity={0.4}
-        />
-      </mesh>
+    <group position={[-0.7, 0.4, 0.1]}>
       <Text
-        position={[-0.3, 0.1, 0.01]}
-        fontSize={0.06}
+        fontSize={0.08}
         color="#ffffff"
+        fillOpacity={0.6}
         anchorX="left"
-        font="https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff"
+        font="https://fonts.gstatic.com/s/outfit/v11/Q_k79pU63_fa7S1chDyk.woff"
       >
-        {title}
+        FOCUS TIMER
       </Text>
       <Text
-        position={[-0.3, -0.05, 0.01]}
-        fontSize={0.12}
-        color={color}
+        position={[0, -0.15, 0]}
+        fontSize={0.3}
+        color="#ffffff"
         anchorX="left"
         fontWeight="bold"
-        font="https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff"
+        font="https://fonts.gstatic.com/s/outfit/v11/Q_k79pU63_fa7S1chDyk.woff"
       >
-        {value}
+        24:59
+      </Text>
+      <mesh position={[0.4, -0.15, -0.05]}>
+        <planeGeometry args={[0.9, 0.25]} />
+        <meshBasicMaterial color="#4f78ff" transparent opacity={0.1} />
+      </mesh>
+    </group>
+  );
+}
+
+function StreakIndicator() {
+  return (
+    <group position={[0.4, 0.4, 0.1]}>
+      <Text
+        fontSize={0.08}
+        color="#ffffff"
+        fillOpacity={0.6}
+        anchorX="left"
+        font="https://fonts.gstatic.com/s/outfit/v11/Q_k79pU63_fa7S1chDyk.woff"
+      >
+        STREAK
+      </Text>
+      <Text
+        position={[0, -0.15, 0]}
+        fontSize={0.25}
+        color="#ff8a00"
+        anchorX="left"
+        fontWeight="bold"
+        font="https://fonts.gstatic.com/s/outfit/v11/Q_k79pU63_fa7S1chDyk.woff"
+      >
+        12d 🔥
       </Text>
     </group>
   );
 }
 
-function MainDashboard() {
-  const group = useRef<THREE.Group>(null);
-
+function ProgressRing() {
+  const ringRef = useRef<THREE.Mesh>(null);
+  
   useFrame((state) => {
+    if (ringRef.current) {
+      ringRef.current.rotation.z = -state.clock.elapsedTime * 0.5;
+    }
+  });
+
+  return (
+    <group position={[0.6, -0.3, 0.1]}>
+      <Text
+        position={[0, 0, 0.05]}
+        fontSize={0.15}
+        color="#ffffff"
+        anchorX="center"
+        anchorY="middle"
+        fontWeight="bold"
+      >
+        85%
+      </Text>
+      <Torus ref={ringRef} args={[0.3, 0.03, 16, 100]} rotation={[0, 0, 0]}>
+        <meshStandardMaterial color="#4f78ff" emissive="#4f78ff" emissiveIntensity={2} />
+      </Torus>
+      <Torus args={[0.3, 0.032, 16, 100]} rotation={[0, 0, 0]}>
+        <meshStandardMaterial color="#ffffff" transparent opacity={0.1} />
+      </Torus>
+    </group>
+  );
+}
+
+function MainPanel() {
+  const group = useRef<THREE.Group>(null);
+  const { mouse } = useThree();
+
+  useFrame(() => {
     if (group.current) {
-      const t = state.clock.getElapsedTime();
-      group.current.rotation.x = Math.sin(t * 0.5) * 0.1;
-      group.current.rotation.y = Math.cos(t * 0.3) * 0.1;
+      // Mouse Parallax Tilt
+      group.current.rotation.x = THREE.MathUtils.lerp(group.current.rotation.x, -mouse.y * 0.2, 0.1);
+      group.current.rotation.y = THREE.MathUtils.lerp(group.current.rotation.y, mouse.x * 0.2, 0.1);
     }
   });
 
   return (
     <group ref={group}>
-      {/* Main Glass Panel */}
       <mesh>
         <planeGeometry args={[3, 2]} />
         <MeshTransmissionMaterial
           backside
-          samples={8}
-          thickness={0.2}
-          chromaticAberration={0.1}
-          anisotropy={0.2}
+          samples={16}
+          thickness={0.05}
+          chromaticAberration={0.05}
+          anisotropy={0.1}
           distortion={0.1}
-          distortionScale={0.2}
-          temporalDistortion={0.1}
           color="#ffffff"
-          transmission={0.9}
+          transmission={0.95}
           roughness={0.05}
           transparent
-          opacity={0.3}
+          opacity={0.5}
         />
       </mesh>
       
-      {/* Header Simulation */}
-      <Text
-        position={[-1.3, 0.8, 0.05]}
-        fontSize={0.1}
-        color="#ffffff"
-        anchorX="left"
-        font="https://fonts.gstatic.com/s/roboto/v18/KFOmCnqEu92Fr1Mu4mxM.woff"
-      >
-        Dashboard Preview
-      </Text>
-      
-      {/* Cards simulation */}
-      <Card position={[-0.9, 0.2, 0.1]} title="Daily Focus" value="4h 20m" color="#7B61FF" />
-      <Card position={[0.1, 0.2, 0.1]} title="Current Streak" value="12 Days" color="#00D4FF" />
-      <Card position={[-0.9, -0.5, 0.1]} title="Productivity" value="94%" color="#3ddc84" />
-      <Card position={[0.1, -0.5, 0.1]} title="Tasks Done" value="8/10" color="#FFD700" />
-      
-      {/* Decorative lines/UI elements */}
-      <mesh position={[0, 0.7, 0.02]}>
-        <planeGeometry args={[2.8, 0.01]} />
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.2} />
+      {/* Glow Border */}
+      <mesh position={[0, 0, -0.01]}>
+        <planeGeometry args={[3.05, 2.05]} />
+        <meshBasicMaterial color="#4f78ff" transparent opacity={0.1} />
       </mesh>
+
+      <TimerDisplay />
+      <StreakIndicator />
+      <ProgressRing />
+      
+      <group position={[-0.7, -0.3, 0.1]}>
+        <Text
+          fontSize={0.08}
+          color="#ffffff"
+          fillOpacity={0.6}
+          anchorX="left"
+        >
+          UPCOMING OBJECTIVE
+        </Text>
+        <Text
+          position={[0, -0.15, 0]}
+          fontSize={0.12}
+          color="#ffffff"
+          anchorX="left"
+        >
+          CompSci 101: Data Structures
+        </Text>
+      </group>
     </group>
   );
 }
 
+// Custom Rounded Plane Geometry helper (simplified)
+function roundedPlaneGeometry(args: any) {
+  // Normally I'd use a proper shape, but for brevity I'll use a plane
+  return <planeGeometry args={[args[0], args[1]]} />;
+}
+
 export default function GrindLockHeroPanel() {
   return (
-    <div className="w-full h-[400px] md:h-[500px] lg:h-[600px] cursor-grab active:cursor-grabbing">
+    <div className="w-full h-[500px] lg:h-[700px] cursor-pointer">
       <Canvas shadows dpr={[1, 2]}>
-        <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={45} />
+        <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={35} />
         <ambientLight intensity={0.5} />
-        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1} castShadow />
-        <pointLight position={[-10, -10, -10]} intensity={0.5} color="#7B61FF" />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1.5} castShadow />
+        <pointLight position={[-5, 5, 5]} intensity={1} color="#4f78ff" />
+        <pointLight position={[5, -5, 5]} intensity={1} color="#a78bfa" />
         
-        <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-          <MainDashboard />
+        <Environment preset="city" />
+        
+        <Float speed={1.5} rotationIntensity={0.2} floatIntensity={0.5}>
+          <MainPanel />
         </Float>
+        
+        <ContactShadows position={[0, -2.5, 0]} opacity={0.4} scale={10} blur={2} far={4.5} />
       </Canvas>
     </div>
   );
 }
+
