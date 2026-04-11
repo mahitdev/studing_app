@@ -637,7 +637,7 @@ const applyXpAndBadges = async (userId) => {
   if (!user) return null;
 
   const goals = await DailyGoal.find({ userId }).sort({ date: 1 });
-  const sessions = await StudySession.find({ userId, status: "completed" }).sort({ startedAt: -1 });
+  const sessions = await StudySession.find({ userId, status: "completed" }).sort({ startedAt: -1 }).limit(500);
   const streak = streakFromGoals(goals);
 
   const totalFocusedMinutes = sessions.reduce((sum, s) => sum + (s.focusedMinutes || 0), 0);

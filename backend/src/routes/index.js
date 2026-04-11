@@ -113,6 +113,13 @@ router.post("/auth/register", authLimiter, async (req, res, next) => {
     if (password.length < 8) {
       return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
+    if (password.length > 128) {
+      return res.status(400).json({ message: "Password is too long" });
+    }
+    const strongPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/;
+    if (!strongPassword.test(password)) {
+      return res.status(400).json({ message: "Password must contain at least one uppercase letter, lowercase letter, and number" });
+    }
 
     const exists = await User.findOne({ email: email.toLowerCase() });
     if (exists) {
@@ -331,18 +338,25 @@ router.post("/users/:userId/sessions/start", async (req, res, next) => {
     const { subject = "General", studyMode = "custom", plannedDurationMinutes = 0, riskMode = false } = req.body;
     const today = todayKey();
 
-    // Auto-close stale active sessions from previous dates so users can start fresh today.
-    await StudySession.updateMany(
-      { userId, status: { $in: ["running", "paused"] }, date: { $ne: today } },
-      {
-        $set: {
-          status: "completed",
-          endedAt: new Date(),
-          focusedMinutes: 0,
-          stopReason: "auto-closed-stale-session"
+    const staleSessions = await StudySession.countDocuments({
+      userId,
+      status: { $in: ["running", "paused"] },
+      date: { $ne: today }
+    });
+
+    if (staleSessions > 0) {
+      await StudySession.updateMany(
+        { userId, status: { $in: ["running", "paused"] }, date: { $ne: today } },
+        {
+          $set: {
+            status: "completed",
+            endedAt: new Date(),
+            focusedMinutes: 0,
+            stopReason: "auto-closed-stale-session"
+          }
         }
-      }
-    );
+      );
+    }
 
     const existing = await StudySession.findOne({
       userId,

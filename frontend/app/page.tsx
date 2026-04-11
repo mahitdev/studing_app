@@ -149,9 +149,9 @@ export default function Home() {
           <a href="#how">How It Works</a>
         </div>
         <div className="footer-social">
-          <a href="/">X</a>
-          <a href="/">In</a>
-          <a href="/">Gh</a>
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">X</a>
+          <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer">In</a>
+          <a href="https://github.com" target="_blank" rel="noopener noreferrer">Gh</a>
         </div>
       </footer>
     </main>

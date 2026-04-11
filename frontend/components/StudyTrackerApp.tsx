@@ -121,6 +121,7 @@ export default function StudyTrackerApp() {
   const [isOfflineSession, setIsOfflineSession] = useState(false);
   const [pythonAnalytics, setPythonAnalytics] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
+  const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
 
   const hiddenAt = useRef<number | null>(null);
   const lastActivityAt = useRef<number>(Date.now());
@@ -189,17 +190,21 @@ export default function StudyTrackerApp() {
   }, [authTokenKey, settingsKey, userKey]);
 
   useEffect(() => {
-    if (screen === "analytics" && user && !pythonAnalytics && !loadingAnalytics) {
+    if (screen === "analytics" && user && !analyticsLoaded && !loadingAnalytics) {
       setLoadingAnalytics(true);
       fetchAnalytics(user._id)
-        .then((data) => setPythonAnalytics(data))
+        .then((data) => {
+          setPythonAnalytics(data);
+          setAnalyticsLoaded(true);
+        })
         .catch((err) => {
           console.error("Analytics fetch error:", err);
           setPythonAnalytics({ error: true, message: "Currently offline." });
+          setAnalyticsLoaded(true);
         })
         .finally(() => setLoadingAnalytics(false));
     }
-  }, [screen, user, pythonAnalytics, loadingAnalytics]);
+  }, [screen, user, analyticsLoaded, loadingAnalytics]);
 
 
   useEffect(() => {
@@ -900,9 +905,9 @@ export default function StudyTrackerApp() {
 
       {screen === "settings" && (
         <section className="card page screen-panel">
-          <label>Daily goal<input type="number" value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} /></label>
-          <label>Weekly target<input type="number" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} /></label>
-          <label>Session target<input type="number" value={goalSessions} onChange={(e) => setGoalSessions(Number(e.target.value))} /></label>
+          <label>Daily goal<input type="number" min={15} max={960} value={goalDaily} onChange={(e) => setGoalDaily(Math.max(15, Math.min(960, Number(e.target.value))))} /></label>
+          <label>Weekly target<input type="number" min={60} max={10080} value={goalWeekly} onChange={(e) => setGoalWeekly(Math.max(60, Math.min(10080, Number(e.target.value))))} /></label>
+          <label>Session target<input type="number" min={1} max={50} value={goalSessions} onChange={(e) => setGoalSessions(Math.max(1, Math.min(50, Number(e.target.value))))} /></label>
           <label className="toggle-row">Dark mode<input type="checkbox" checked={settings.darkMode} onChange={(e) => saveSettings({ darkMode: e.target.checked })} /></label>
           <label className="toggle-row">Pressure notifications<input type="checkbox" checked={settings.notifications} onChange={(e) => saveSettings({ notifications: e.target.checked })} /></label>
           <label>Identity<select value={identityType} onChange={(e) => setIdentityType(e.target.value as "Casual" | "Serious" | "Hardcore")}><option value="Casual">Casual</option><option value="Serious">Serious</option><option value="Hardcore">Hardcore</option></select></label>

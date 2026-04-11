@@ -4,6 +4,8 @@ import { mockRequest } from "./mockApi";
 const AUTH_TOKEN_KEY = "study-tracker-auth-token";
 const USER_ID_KEY = "study-tracker-user-id";
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 function normalizeApiBase(raw?: string) {
   const fallback = "http://localhost:5000/api";
   const value = (raw || fallback).trim();
@@ -42,12 +44,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       },
       cache: "no-store"
     });
-  } catch {
-    return mockRequest<T>(path, init);
+  } catch (err) {
+    if (IS_DEV) {
+      return mockRequest<T>(path, init);
+    }
+    throw new Error("Network error: Unable to reach server");
   }
 
   if (res.status >= 500) {
-    return mockRequest<T>(path, init);
+    if (IS_DEV) {
+      return mockRequest<T>(path, init);
+    }
+    throw new Error("Server error: Please try again later");
   }
 
   if (!res.ok) {

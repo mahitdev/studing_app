@@ -161,7 +161,6 @@ def analyze_sessions(payload: AnalyticsRequest):
             
             if current_day_str in le_day.classes_:
                 current_day_encoded = le_day.transform([current_day_str])[0]
-                # Scikit-learn 1.2+ warns on un-named features, but it's fine for simple use
                 predicted_minutes = rf.predict([[current_day_encoded, current_hour]])[0]
                 ml_insights["prediction_text"] = f"Based on your habits, if you start studying now, our ML model predicts you will focus for ~{int(predicted_minutes)} minutes."
             else:
