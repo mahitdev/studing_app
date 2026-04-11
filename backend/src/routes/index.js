@@ -14,7 +14,17 @@ const {
   dashboardForUser
 } = require("../services/trackerService");
 
+const rateLimit = require("express-rate-limit");
+
 const router = express.Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 15, // limit each IP to 15 requests per windowMs
+  message: { message: "Too many requests from this IP, please try again after 15 minutes" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const legacyHash = (input) => crypto.createHash("sha256").update(input).digest("hex");
 const JWT_SECRET = process.env.JWT_SECRET || "focusflow-dev-secret-change-in-production";
@@ -94,7 +104,7 @@ router.post("/waitlist/subscribe", async (req, res, next) => {
   }
 });
 
-router.post("/auth/register", async (req, res, next) => {
+router.post("/auth/register", authLimiter, async (req, res, next) => {
   try {
     const { name, email, password, college = "General", identityType = "Serious", motivationWhy = "" } = req.body;
     if (!email || !password) {
@@ -128,7 +138,7 @@ router.post("/auth/register", async (req, res, next) => {
   }
 });
 
-router.post("/auth/login", async (req, res, next) => {
+router.post("/auth/login", authLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: (email || "").toLowerCase() });
@@ -289,14 +299,15 @@ router.get("/users/:userId/analytics", async (req, res, next) => {
     const { userId } = req.params;
     const sessions = await StudySession.find({ userId }).sort({ startedAt: 1 });
     
-    // Fetch from python microservice
+    // Fetch from python microservice with timeout
     const analyticsUrl = process.env.ANALYTICS_SERVICE_URL || "http://localhost:8000";
     const response = await fetch(`${analyticsUrl}/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ sessions })
+      body: JSON.stringify({ sessions }),
+      signal: AbortSignal.timeout(10000)
     });
 
     if (!response.ok) {
@@ -307,6 +318,9 @@ router.get("/users/:userId/analytics", async (req, res, next) => {
     res.json(analyticsData);
   } catch (err) {
     console.error("Analytics Error:", err);
+    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
+      return res.status(504).json({ message: "Analytics service timed out", error: "Gateway Timeout" });
+    }
     res.status(502).json({ message: "Analytics service unavailable", error: err.message });
   }
 });
