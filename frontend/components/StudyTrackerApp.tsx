@@ -217,13 +217,15 @@ export default function StudyTrackerApp() {
       return;
     }
 
-    const tick = () => {
-      setElapsedSeconds(elapsedForSession(activeSession));
-    };
+    const initialElapsed = elapsedForSession(activeSession);
+    setElapsedSeconds(initialElapsed);
 
-    tick();
     if (activeSession.status !== "running") return undefined;
-    const timer = setInterval(tick, 1000);
+
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
     return () => clearInterval(timer);
   }, [activeSession]);
 
