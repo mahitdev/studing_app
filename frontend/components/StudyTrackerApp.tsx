@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   addFriend,
   endSession,
@@ -704,223 +705,305 @@ export default function StudyTrackerApp() {
         </header>
 
         <div className="page-stage">
-      {screen === "dashboard" && (
-        <section className="card page screen-panel">
-          {!ritualDoneToday && <button onClick={handleStartRitual}>{dashboard.startRitual.title}</button>}
-          <div className="goal-ring-wrap">
-            <div className="goal-ring" style={{ ["--ring-fill" as string]: `${progressPercent}%` }}>
-              <span>{progressPercent}%</span>
-              <small>Goal</small>
-            </div>
-          </div>
-          <div className="kpi-grid">
-            <article><p>Goal</p><h3>{dashboard.todayGoal.targetMinutes} min</h3></article>
-            <article><p>Studied</p><h3>{dashboard.todayGoal.studiedMinutes} min</h3></article>
-            <article><p>Momentum</p><h3>{dashboard.momentum.score}%</h3></article>
-            <article><p>Focus</p><h3>{dashboard.focusScore.score}%</h3></article>
-          </div>
-          <div className="progress"><span style={{ width: `${progressPercent}%` }} /></div>
-          <p className="muted">{dashboard.timePressure.message}</p>
-          {dashboard.recovery?.eligible && <p className="timer-alert">{dashboard.recovery.message}</p>}
-          {dashboard.identityReminder && <p>{dashboard.identityReminder}</p>}
-          {dashboard.pressureNotifications?.length ? (
-            <article className="card">
-              <h3>Pressure</h3>
-              <div className="stats">
-                {dashboard.pressureNotifications.map((item, idx) => <p key={`${item}-${idx}`}>{item}</p>)}
-              </div>
-            </article>
-          ) : null}
-          <div className="row wrap">
-            <input placeholder="Add friend by email" value={friendEmail} onChange={(e) => setFriendEmail(e.target.value)} />
-            <button onClick={handleAddFriend}>Add Friend</button>
-          </div>
-          <p className="muted">{liveMessage}</p>
-          <p>{dashboard.futureYouReminder}</p>
-        </section>
-      )}
+          <AnimatePresence mode="wait">
+            {screen === "dashboard" && (
+              <motion.section
+                key="dashboard"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="page screen-panel"
+              >
+                {!ritualDoneToday && (
+                  <button className="ritual-cta" onClick={handleStartRitual}>
+                    {dashboard.startRitual.title}
+                  </button>
+                )}
+                
+                <div className="goal-ring-wrap">
+                  <div className="goal-ring" style={{ ["--ring-fill" as string]: `${progressPercent}%` }}>
+                    <span>{progressPercent}%</span>
+                    <small>Completed</small>
+                  </div>
+                </div>
 
-      {screen === "timer" && (
-        <section className="card page screen-panel timer-screen">
-          <div className="timer-center">
-            <div className={`timer-ring big ${activeSession?.status === "running" ? "pulse-active" : ""}`} style={{ ["--ring-fill" as string]: `${timerProgress}%` }}><span>{formatHMS(elapsedSeconds)}</span></div>
-          </div>
-          <div className="row wrap">
-            <button type="button" className={studyMode === "pomodoro" ? "nav-btn active" : "nav-btn"} onClick={() => { setStudyMode("pomodoro"); setPlannedDuration(25); }}>25m Pomodoro</button>
-            <button type="button" className={studyMode === "deep" ? "nav-btn active" : "nav-btn"} onClick={() => { setStudyMode("deep"); setPlannedDuration(50); }}>50m Deep Work</button>
-            <button type="button" className={studyMode === "custom" ? "nav-btn active" : "nav-btn"} onClick={() => setStudyMode("custom")}>Custom</button>
-          </div>
-          {studyMode === "custom" && (
-            <label>Custom duration (minutes)<input type="number" min={10} max={240} value={plannedDuration} onChange={(e) => setPlannedDuration(Number(e.target.value))} /></label>
-          )}
-          <label className="toggle-row">Risk mode (double XP if completed)<input type="checkbox" checked={riskMode} onChange={(e) => setRiskMode(e.target.checked)} /></label>
-          <div className="grid two">
-            <div><label>Subject</label><select value={subject} onChange={(e) => setSubject(e.target.value)}><option>General</option><option>Math</option><option>Science</option><option>Programming</option></select></div>
-            <div><label>Notes</label><textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-          </div>
-          <label>Session quality</label>
-          <select value={sessionQualityTag} onChange={(e) => setSessionQualityTag(e.target.value as "deep" | "average" | "distracted" | "") }>
-            <option value="">Select</option><option value="deep">Deep focus</option><option value="average">Average</option><option value="distracted">Distracted</option>
-          </select>
-          <div className="row wrap">
-            <button onClick={handleStart} disabled={Boolean(activeSession)}>Start</button>
-            <button onClick={handlePauseResume} disabled={!activeSession}>{activeSession?.status === "paused" ? "Resume" : "Pause"}</button>
-            <button onClick={handleReset} disabled={!activeSession}>Reset</button>
-            <button onClick={handleEnd} disabled={!activeSession}>Finish</button>
-          </div>
-          {timerAlert && <p className="timer-alert">{timerAlert}</p>}
-        </section>
-      )}
+                <div className="kpi-grid">
+                  <article>
+                    <p>Daily Goal</p>
+                    <h3>{dashboard.todayGoal.targetMinutes}m</h3>
+                  </article>
+                  <article>
+                    <p>Focus Time</p>
+                    <h3>{dashboard.todayGoal.studiedMinutes}m</h3>
+                  </article>
+                  <article>
+                    <p>Momentum</p>
+                    <h3>{dashboard.momentum.score}%</h3>
+                  </article>
+                  <article>
+                    <p>Focus Score</p>
+                    <h3>{dashboard.focusScore.score}%</h3>
+                  </article>
+                </div>
 
-      {screen === "analytics" && (
-        <section className="card page screen-panel python-analytics-panel">
-          <div style={{ marginBottom: "2rem" }}>
-            <h2 style={{ fontSize: "2rem", background: "linear-gradient(90deg, #7B61FF, #00D4FF)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              Deep Analytics Engine
-            </h2>
-            <p className="muted" style={{ letterSpacing: "1px", textTransform: "uppercase", fontSize: "0.85rem" }}>
-              Powered by Python
-            </p>
-          </div>
-          
-          {loadingAnalytics ? (
-            <div className="shimmer-wrap" style={{ marginTop: '20px' }}>
-              <div className="shimmer-block" style={{ height: "100px" }}></div>
-              <div className="shimmer-block" style={{ height: "100px", marginTop: "1rem" }}></div>
-            </div>
-          ) : pythonAnalytics && !pythonAnalytics.error ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "2rem", marginBottom: "2rem" }}>
-              <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: "1rem" }}>
-                <article style={{ background: "rgba(123, 97, 255, 0.1)", border: "1px solid rgba(123, 97, 255, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
-                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Avg Session</p>
-                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{pythonAnalytics.average_study_time} <span style={{fontSize:"1rem"}}>min</span></h3>
-                </article>
-                <article style={{ background: "rgba(0, 212, 255, 0.1)", border: "1px solid rgba(0, 212, 255, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
-                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Consistency</p>
-                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{pythonAnalytics.consistency_score}%</h3>
-                </article>
-                <article style={{ background: "rgba(255, 215, 0, 0.1)", border: "1px solid rgba(255, 215, 0, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
-                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Focus Score</p>
-                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{pythonAnalytics.focus_score}%</h3>
-                </article>
-                <article style={{ background: "rgba(255, 97, 122, 0.1)", border: "1px solid rgba(255, 97, 122, 0.3)", borderRadius: "12px", padding: "1.5rem" }}>
-                  <p style={{ margin: 0, fontSize: "0.9rem", color: "var(--fg-muted)" }}>Peak Time</p>
-                  <h3 style={{ margin: "0.5rem 0 0", fontSize: "1.8rem", color: "#fff" }}>{(pythonAnalytics.best_study_time || "").split(' ')[0]}</h3>
-                </article>
-              </div>
+                <div className="card pressure-box">
+                  <p className="accent-text uppercase text-[10px] font-bold tracking-widest mb-2">System Status</p>
+                  <p className="text-lg font-medium">{dashboard.timePressure.message}</p>
+                </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1rem" }}>
-                <article className="card" style={{ background: "linear-gradient(145deg, #1a1a2e, #16213e)", borderLeft: "4px solid #00D4FF" }}>
-                   <h3 style={{ margin: "0 0 0.5rem", color: "#00D4FF" }}>💡 Data Insight</h3>
-                   <p style={{ margin: 0, fontSize: "1.1rem" }}>{pythonAnalytics.message}</p>
-                </article>
-                <article className="card" style={{ background: "linear-gradient(145deg, #2e1a1a, #3e1616)", borderLeft: "4px solid #FF617A" }}>
-                   <h3 style={{ margin: "0 0 0.5rem", color: "#FF617A" }}>📉 Weak Pattern Detected</h3>
-                   <p style={{ margin: 0, fontSize: "1.1rem" }}>{pythonAnalytics.weak_pattern}</p>
-                </article>
-                {pythonAnalytics.ml_insights && pythonAnalytics.ml_insights.prediction_text && (
-                  <article className="card" style={{ background: "linear-gradient(145deg, #1f2e1a, #1a2516)", borderLeft: "4px solid #00FF88" }}>
-                     <h3 style={{ margin: "0 0 0.5rem", color: "#00FF88" }}>🤖 AI Predictor</h3>
-                     <p style={{ margin: 0, fontSize: "1.1rem" }}>{pythonAnalytics.ml_insights.prediction_text}</p>
+                {dashboard.pressureNotifications?.length ? (
+                  <div className="flex flex-col gap-4">
+                    {dashboard.pressureNotifications.map((item, idx) => (
+                      <article key={`${item}-${idx}`} className="alert-card">
+                        <span className="pulse-dot" />
+                        <p>{item}</p>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="card glass-panel mt-4">
+                  <div className="flex items-center gap-4 mb-4">
+                    <span className="text-2xl">👥</span>
+                    <div>
+                      <h3 className="text-sm font-bold">Network Synergy</h3>
+                      <p className="text-xs muted">{liveMessage || "No active sync partners"}</p>
+                    </div>
+                  </div>
+                  <div className="row wrap">
+                    <input 
+                      placeholder="Partner email..." 
+                      className="flex-1"
+                      value={friendEmail} 
+                      onChange={(e) => setFriendEmail(e.target.value)} 
+                    />
+                    <button onClick={handleAddFriend}>Add</button>
+                  </div>
+                </div>
+              </motion.section>
+            )}
+
+            {screen === "timer" && (
+              <motion.section
+                key="timer"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.05 }}
+                transition={{ duration: 0.4 }}
+                className="page screen-panel timer-screen"
+              >
+                <div className="timer-center">
+                  <div 
+                    className={`timer-ring big ${activeSession?.status === "running" ? "pulse-active" : ""}`} 
+                    style={{ ["--ring-fill" as string]: `${timerProgress}%` }}
+                  >
+                    <span>{formatHMS(elapsedSeconds)}</span>
+                  </div>
+                </div>
+
+                <div className="glass-panel p-6 rounded-3xl flex flex-col gap-8 w-full max-w-2xl mx-auto">
+                  <div className="row justify-center gap-4">
+                    <button 
+                      className={studyMode === "pomodoro" ? "nav-btn active" : "nav-btn"} 
+                      onClick={() => { setStudyMode("pomodoro"); setPlannedDuration(25); }}
+                    >
+                      Pomodoro (25)
+                    </button>
+                    <button 
+                      className={studyMode === "deep" ? "nav-btn active" : "nav-btn"} 
+                      onClick={() => { setStudyMode("deep"); setPlannedDuration(50); }}
+                    >
+                      Deep Work (50)
+                    </button>
+                    <button 
+                      className={studyMode === "custom" ? "nav-btn active" : "nav-btn"} 
+                      onClick={() => setStudyMode("custom")}
+                    >
+                      Custom
+                    </button>
+                  </div>
+
+                  <div className="grid two gap-6">
+                    <div className="flex flex-col gap-2 text-left">
+                      <label>Subject Focus</label>
+                      <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+                        <option>General</option>
+                        <option>Math</option>
+                        <option>Science</option>
+                        <option>Programming</option>
+                      </select>
+                    </div>
+                    
+                    <div className="flex flex-col gap-2 text-left">
+                      <label>Session Type</label>
+                      <label className="toggle-row glass p-3 rounded-xl border border-white/5">
+                        <span className="text-xs font-bold uppercase tracking-wider">Risk Mode</span>
+                        <input type="checkbox" checked={riskMode} onChange={(e) => setRiskMode(e.target.checked)} />
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="row wrap justify-center gap-4">
+                    <button className="primary-glow px-12" onClick={handleStart} disabled={Boolean(activeSession)}>Initialize Session</button>
+                    <button className="secondary ghost" onClick={handlePauseResume} disabled={!activeSession}>
+                      {activeSession?.status === "paused" ? "Resume" : "Pause"}
+                    </button>
+                    <button className="danger ghost" onClick={handleEnd} disabled={!activeSession}>Terminate</button>
+                  </div>
+                  
+                  {timerAlert && <p className="timer-alert">{timerAlert}</p>}
+                </div>
+              </motion.section>
+            )}
+
+            {screen === "analytics" && (
+              <motion.section
+                key="analytics"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                className="page screen-panel python-analytics-panel"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-4xl font-black tracking-tighter gradient-text">DEEP ENGINE.</h2>
+                    <p className="muted text-xs font-bold tracking-[0.2em] uppercase">Neural Performance Analytics</p>
+                  </div>
+                  <div className="px-4 py-2 glass-light rounded-full text-[10px] font-bold text-accent uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                    System Live
+                  </div>
+                </div>
+                
+                {loadingAnalytics ? (
+                  <div className="shimmer-wrap">
+                    <div className="shimmer-block" style={{ height: "120px" }} />
+                    <div className="shimmer-block" style={{ height: "400px" }} />
+                  </div>
+                ) : pythonAnalytics && !pythonAnalytics.error ? (
+                  <div className="flex flex-col gap-8">
+                    <div className="kpi-grid">
+                      <article className="stat-card blue">
+                        <p>Efficiency</p>
+                        <h3>{pythonAnalytics.consistency_score}%</h3>
+                      </article>
+                      <article className="stat-card purple">
+                        <p>Avg Session</p>
+                        <h3>{pythonAnalytics.average_study_time}m</h3>
+                      </article>
+                      <article className="stat-card pink">
+                        <p>Focus Peak</p>
+                        <h3>{pythonAnalytics.focus_score}%</h3>
+                      </article>
+                    </div>
+
+                    <div className="grid two gap-6">
+                      <article className="card insight-card border-l-4 border-accent">
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-accent mb-4">Neural Insight</h4>
+                        <p className="text-lg font-medium leading-relaxed">{pythonAnalytics.message}</p>
+                      </article>
+                      <article className="card insight-card border-l-4 border-danger">
+                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-danger mb-4">Performance Leak</h4>
+                        <p className="text-lg font-medium leading-relaxed">{pythonAnalytics.weak_pattern}</p>
+                      </article>
+                    </div>
+
+                    {pythonAnalytics.graphs?.focus_trend && (
+                      <article className="card p-4 overflow-hidden">
+                        <img 
+                          src={`data:image/png;base64,${pythonAnalytics.graphs.focus_trend}`} 
+                          alt="Trend" 
+                          className="w-full h-auto rounded-xl opacity-90 transition-opacity hover:opacity-100" 
+                        />
+                      </article>
+                    )}
+                  </div>
+                ) : (
+                  <article className="card border-l-4 border-danger">
+                    <h3 className="text-xl font-bold mb-2">Offline.</h3>
+                    <p className="muted">Neural engine is currently unreachable. Check back when online.</p>
                   </article>
                 )}
-              </div>
-
-              {pythonAnalytics.graphs && Object.keys(pythonAnalytics.graphs).length > 0 && (
-                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                  {pythonAnalytics.graphs.focus_trend && (
-                    <article className="card" style={{ padding: "1rem", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                      <img src={`data:image/png;base64,${pythonAnalytics.graphs.focus_trend}`} alt="Focus Trend Graph" style={{ maxWidth: "100%", height: "auto", filter: "drop-shadow(0 0 10px rgba(123,97,255,0.2))" }} />
-                    </article>
-                  )}
-                  {pythonAnalytics.graphs.weekday_performance && (
-                    <article className="card" style={{ padding: "1rem", display: "flex", justifyContent: "center", alignItems: "center" }}>
-                      <img src={`data:image/png;base64,${pythonAnalytics.graphs.weekday_performance}`} alt="Weekday Performance Graph" style={{ maxWidth: "100%", height: "auto", filter: "drop-shadow(0 0 10px rgba(255,97,122,0.2))" }} />
-                    </article>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : (
-             <article className="card" style={{ borderLeft: "4px solid #FF617A", marginBottom: "2rem" }}>
-                <h3>Analytics Engine Offline</h3>
-                <p>{pythonAnalytics?.message || "Could not connect to Python microservice or not enough data."}</p>
-             </article>
-          )}
-
-          <hr style={{ border: 0, height: "1px", background: "var(--border)", margin: "2rem 0" }} />
-          <h3 style={{ marginBottom: "1rem", color: "var(--fg-muted)" }}>Legacy History</h3>
-
-          <div className="calendar-grid">
-            {dashboard.history.slice(-56).map((day) => (
-              <span key={day.date} className={`heat ${day.color}`} title={`${day.date}: ${day.studiedMinutes} min`} />
-            ))}
-          </div>
-          <div className="trend-grid">
-            {dashboard.history.slice(-14).map((day) => (
-              <div key={day.date} className="trend-col"><div className={day.completed ? "target-bar ok" : "target-bar bad"}><span style={{ height: `${Math.min(100, day.completionPercent)}%` }} /></div><p>{compactDate(day.date)}</p></div>
-            ))}
-          </div>
-          {dashboard.effortVsResult && <article className="card"><h3>Effort vs Result</h3><p>{dashboard.effortVsResult.message}</p></article>}
-          {dashboard.weakDayDetection && <article className="card"><h3>Weak Day Detection</h3><p>{dashboard.weakDayDetection.reminder}</p></article>}
-          {dashboard.lazyPattern && <article className="card"><h3>Lazy Pattern</h3><p>{dashboard.lazyPattern.message}</p></article>}
-          {dashboard.longTermProgress && <article className="card"><h3>Long-Term Progress</h3><p>{`This month: ${dashboard.longTermProgress.monthlyHours}h | Growth: ${dashboard.longTermProgress.growthPercent}%`}</p></article>}
-          {dashboard.sessionReplay?.length ? (
-            <article className="card">
-              <h3>Session History Replay</h3>
-              <div className="stats">
-                {dashboard.sessionReplay.map((s) => (
-                  <p key={s.sessionId}>
-                    {new Date(s.start).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - {s.minutes}m - {s.subject} - {s.studyMode}{s.riskMode ? " (Risk)" : ""}
-                  </p>
-                ))}
-              </div>
-            </article>
-          ) : null}
-          <article className="card"><h3>Energy Pattern</h3><p>{dashboard.energyPatternTracking.message}</p></article>
-        </section>
-      )}
-
-      {screen === "streak" && (
-        <section className="card page screen-panel">
-          <div className="streak-flame">🔥</div>
-          <div className="kpi-grid">
-            <article><p>Current Streak</p><h3>{dashboard.streak.current}</h3></article>
-            <article><p>Longest</p><h3>{dashboard.streak.longest}</h3></article>
-            <article><p>Consistency</p><h3>{dashboard.consistencyScore7d}%</h3></article>
-          </div>
-          <div className="badges">
-            {(dashboard.gamification.badges || []).length ? (
-              dashboard.gamification.badges.map((badge) => (
-                <span key={badge} className="badge unlocked">{badge}</span>
-              ))
-            ) : (
-              <span className="badge">No badges yet</span>
+              </motion.section>
             )}
-          </div>
-          <article className="card"><h3>Auto Habit Builder</h3><p>{dashboard.autoHabitBuilder.message}</p></article>
-          {dashboard.weeklySelfRank && <article className="card"><h3>Weekly Rank (Self)</h3><p>{`${dashboard.weeklySelfRank.rank} rank - ${dashboard.weeklySelfRank.message}`}</p></article>}
-        </section>
-      )}
 
-      {screen === "settings" && (
-        <section className="card page screen-panel">
-          <label>Daily goal<input type="number" min={15} max={960} value={goalDaily} onChange={(e) => setGoalDaily(Math.max(15, Math.min(960, Number(e.target.value))))} /></label>
-          <label>Weekly target<input type="number" min={60} max={10080} value={goalWeekly} onChange={(e) => setGoalWeekly(Math.max(60, Math.min(10080, Number(e.target.value))))} /></label>
-          <label>Session target<input type="number" min={1} max={50} value={goalSessions} onChange={(e) => setGoalSessions(Math.max(1, Math.min(50, Number(e.target.value))))} /></label>
-          <label className="toggle-row">Dark mode<input type="checkbox" checked={settings.darkMode} onChange={(e) => saveSettings({ darkMode: e.target.checked })} /></label>
-          <label className="toggle-row">Pressure notifications<input type="checkbox" checked={settings.notifications} onChange={(e) => saveSettings({ notifications: e.target.checked })} /></label>
-          <label>Identity<select value={identityType} onChange={(e) => setIdentityType(e.target.value as "Casual" | "Serious" | "Hardcore")}><option value="Casual">Casual</option><option value="Serious">Serious</option><option value="Hardcore">Hardcore</option></select></label>
-          <label>Motivation<input value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} /></label>
-          <label>Email for summary<input type="email" value={summaryEmail} onChange={(e) => setSummaryEmail(e.target.value)} placeholder="you@example.com" /></label>
-          <button onClick={handleGoalUpdate}>Apply Goals</button>
-          <button onClick={handleIdentityUpdate}>Apply Profile</button>
-          <button onClick={handleEmailSummary}>Send My Progress Email</button>
-          {emailStatus ? <p className="muted">{emailStatus}</p> : null}
-        </section>
-      )}
+            {screen === "streak" && (
+              <motion.section
+                key="streak"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.1 }}
+                className="page screen-panel text-center"
+              >
+                <div className="streak-flame">🔥</div>
+                <h2 className="text-5xl font-black mb-12 uppercase tracking-tighter">Day {dashboard.streak.current}</h2>
+                <div className="kpi-grid">
+                  <article><p>Best Streak</p><h3>{dashboard.streak.longest}d</h3></article>
+                  <article><p>Consistency</p><h3>{dashboard.consistencyScore7d}%</h3></article>
+                </div>
+                <div className="badges mt-12 overflow-x-auto pb-4">
+                  {(dashboard.gamification.badges || []).map((badge) => (
+                    <div key={badge} className="badge unlocked min-w-[120px]">{badge}</div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
 
-      {error && <p className="error">{error}</p>}
+            {screen === "settings" && (
+              <motion.section
+                key="settings"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="page screen-panel max-w-2xl"
+              >
+                <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">System Config</h2>
+                <div className="grid gap-8">
+                  <div className="grid two gap-6">
+                    <div className="flex flex-col gap-2">
+                      <label>Daily Mission (Min)</label>
+                      <input type="number" value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <label>Weekly Sprint (Min)</label>
+                      <input type="number" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} />
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-2">
+                    <label>Self Identity</label>
+                    <select value={identityType} onChange={(e) => setIdentityType(e.target.value as any)}>
+                      <option value="Casual">Casual</option>
+                      <option value="Serious">Serious (Recommended)</option>
+                      <option value="Hardcore">Hardcore</option>
+                    </select>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label>The "Why" (Motivation)</label>
+                    <textarea value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} rows={3} />
+                  </div>
+
+                  <div className="row wrap mt-4">
+                    <button className="primary-glow" onClick={handleGoalUpdate}>Sync Configuration</button>
+                    <button className="secondary ghost" onClick={handleIdentityUpdate}>Update Identity</button>
+                  </div>
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+          {error && (
+            <div className="mt-8">
+              <article className="alert-card animate-pulse">
+                <span className="pulse-dot" />
+                <p className="text-danger font-bold uppercase tracking-wider text-xs">System Fault Detected</p>
+                <p className="flex-1">{error}</p>
+                <button className="text-[10px] underline" onClick={() => setError("")}>Dismiss</button>
+              </article>
+            </div>
+          )}
         </div>
       </div>
     </main>

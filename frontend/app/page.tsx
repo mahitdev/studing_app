@@ -11,7 +11,7 @@ function NavLink({ href, children }: { href: string; children: React.ReactNode }
   return (
     <Link 
       href={href} 
-      className="text-xs font-bold uppercase tracking-widest text-white/70 hover:text-white transition-colors duration-300"
+      className="text-xs font-bold uppercase tracking-widest text-white hover:text-white transition-colors duration-300"
     >
       {children}
     </Link>
@@ -50,7 +50,7 @@ function FeatureCard({ title, icon, description, delay }: { title: string; icon:
       <div className="relative z-10">
         <div className="text-4xl mb-8 group-hover:scale-110 transition-transform duration-500 ease-out">{icon}</div>
         <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">{title}</h3>
-        <p className="text-white/60 leading-relaxed font-medium">{description}</p>
+        <p className="text-white leading-relaxed font-medium opacity-80">{description}</p>
       </div>
     </motion.div>
   );
@@ -67,12 +67,12 @@ export default function Home() {
   if (!mounted) return <div className="min-h-screen bg-[#000000]" />;
 
   return (
-    <main className="relative bg-[#000000] text-white selection:bg-accent/30 selection:text-white overflow-hidden">
+    <main className="relative text-white selection:bg-accent/30 selection:text-white min-h-screen">
       <GrindLock3D />
 
       {/* Persistent Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+      <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-10 pointer-events-none">
+        <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -108,7 +108,7 @@ export default function Home() {
       </nav>
 
       {/* Scrollable Content */}
-      <div className="scroll-container h-screen overflow-y-auto" ref={scrollContainerRef}>
+      <div className="scroll-container w-full" ref={scrollContainerRef}>
         
         {/* HERO SECTION */}
         <Section id="hero" className="flex flex-col items-center justify-center">
@@ -127,7 +127,7 @@ export default function Home() {
                   Discipline<br />
                   <span className="opacity-90">Your Time.</span>
                 </h1>
-                <p className="text-xl text-white/60 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0">
+                <p className="text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0">
                   The high-end productivity engine for those who refuse to settle. 
                   Atomic focus, iron streaks, and cinematic analytics.
                 </p>
@@ -163,7 +163,7 @@ export default function Home() {
         <Section id="features">
           <div className="text-center mb-24">
             <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-6 gradient-text">ENGINEERED FOR ELITE.</h2>
-            <p className="text-white/60 text-xl font-medium">Tools that force consistency where motivation fails.</p>
+            <p className="text-white/90 text-xl font-medium">Tools that force consistency where motivation fails.</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -203,7 +203,7 @@ export default function Home() {
                   <div className="text-8xl font-black text-white/[0.08]">{item.step}</div>
                   <div>
                     <h3 className="text-4xl font-black mb-4 tracking-tight">{item.title}</h3>
-                    <p className="text-xl text-white/60 leading-relaxed font-medium">{item.desc}</p>
+                    <p className="text-xl text-white/90 leading-relaxed font-medium">{item.desc}</p>
                   </div>
                 </div>
               ))}

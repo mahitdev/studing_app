@@ -82,10 +82,10 @@ function Scene() {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={50} />
-      <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={2.5} color="#7B61FF" />
-      <pointLight position={[-10, -10, -10]} intensity={1.5} color="#00D4FF" />
-      <spotLight position={[0, 5, 0]} intensity={1} color="#ffffff" angle={0.5} penumbra={1} />
+      <ambientLight intensity={0.8} />
+      <pointLight position={[10, 10, 10]} intensity={6} color="#7B61FF" />
+      <pointLight position={[-10, -10, -10]} intensity={4} color="#00D4FF" />
+      <spotLight position={[0, 10, 0]} intensity={5} color="#ffffff" angle={0.5} penumbra={1} />
       
       {/* Background Layer */}
       <AnimatedBlob position={[-6, 4, -10]} speed={0.5} color="#2d1b69" distort={0.2} radius={3} factor={0.5} />

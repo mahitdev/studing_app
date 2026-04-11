@@ -127,15 +127,15 @@ function MainPanel() {
         <MeshTransmissionMaterial
           backside
           samples={16}
-          thickness={0.15}
+          thickness={0.2}
           chromaticAberration={0.05}
           anisotropy={0.1}
           distortion={0.1}
           color="#ffffff"
           transmission={0.95}
-          roughness={0.1}
+          roughness={0.15}
           transparent
-          opacity={0.7}
+          opacity={0.8}
         />
       </mesh>
       
@@ -182,10 +182,10 @@ export default function GrindLockHeroPanel() {
     <div className="w-full h-[500px] lg:h-[700px] cursor-pointer">
       <Canvas shadows dpr={[1, 2]}>
         <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={35} />
-        <ambientLight intensity={0.5} />
-        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={1.5} castShadow />
-        <pointLight position={[-5, 5, 5]} intensity={1} color="#4f78ff" />
-        <pointLight position={[5, -5, 5]} intensity={1} color="#a78bfa" />
+        <ambientLight intensity={1.2} />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={4} castShadow />
+        <pointLight position={[-5, 5, 5]} intensity={5} color="#4f78ff" />
+        <pointLight position={[5, -5, 5]} intensity={5} color="#a78bfa" />
         
         <Environment preset="city" />
         
