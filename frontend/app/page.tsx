@@ -64,10 +64,10 @@ export default function Home() {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="min-h-screen bg-[#030303]" />;
+  if (!mounted) return <div className="min-h-screen bg-[#000000]" />;
 
   return (
-    <main className="relative bg-[#030303] text-white selection:bg-accent/30 selection:text-white overflow-hidden">
+    <main className="relative bg-[#000000] text-white selection:bg-accent/30 selection:text-white overflow-hidden">
       <GrindLock3D />
 
       {/* Persistent Navigation */}

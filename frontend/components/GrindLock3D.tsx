@@ -121,13 +121,13 @@ function Scene() {
 
 export default function GrindLock3D() {
   return (
-    <div className="fixed inset-0 -z-10 bg-[#030303]">
+    <div className="fixed inset-0 -z-10 bg-[#000000]">
       <div className="absolute inset-0 bg-mesh opacity-50" />
       <Canvas dpr={[1, 2]} gl={{ antialias: true, alpha: true }}>
         <Scene />
       </Canvas>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(123,97,255,0.1),transparent_80%)]" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#030303] to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#000000] to-transparent" />
     </div>
   );
 }
