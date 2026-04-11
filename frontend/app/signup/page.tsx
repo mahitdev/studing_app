@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import FloatingScene from "../../components/FloatingScene";
+import { registerUser, saveAuthSession } from "../../lib/api";
 
 export default function SignUpPage() {
   const router = useRouter();

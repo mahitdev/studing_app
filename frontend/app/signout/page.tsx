@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import FloatingScene from "../../components/FloatingScene";
+import { clearAuthSession } from "../../lib/api";
 
 export default function SignOutPage() {
   useEffect(() => {

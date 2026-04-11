@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import FloatingScene from "../../components/FloatingScene";
+import { bootstrapUser, loginUser, saveAuthSession } from "../../lib/api";
 
 export default function SignInPage() {
   const router = useRouter();
