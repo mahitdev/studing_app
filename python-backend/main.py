@@ -88,7 +88,8 @@ def analyze_sessions(payload: AnalyticsRequest):
 
     # 1. Study Analytics Engine calculations
     # Average study time
-    average_study_time = int(df['total_duration_minutes'].mean())
+    avg_duration = df['total_duration_minutes'].mean()
+    average_study_time = int(avg_duration) if pd.notna(avg_duration) else 0
     
     # Consistency %: Number of unique days studied over the span
     total_days_span = max((df['startedAt'].dt.date.max() - df['startedAt'].dt.date.min()).days + 1, 1)
@@ -106,7 +107,7 @@ def analyze_sessions(payload: AnalyticsRequest):
     best_study_time_label = "Anytime"
     productivity_boost = 0
     try:
-        grouped_tod = df.groupby('time_of_day')['focusedMinutes'].mean().dropna()
+        grouped_tod = df.groupby('time_of_day', observed=False)['focusedMinutes'].mean().dropna()
         if not grouped_tod.empty:
             best_tod = grouped_tod.idxmax()
             best_avg = grouped_tod.max()

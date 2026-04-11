@@ -193,7 +193,10 @@ export default function StudyTrackerApp() {
       setLoadingAnalytics(true);
       fetchAnalytics(user._id)
         .then((data) => setPythonAnalytics(data))
-        .catch((err) => console.error("Analytics fetch error:", err))
+        .catch((err) => {
+          console.error("Analytics fetch error:", err);
+          setPythonAnalytics({ error: true, message: "Currently offline." });
+        })
         .finally(() => setLoadingAnalytics(false));
     }
   }, [screen, user, pythonAnalytics, loadingAnalytics]);
