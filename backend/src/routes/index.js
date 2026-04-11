@@ -290,7 +290,8 @@ router.get("/users/:userId/analytics", async (req, res, next) => {
     const sessions = await StudySession.find({ userId }).sort({ startedAt: 1 });
     
     // Fetch from python microservice
-    const response = await fetch("http://localhost:8000/analyze", {
+    const analyticsUrl = process.env.ANALYTICS_SERVICE_URL || "http://localhost:8000";
+    const response = await fetch(`${analyticsUrl}/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

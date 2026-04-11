@@ -15,3 +15,14 @@ services:
         sync: false
       - key: PORT
         value: 10000
+      - key: ANALYTICS_SERVICE_URL
+        value: http://studing-app-analytics:8000
+
+  - type: pserv
+    name: studing-app-analytics
+    runtime: python
+    rootDir: python-backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port 8000
+    autoDeploy: true
