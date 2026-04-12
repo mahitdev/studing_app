@@ -4,8 +4,9 @@ import { mockRequest } from "./mockApi";
 const AUTH_TOKEN_KEY = "study-tracker-auth-token";
 const USER_ID_KEY = "study-tracker-user-id";
 
-const IS_DEV = process.env.NODE_ENV === "development";
-const USE_MOCK = IS_DEV && !process.env.NEXT_PUBLIC_API_URL;
+// Use mock API whenever no explicit backend URL is configured.
+// This makes the app work standalone (both locally and on Vercel) without a backend.
+const HAS_BACKEND = Boolean(process.env.NEXT_PUBLIC_API_URL);
 
 function normalizeApiBase(raw?: string) {
   const fallback = "http://localhost:5000/api";
@@ -33,9 +34,8 @@ export function clearAuthSession() {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  // In dev mode without an explicit API URL, use the mock API directly.
-  // This avoids network errors when the backend server isn't running.
-  if (USE_MOCK) {
+  // No backend URL configured — use mock API directly (works in dev and production).
+  if (!HAS_BACKEND) {
     return mockRequest<T>(path, init);
   }
 
@@ -52,17 +52,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       cache: "no-store"
     });
   } catch (err) {
-    if (IS_DEV) {
-      return mockRequest<T>(path, init);
-    }
-    throw new Error("Network error: Unable to reach server");
+    // Backend is configured but unreachable — fall back to mock
+    return mockRequest<T>(path, init);
   }
 
   if (res.status >= 500) {
-    if (IS_DEV) {
-      return mockRequest<T>(path, init);
-    }
-    throw new Error("Server error: Please try again later");
+    // Backend returned a server error — fall back to mock
+    return mockRequest<T>(path, init);
   }
 
   if (!res.ok) {
