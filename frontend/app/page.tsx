@@ -43,6 +43,10 @@ function Section({ children, id, className = "" }: { children: React.ReactNode, 
 function FeatureCard({ title, icon, description, delay }: { title: string; icon: string; description: string; delay: number }) {
   return (
     <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.6, delay, ease: [0.2, 0.8, 0.2, 1] }}
       whileHover={{ y: -10, scale: 1.02 }}
       className="glass p-10 rounded-[2rem] group relative overflow-hidden"
     >

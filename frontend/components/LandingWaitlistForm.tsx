@@ -43,7 +43,7 @@ export default function LandingWaitlistForm() {
           disabled={loading}
           className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-black font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-white/5 whitespace-nowrap"
         >
-          {loading ? "Sychronizing..." : "Join the Elite"}
+          {loading ? "Synchronizing..." : "Join the Elite"}
         </motion.button>
       </div>
       <AnimatePresence>

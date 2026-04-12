@@ -5,6 +5,7 @@ const AUTH_TOKEN_KEY = "study-tracker-auth-token";
 const USER_ID_KEY = "study-tracker-user-id";
 
 const IS_DEV = process.env.NODE_ENV === "development";
+const USE_MOCK = IS_DEV && !process.env.NEXT_PUBLIC_API_URL;
 
 function normalizeApiBase(raw?: string) {
   const fallback = "http://localhost:5000/api";
@@ -32,6 +33,12 @@ export function clearAuthSession() {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  // In dev mode without an explicit API URL, use the mock API directly.
+  // This avoids network errors when the backend server isn't running.
+  if (USE_MOCK) {
+    return mockRequest<T>(path, init);
+  }
+
   let res: Response;
   const token = getAuthToken();
   try {

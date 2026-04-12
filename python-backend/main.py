@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import pandas as pd
 import numpy as np
@@ -17,12 +17,12 @@ class PauseItem(BaseModel):
     reason: Optional[str] = None
 
 class StudySession(BaseModel):
-    id: str
-    userId: str
-    date: str
-    startedAt: str
+    id: str = Field(default="", alias="_id")
+    userId: str = ""
+    date: str = ""
+    startedAt: str = ""
     endedAt: Optional[str] = None
-    status: str
+    status: str = "completed"
     pauseCount: int = 0
     pauses: List[PauseItem] = []
     focusedMinutes: float = 0
@@ -30,6 +30,9 @@ class StudySession(BaseModel):
     subject: str = "General"
     studyMode: str = "custom"
     plannedDurationMinutes: float = 0
+
+    class Config:
+        populate_by_name = True
 
 class AnalyticsRequest(BaseModel):
     sessions: List[StudySession]

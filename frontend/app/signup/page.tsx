@@ -15,15 +15,20 @@ export default function SignUpPage() {
   const [identity, setIdentity] = useState<"Casual" | "Serious" | "Hardcore">("Serious");
   const [why, setWhy] = useState("Job - 12 LPA");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const onSignup = async () => {
+    if (loading) return;
     try {
       setError("");
+      setLoading(true);
       const response = await registerUser(name, email, password, "General", identity, why);
       saveAuthSession(response.user._id, response.token);
       router.push("/dashboard");
     } catch (err) {
       setError((err as Error).message || "Sign up failed");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -37,24 +42,24 @@ export default function SignUpPage() {
         initial={{ opacity: 0, scale: 0.9, rotateY: 10 }}
         animate={{ opacity: 1, scale: 1, rotateY: 0 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="auth-card max-w-[550px]"
+        className="auth-card max-w-[520px]"
       >
         <h1>Create Account</h1>
         
-        <div className="grid two gap-6 text-left">
-          <div className="flex flex-col gap-2">
+        <div className="grid two gap-4 text-left">
+          <div className="flex flex-col gap-1.5">
             <label>Full Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} />
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <label>Email</label>
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <label>Password</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 chars" />
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <label>Study Identity</label>
             <select value={identity} onChange={(e) => setIdentity(e.target.value as "Casual" | "Serious" | "Hardcore")}>
               <option value="Casual">Casual</option>
@@ -64,12 +69,14 @@ export default function SignUpPage() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 text-left">
+        <div className="flex flex-col gap-1.5 text-left">
           <label>Why are you studying?</label>
           <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Your high-stakes motivation..." />
         </div>
 
-        <button className="w-full mt-4" onClick={onSignup}>Start My Journey</button>
+        <button className="w-full mt-2 primary-glow" onClick={onSignup} disabled={loading}>
+          {loading ? "Creating Account..." : "Start My Journey"}
+        </button>
         <p className="text-sm">Already have account? <Link href="/signin" className="text-accent font-bold hover:underline">Sign in</Link></p>
         
         {error && <p className="error">{error}</p>}
@@ -77,3 +84,4 @@ export default function SignUpPage() {
     </main>
   );
 }
+

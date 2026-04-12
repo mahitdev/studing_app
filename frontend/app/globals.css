@@ -497,6 +497,7 @@ input:focus, select:focus, textarea:focus {
   background: #000;
   position: relative;
   overflow: hidden;
+  padding: 2rem;
 }
 
 .auth-container {
@@ -509,36 +510,36 @@ input:focus, select:focus, textarea:focus {
 .auth-card {
   width: 100%;
   max-width: 480px;
-  padding: 4rem;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 3rem 2.5rem;
+  background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(60px);
   -webkit-backdrop-filter: blur(60px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 40px;
+  border-radius: 32px;
   text-align: center;
   position: relative;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 1);
 }
 
 .auth-card label {
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted);
-  margin-bottom: -1rem;
+  margin-bottom: 0;
 }
 
 .auth-card h1 {
-  font-size: 3rem;
+  font-size: 2.5rem;
   font-weight: 900;
   letter-spacing: -0.05em;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.4) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -546,7 +547,37 @@ input:focus, select:focus, textarea:focus {
 
 .auth-card p {
   color: var(--muted);
-  margin-bottom: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.auth-card input,
+.auth-card select,
+.auth-card textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.auth-card input:focus,
+.auth-card select:focus,
+.auth-card textarea:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(79, 120, 255, 0.1);
+  outline: none;
+}
+
+.auth-card .error {
+  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 93, 121, 0.08);
+  border: 1px solid rgba(255, 93, 121, 0.2);
+  border-radius: 12px;
 }
 
 .ghost {
@@ -667,6 +698,19 @@ input:focus, select:focus, textarea:focus {
   width: auto;
 }
 
+.glass-panel {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 1.5rem;
+}
+
+.page-stage {
+  flex: 1;
+  overflow-y: auto;
+}
+
 /* Multi-level Dashboard Components */
 .ritual-cta {
   width: 100%;
@@ -756,16 +800,12 @@ input:focus, select:focus, textarea:focus {
   border-radius: 24px;
 }
 
-.gradient-text {
+/* Dashboard uses a simpler gradient text variant */
+.gradient-text-simple {
   background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.4) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-}
-
-.glass-light {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-clip: text;
 }
 
 .primary-glow {
