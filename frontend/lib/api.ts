@@ -6,7 +6,7 @@ const USER_ID_KEY = "study-tracker-user-id";
 
 // Use mock API whenever no explicit backend URL is configured.
 // This makes the app work standalone (both locally and on Vercel) without a backend.
-const HAS_BACKEND = Boolean(process.env.NEXT_PUBLIC_API_URL);
+const HAS_BACKEND = Boolean(process.env.NEXT_PUBLIC_API_URL) && typeof window !== "undefined" && localStorage.getItem("study-tracker-pref-mock") !== "true";
 
 function normalizeApiBase(raw?: string) {
   const fallback = "http://localhost:5000/api";
@@ -41,6 +41,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   let res: Response;
   const token = getAuthToken();
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), 5000);
+
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...init,
@@ -49,10 +52,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(init?.headers || {})
       },
+      signal: controller.signal,
       cache: "no-store"
     });
+    clearTimeout(id);
   } catch (err) {
-    // Backend is configured but unreachable — fall back to mock
+    clearTimeout(id);
+    // Backend is configured but unreachable/timeout — fall back to mock
     return mockRequest<T>(path, init);
   }
 

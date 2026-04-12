@@ -1000,7 +1000,10 @@ export default function StudyTrackerApp() {
                 <span className="pulse-dot" />
                 <p className="text-danger font-bold uppercase tracking-wider text-xs">System Fault Detected</p>
                 <p className="flex-1">{error}</p>
-                <button className="text-[10px] underline" onClick={() => setError("")}>Dismiss</button>
+                <div className="flex gap-4">
+                  <button className="text-[10px] uppercase font-bold underline" onClick={() => { localStorage.setItem("study-tracker-pref-mock", "true"); window.location.reload(); }}>Switch to Standalone Mode</button>
+                  <button className="text-[10px] uppercase font-bold underline" onClick={() => setError("")}>Dismiss</button>
+                </div>
               </article>
             </div>
           )}

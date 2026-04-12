@@ -85,9 +85,17 @@ export default function SignUpPage() {
         <p className="text-sm mt-2">Already have account? <Link href="/signin" className="text-accent font-bold hover:underline">Sign in</Link></p>
         
         {error && (
-          <div className="error mt-4 flex items-center justify-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-            <span>{error}</span>
+          <div className="error mt-4 flex flex-col items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+              <span>{error}</span>
+            </div>
+            <button 
+              className="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 underline decoration-danger"
+              onClick={() => { localStorage.setItem("study-tracker-pref-mock", "true"); window.location.reload(); }}
+            >
+              Force Standalone Mode (Bypass Server)
+            </button>
           </div>
         )}
       </motion.section>
