@@ -42,14 +42,14 @@ export default function SignUpPage() {
         initial={{ opacity: 0, scale: 0.9, rotateY: 10 }}
         animate={{ opacity: 1, scale: 1, rotateY: 0 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="auth-card max-w-[520px]"
+        className="auth-card max-w-[540px]"
       >
         <h1>Create Account</h1>
         
-        <div className="grid two gap-4 text-left">
+        <div className="flex flex-col gap-4 text-left w-full">
           <div className="flex flex-col gap-1.5">
             <label>Full Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} />
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Focused Student" />
           </div>
           <div className="flex flex-col gap-1.5">
             <label>Email</label>
@@ -57,7 +57,7 @@ export default function SignUpPage() {
           </div>
           <div className="flex flex-col gap-1.5">
             <label>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 chars" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 characters" />
           </div>
           <div className="flex flex-col gap-1.5">
             <label>Study Identity</label>
@@ -67,19 +67,29 @@ export default function SignUpPage() {
               <option value="Hardcore">Hardcore</option>
             </select>
           </div>
+          <div className="flex flex-col gap-1.5">
+            <label>Why are you studying?</label>
+            <textarea 
+              value={why} 
+              onChange={(e) => setWhy(e.target.value)} 
+              placeholder="Your high-stakes motivation..." 
+              rows={2}
+              className="resize-none"
+            />
+          </div>
         </div>
 
-        <div className="flex flex-col gap-1.5 text-left">
-          <label>Why are you studying?</label>
-          <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Your high-stakes motivation..." />
-        </div>
-
-        <button className="w-full mt-2 primary-glow" onClick={onSignup} disabled={loading}>
-          {loading ? "Creating Account..." : "Start My Journey"}
+        <button className="w-full mt-4 primary-glow py-4 text-lg" onClick={onSignup} disabled={loading}>
+          {loading ? "Initializing Journey..." : "Start My Journey"}
         </button>
-        <p className="text-sm">Already have account? <Link href="/signin" className="text-accent font-bold hover:underline">Sign in</Link></p>
+        <p className="text-sm mt-2">Already have account? <Link href="/signin" className="text-accent font-bold hover:underline">Sign in</Link></p>
         
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <div className="error mt-4 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+            <span>{error}</span>
+          </div>
+        )}
       </motion.section>
     </main>
   );

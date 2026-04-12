@@ -54,10 +54,10 @@ export default function SignInPage() {
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="auth-card"
+        className="auth-card max-w-[480px]"
       >
         <h1>Sign In</h1>
-        <div className="flex flex-col gap-4 text-left">
+        <div className="flex flex-col gap-4 text-left w-full">
           <div className="flex flex-col gap-1.5">
             <label>Email</label>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
@@ -68,13 +68,19 @@ export default function SignInPage() {
           </div>
         </div>
         
-        <button className="w-full primary-glow" onClick={onLogin} disabled={loading}>
-          {loading ? "Signing In..." : "Sign In"}
+        <button className="w-full mt-2 primary-glow py-4 text-lg" onClick={onLogin} disabled={loading}>
+          {loading ? "Accessing Core..." : "Sign In"}
         </button>
-        <button className="ghost w-full" onClick={onGuest} disabled={loading}>Continue as Guest</button>
+        <button className="ghost w-full py-3" onClick={onGuest} disabled={loading}>Continue as Guest</button>
         
-        <p className="text-sm">New here? <Link href="/signup" className="text-accent font-bold hover:underline">Create account</Link></p>
-        {error && <p className="error">{error}</p>}
+        <p className="text-sm mt-2">New here? <Link href="/signup" className="text-accent font-bold hover:underline">Create account</Link></p>
+        
+        {error && (
+          <div className="error mt-4 flex items-center justify-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
+            <span>{error}</span>
+          </div>
+        )}
       </motion.section>
     </main>
   );
