@@ -8,7 +8,7 @@ import seaborn as sns
 import io
 import base64
 
-app = FastAPI(title="Study Tracker Analytics Microservice")
+app = FastAPI(title="GrindLock Neural Analytics Engine")
 
 # Pydantic models for incoming data
 class PauseItem(BaseModel):

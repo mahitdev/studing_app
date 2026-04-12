@@ -2,7 +2,12 @@ const DailyGoal = require("../models/DailyGoal");
 const StudySession = require("../models/StudySession");
 const User = require("../models/User");
 
-const todayKey = () => new Date().toISOString().slice(0, 10);
+const todayKey = () => {
+  const d = new Date();
+  const offset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - (offset * 60 * 1000));
+  return local.toISOString().slice(0, 10);
+};
 
 const levelFromXp = (xp) => Math.min(50, Math.floor((xp || 0) / 600) + 1);
 

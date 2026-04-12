@@ -773,7 +773,7 @@ export default function StudyTrackerApp() {
                   </div>
                   <div className="row wrap">
                     <input 
-                      placeholder="Partner email..." 
+                      placeholder="Partner's Email (e.g. rival@study.com)" 
                       className="flex-1"
                       value={friendEmail} 
                       onChange={(e) => setFriendEmail(e.target.value)} 

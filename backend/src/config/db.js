@@ -1,17 +1,26 @@
 const mongoose = require("mongoose");
 
 const connectDB = async () => {
-  const { MONGODB_URI } = process.env;
+  const uri = process.env.MONGODB_URI;
 
-  if (!MONGODB_URI) {
-    throw new Error("MONGODB_URI is not defined in environment variables");
+  if (!uri) {
+    console.warn("⚠️ MONGODB_URI not found in env. Falling back to local default.");
   }
 
-  await mongoose.connect(MONGODB_URI, {
-    serverSelectionTimeoutMS: 10000
-  });
-  // eslint-disable-next-line no-console
-  console.log("MongoDB connected");
+  const finalUri = uri || "mongodb://localhost:27017/study-tracker";
+
+  try {
+    await mongoose.connect(finalUri, {
+      serverSelectionTimeoutMS: 5000
+    });
+    console.log(`✅ MongoDB connected to: ${finalUri.includes("@") ? finalUri.split("@")[1].split("/")[0] : finalUri}`);
+  } catch (err) {
+    console.error("❌ MongoDB connection failed:", err.message);
+    if (!uri) {
+      console.error("💡 TIP: Make sure your local MongoDB is running or provide a valid MONGODB_URI in .env");
+    }
+    throw err;
+  }
 };
 
 module.exports = connectDB;
