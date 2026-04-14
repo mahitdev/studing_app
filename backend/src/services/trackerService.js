@@ -738,6 +738,13 @@ const dashboardForUser = async (userId) => {
   const pressure = pressureNotifications(remainingMinutes, streak, weakDay, recovery);
 
   return {
+    user: {
+      _id: user._id,
+      name: user.name,
+      college: user.college,
+      level: user.level,
+      xp: user.xp
+    },
     todayGoal,
     identity: {
       type: user?.identityType || "Serious",

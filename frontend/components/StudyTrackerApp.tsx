@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   addFriend,
@@ -20,6 +20,22 @@ import {
   fetchAnalytics
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
+import { 
+  LayoutDashboard, 
+  Timer, 
+  BarChart3, 
+  Flame, 
+  Settings, 
+  LogOut, 
+  Zap, 
+  TrendingUp, 
+  Target, 
+  Activity,
+  Users,
+  ChevronRight,
+  ShieldCheck,
+  AlertTriangle
+} from "lucide-react";
 
 type Screen = "dashboard" | "timer" | "analytics" | "streak" | "settings";
 
@@ -31,22 +47,6 @@ type AppSettings = {
   streakProtectionWeek: string;
   streakProtectionUsed: boolean;
   roastMode: boolean;
-};
-
-type OfflineSessionPayload = {
-  startedAt: string;
-  endedAt: string;
-  focusedMinutes: number;
-  inactiveSeconds?: number;
-  pauseCount?: number;
-  subject?: string;
-  studyMode?: "pomodoro" | "deep" | "custom";
-  plannedDurationMinutes?: number;
-  riskMode?: boolean;
-  notes?: string;
-  stopReason?: string;
-  sessionQualityTag?: "deep" | "average" | "distracted" | "";
-  date?: string;
 };
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -77,17 +77,6 @@ function elapsedForSession(session: StudySession, nowMs = Date.now()) {
   return Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
 }
 
-function weekKey(date = new Date()) {
-  const start = new Date(date.getFullYear(), 0, 1);
-  const day = Math.floor((date.getTime() - start.getTime()) / 86400000);
-  return `${date.getFullYear()}-W${Math.ceil((day + start.getDay() + 1) / 7)}`;
-}
-
-function compactDate(dateKey: string) {
-  const d = new Date(dateKey);
-  return `${d.getDate()}/${d.getMonth() + 1}`;
-}
-
 export default function StudyTrackerApp() {
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
@@ -99,7 +88,6 @@ export default function StudyTrackerApp() {
   const [friendEmail, setFriendEmail] = useState("");
   const [loading, setLoading] = useState(true);
   const [activeSession, setActiveSession] = useState<StudySession | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [inactiveSeconds, setInactiveSeconds] = useState(0);
   const [subject, setSubject] = useState("General");
   const [studyMode, setStudyMode] = useState<"pomodoro" | "deep" | "custom">("custom");
@@ -127,34 +115,40 @@ export default function StudyTrackerApp() {
   const hiddenAt = useRef<number | null>(null);
   const lastActivityAt = useRef<number>(Date.now());
 
-  const userKey = useMemo(() => "study-tracker-user-id", []);
-  const authTokenKey = useMemo(() => "study-tracker-auth-token", []);
-  const settingsKey = useMemo(() => "study-tracker-settings", []);
-  const offlineQueueKey = useMemo(() => "study-tracker-offline-session-queue", []);
-  const ritualKey = useMemo(() => `study-tracker-ritual-${new Date().toISOString().slice(0, 10)}`, []);
+  const userKey = "study-tracker-user-id";
+  const authTokenKey = "study-tracker-auth-token";
+  const settingsKey = "study-tracker-settings";
+  const offlineQueueKey = "study-tracker-offline-session-queue";
+  const ritualKey = `study-tracker-ritual-${new Date().toISOString().slice(0, 10)}`;
 
   const refreshAll = async (userId: string) => {
-    const [dash, todaySessions, live] = await Promise.all([
-      fetchDashboard(userId),
-      getTodaySessions(userId),
-      getLiveFriends(userId).catch(() => ({ friends: [], studyingNowCount: 0, liveMessage: "" }))
-    ]);
+    try {
+      const [dash, todaySessions, live] = await Promise.all([
+        fetchDashboard(userId),
+        getTodaySessions(userId),
+        getLiveFriends(userId).catch(() => ({ friends: [], studyingNowCount: 0, liveMessage: "" }))
+      ]);
 
-    setDashboard(dash);
-    setGoalDaily(dash.goalTypes.dailyMinutes);
-    setGoalWeekly(dash.goalTypes.weeklyTargetMinutes);
-    setGoalSessions(dash.goalTypes.weeklySessionTarget);
-    setIdentityType(dash.identity.type);
-    setSessions(todaySessions.sessions);
-    setLiveFriends(live.friends || []);
-    setLiveMessage(live.liveMessage || "");
+      setDashboard(dash);
+      setUser(dash.user);
+      setGoalDaily(dash.goalTypes.dailyMinutes);
+      setGoalWeekly(dash.goalTypes.weeklyTargetMinutes);
+      setGoalSessions(dash.goalTypes.weeklySessionTarget);
+      setIdentityType(dash.identity.type);
+      setSessions(todaySessions.sessions || []);
+      setLiveFriends(live.friends || []);
+      setLiveMessage(live.liveMessage || "");
 
-    const running = todaySessions.sessions.find((s) => s.status === "running" || s.status === "paused") || null;
-    setActiveSession(running);
-    if (running?.subject) setSubject(running.subject);
-    if (running?.studyMode) setStudyMode(running.studyMode);
-    if (running?.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
-    if (typeof running?.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+      const running = (todaySessions.sessions || []).find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
+      setActiveSession(running);
+      if (running?.subject) setSubject(running.subject);
+      if (running?.studyMode) setStudyMode(running.studyMode);
+      if (running?.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
+      if (typeof running?.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+    } catch (err) {
+      console.error("Refresh failed:", err);
+      setError("Sync failed. Check connection.");
+    }
   };
 
   useEffect(() => {
@@ -177,8 +171,6 @@ export default function StudyTrackerApp() {
           return;
         }
 
-        const pseudoUser = { _id: userId, name: "Focused Student", college: "General" };
-        setUser(pseudoUser);
         await refreshAll(userId);
       } catch (err) {
         setError((err as Error).message || "Failed to initialize app");
@@ -188,7 +180,7 @@ export default function StudyTrackerApp() {
     };
 
     init();
-  }, [authTokenKey, settingsKey, userKey]);
+  }, []);
 
   useEffect(() => {
     if (screen === "analytics" && user && !analyticsLoaded && !loadingAnalytics) {
@@ -200,40 +192,21 @@ export default function StudyTrackerApp() {
         })
         .catch((err) => {
           console.error("Analytics fetch error:", err);
-          setPythonAnalytics({ error: true, message: "Currently offline." });
+          setPythonAnalytics({ error: true, message: "Analytics engine is currently unavailable." });
           setAnalyticsLoaded(true);
         })
         .finally(() => setLoadingAnalytics(false));
     }
   }, [screen, user, analyticsLoaded, loadingAnalytics]);
 
-
   useEffect(() => {
     document.body.dataset.theme = settings.darkMode ? "dark" : "light";
     localStorage.setItem(settingsKey, JSON.stringify(settings));
-  }, [settings, settingsKey]);
+  }, [settings]);
 
   useEffect(() => {
     setRitualDoneToday(localStorage.getItem(ritualKey) === "done");
   }, [ritualKey]);
-
-  useEffect(() => {
-    if (!activeSession) {
-      setElapsedSeconds(0);
-      return;
-    }
-
-    const initialElapsed = elapsedForSession(activeSession);
-    setElapsedSeconds(initialElapsed);
-
-    if (activeSession.status !== "running") return undefined;
-
-    const timer = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [activeSession]);
 
   useEffect(() => {
     const onVisibility = async () => {
@@ -246,7 +219,7 @@ export default function StudyTrackerApp() {
           setActiveSession(session);
           setTimerAlert("Focus bro... you switched tabs 👀");
         } catch {
-          setTimerAlert("Session lost focus. Resume manually.");
+          setTimerAlert("Focus lost. Resume manually.");
         }
       }
 
@@ -263,9 +236,7 @@ export default function StudyTrackerApp() {
   }, [activeSession, user]);
 
   useEffect(() => {
-    const record = () => {
-      lastActivityAt.current = Date.now();
-    };
+    const record = () => { lastActivityAt.current = Date.now(); };
     window.addEventListener("mousemove", record);
     window.addEventListener("keydown", record);
     window.addEventListener("click", record);
@@ -284,10 +255,10 @@ export default function StudyTrackerApp() {
         try {
           const { session } = await pauseSession(user._id, activeSession._id, "idle-detected");
           setActiveSession(session);
-          setTimerAlert("Paused for inactivity. Are you still studying?");
+          setTimerAlert("Paused due to inactivity.");
           setAntiCheatFlags((prev) => prev + 1);
         } catch {
-          setTimerAlert("Inactivity detected.");
+          // ignore
         }
       }
     }, 15000);
@@ -296,105 +267,21 @@ export default function StudyTrackerApp() {
   }, [activeSession, user]);
 
   useEffect(() => {
-    if (!dashboard || !settings.notifications || typeof window === "undefined") return;
-    if (!("Notification" in window)) return;
-
-    const pushPressure = async () => {
-      if (Notification.permission === "default") {
-        await Notification.requestPermission();
-      }
-      if (Notification.permission !== "granted") return;
-
-      const first = dashboard.pressureNotifications?.[0];
-      if (first) {
-        new Notification("FocusFlow Pressure", { body: first });
-      }
-    };
-
-    pushPressure();
-  }, [dashboard, settings.notifications]);
-
-  useEffect(() => {
+    let rafId: number;
     const onMove = (event: MouseEvent) => {
-      const x = (event.clientX / window.innerWidth) * 100;
-      const y = (event.clientY / window.innerHeight) * 100;
-      document.documentElement.style.setProperty("--mx", `${x}%`);
-      document.documentElement.style.setProperty("--my", `${y}%`);
-      document.documentElement.style.setProperty("--cursor-x", `${event.clientX}px`);
-      document.documentElement.style.setProperty("--cursor-y", `${event.clientY}px`);
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        document.documentElement.style.setProperty("--mx", `${event.clientX}px`);
+        document.documentElement.style.setProperty("--my", `${event.clientY}px`);
+      });
     };
-
-    const onClickRipple = (event: MouseEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (!target) return;
-      const button = target.closest("button, .cta, .nav-btn") as HTMLElement | null;
-      if (!button) return;
-
-      const ripple = document.createElement("span");
-      ripple.className = "ripple";
-      const rect = button.getBoundingClientRect();
-      ripple.style.left = `${event.clientX - rect.left}px`;
-      ripple.style.top = `${event.clientY - rect.top}px`;
-      button.appendChild(ripple);
-      window.setTimeout(() => ripple.remove(), 500);
-    };
-
     window.addEventListener("mousemove", onMove);
-    window.addEventListener("click", onClickRipple);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("click", onClickRipple);
-    };
+    return () => window.removeEventListener("mousemove", onMove);
   }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const flush = async () => {
-      try {
-        const raw = localStorage.getItem(offlineQueueKey);
-        if (!raw) return;
-        const pending = JSON.parse(raw) as OfflineSessionPayload[];
-        if (!pending.length) return;
-        const { dashboard: updated } = await syncOfflineSessions(user._id, pending);
-        setDashboard(updated);
-        localStorage.removeItem(offlineQueueKey);
-        setTimerAlert("Offline sessions synced successfully.");
-      } catch {
-        // keep queue for next online event
-      }
-    };
-
-    const handleOnline = () => {
-      flush();
-    };
-
-    window.addEventListener("online", handleOnline);
-    flush();
-    return () => window.removeEventListener("online", handleOnline);
-  }, [offlineQueueKey, user]);
-
-  const saveSettings = (next: Partial<AppSettings>) => {
-    setSettings((prev) => ({ ...prev, ...next }));
-  };
-
-  const handleGoalUpdate = async () => {
-    if (!user) return;
-    const { dashboard: updated } = await setGoalConfig(user._id, {
-      dailyMinutes: goalDaily,
-      weeklyTargetMinutes: goalWeekly,
-      weeklySessionTarget: goalSessions
-    });
-    setDashboard(updated);
-  };
 
   const handleStart = async () => {
     if (!user) return;
-
     try {
-      if (dashboard?.softLockMode.active) {
-        const proceed = window.confirm(dashboard.softLockMode.message || "You planned to study. Continue?");
-        if (!proceed) return;
-      }
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
       const { session } = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
       setActiveSession(session);
@@ -403,53 +290,12 @@ export default function StudyTrackerApp() {
       setTimerAlert("");
       await refreshAll(user._id);
     } catch (err) {
-      const message = (err as Error).message || "";
-      if (message.toLowerCase().includes("already active")) {
-        setTimerAlert("You already have an active session. Resume or finish it first.");
-        await refreshAll(user._id);
-        return;
-      }
-      if (
-        message.toLowerCase().includes("authentication required") ||
-        message.toLowerCase().includes("invalid or expired token")
-      ) {
-        setError("Session expired. Please sign in again.");
-        return;
-      }
-
-      const offlineId = `offline-${Date.now()}`;
-      const startedAt = new Date().toISOString();
-      const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
-      setActiveSession({
-        _id: offlineId,
-        status: "running",
-        startedAt,
-        focusedMinutes: 0,
-        pauseCount: 0,
-        inactiveSeconds: 0,
-        subject,
-        studyMode,
-        plannedDurationMinutes: modeMinutes,
-        riskMode,
-        date: startedAt.slice(0, 10)
-      });
-      setElapsedSeconds(0);
-      setInactiveSeconds(0);
-      setIsOfflineSession(true);
-      setTimerAlert("Offline mode active. Session will sync when internet is back.");
+      setError("Could not start session.");
     }
   };
 
   const handlePauseResume = async () => {
     if (!user || !activeSession) return;
-    if (isOfflineSession) {
-      setActiveSession((prev) => {
-        if (!prev) return prev;
-        return { ...prev, status: prev.status === "running" ? "paused" : "running" };
-      });
-      return;
-    }
-
     try {
       if (activeSession.status === "running") {
         const { session } = await pauseSession(user._id, activeSession._id, "manual");
@@ -459,50 +305,15 @@ export default function StudyTrackerApp() {
         setActiveSession(session);
         setTimerAlert("");
       }
-      await refreshAll(user._id);
     } catch (err) {
-      setError((err as Error).message);
+      setError("Update failed.");
     }
   };
 
   const handleEnd = async () => {
     if (!user || !activeSession) return;
-
     try {
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
-      if (isOfflineSession) {
-        const started = new Date(activeSession.startedAt).getTime();
-        const endedAt = new Date().toISOString();
-        const focusedMinutes = Math.max(0, Math.round((Date.now() - started) / 60000) - Math.round(inactiveSeconds / 60));
-        const raw = localStorage.getItem(offlineQueueKey);
-        const queue = (raw ? JSON.parse(raw) : []) as OfflineSessionPayload[];
-        queue.push({
-          startedAt: activeSession.startedAt,
-          endedAt,
-          focusedMinutes,
-          inactiveSeconds,
-          pauseCount: activeSession.pauseCount || 0,
-          subject,
-          studyMode,
-          plannedDurationMinutes: modeMinutes,
-          riskMode,
-          notes,
-          stopReason,
-          sessionQualityTag,
-          date: activeSession.date
-        });
-        localStorage.setItem(offlineQueueKey, JSON.stringify(queue));
-        setActiveSession(null);
-        setInactiveSeconds(0);
-        setAntiCheatFlags(0);
-        setNotes("");
-        setStopReason("");
-        setSessionQualityTag("");
-        setIsOfflineSession(false);
-        setTimerAlert("Offline session saved. It will sync automatically.");
-        return;
-      }
-
       const { dashboard: updated } = await endSession(
         user._id,
         activeSession._id,
@@ -523,492 +334,490 @@ export default function StudyTrackerApp() {
       setNotes("");
       setStopReason("");
       setSessionQualityTag("");
-      setIsOfflineSession(false);
       await refreshAll(user._id);
     } catch (err) {
-      setError((err as Error).message);
+      setError("Failed to end session properly.");
     }
   };
 
-  const handleReset = async () => {
-    if (!user || !activeSession) return;
-    if (isOfflineSession) {
-      setActiveSession(null);
-      setElapsedSeconds(0);
-      setInactiveSeconds(0);
-      setAntiCheatFlags(0);
-      setNotes("");
-      setStopReason("");
-      setSessionQualityTag("");
-      setIsOfflineSession(false);
-      return;
-    }
-    const { dashboard: updated } = await resetSession(user._id, activeSession._id, stopReason);
-    setDashboard(updated);
-    setActiveSession(null);
-    setElapsedSeconds(0);
-    setInactiveSeconds(0);
-    setAntiCheatFlags(0);
-    setNotes("");
-    setStopReason("");
-    setSessionQualityTag("");
-    setIsOfflineSession(false);
-    await refreshAll(user._id);
-  };
-
-  const handleAddFriend = async () => {
-    if (!user || !friendEmail.trim()) return;
+  const handleGoalUpdate = async () => {
+    if (!user) return;
     try {
-      await addFriend(user._id, friendEmail.trim());
-      setFriendEmail("");
-      await refreshAll(user._id);
+      const { dashboard: updated } = await setGoalConfig(user._id, {
+        dailyMinutes: goalDaily,
+        weeklyTargetMinutes: goalWeekly,
+        weeklySessionTarget: goalSessions
+      });
+      setDashboard(updated);
+      setError("");
     } catch (err) {
-      setError((err as Error).message);
+      setError("Failed to update goals.");
     }
   };
 
   const handleIdentityUpdate = async () => {
     if (!user) return;
-    const { dashboard: updated } = await setModes(user._id, settings.roastMode, identityType, motivationWhy);
-    setDashboard(updated);
-  };
-
-  const handleEmailSummary = async () => {
-    if (!user) return;
     try {
-      setEmailStatus("");
-      const res = await sendProgressEmail(user._id, summaryEmail.trim());
-      setEmailStatus(res.message);
+      const { dashboard: updated } = await setModes(user._id, settings.roastMode, identityType, motivationWhy);
+      setDashboard(updated);
+      setError("");
     } catch (err) {
-      setEmailStatus((err as Error).message || "Could not send email right now.");
+      setError("Failed to update identity.");
     }
   };
 
-  const handleStartRitual = () => {
-    localStorage.setItem(ritualKey, "done");
-    setRitualDoneToday(true);
-    setScreen("timer");
-  };
+  if (loading) return (
+    <div className="flex items-center justify-center min-vh-100 bg-black">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-bold tracking-[0.3em] uppercase opacity-50">Initializing OS...</p>
+      </div>
+    </div>
+  );
 
-  const quickStartPomodoro = async () => {
-    setStudyMode("pomodoro");
-    setPlannedDuration(25);
-    setScreen("timer");
-    if (!user) return;
-    try {
-      const { session } = await startSession(user._id, subject, "pomodoro", 25, riskMode);
-      setActiveSession(session);
-      setInactiveSeconds(0);
-      setIsOfflineSession(false);
-      setTimerAlert("");
-      await refreshAll(user._id);
-    } catch (err) {
-      const message = (err as Error).message || "";
-      if (message.toLowerCase().includes("already active")) {
-        setTimerAlert("You already have an active session. Resume or finish it first.");
-        await refreshAll(user._id);
-        return;
-      }
-      if (
-        message.toLowerCase().includes("authentication required") ||
-        message.toLowerCase().includes("invalid or expired token")
-      ) {
-        setError("Session expired. Please sign in again.");
-        return;
-      }
+  if (!user || !dashboard) return (
+    <div className="auth-wrapper">
+      <div className="auth-form text-center">
+        <h1 className="display-lg mb-4">Unauthorized</h1>
+        <p className="text-muted mb-8">System access requires active authentication.</p>
+        <Link href="/signin" className="btn-primary inline-block">Renew Access</Link>
+      </div>
+    </div>
+  );
 
-      const startedAt = new Date().toISOString();
-      setActiveSession({
-        _id: `offline-${Date.now()}`,
-        status: "running",
-        startedAt,
-        focusedMinutes: 0,
-        pauseCount: 0,
-        inactiveSeconds: 0,
-        subject,
-        studyMode: "pomodoro",
-        plannedDurationMinutes: 25,
-        riskMode,
-        date: startedAt.slice(0, 10)
-      });
-      setElapsedSeconds(0);
-      setInactiveSeconds(0);
-      setIsOfflineSession(true);
-      setTimerAlert("Offline mode active. Session will sync when internet is back.");
-    }
-  };
-
-  if (loading) {
-    return (
-      <main className="shell shimmer-wrap">
-        <div className="shimmer-block" />
-        <div className="shimmer-block" />
-        <div className="shimmer-block" />
-      </main>
-    );
-  }
-
-  if (!user) {
-    return (
-      <main className="auth-page">
-        <section className="auth-card">
-          <h1>Sign in required</h1>
-          <p>Use proper auth pages to continue.</p>
-          <div className="row wrap">
-            <Link href="/signin" className="cta">Sign In</Link>
-            <Link href="/signup" className="ghost">Sign Up</Link>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  if (!dashboard) return <main className="shell">Unable to load data. {error}</main>;
-
-  const punishmentActive = settings.punishmentMode && dashboard.punishmentActive;
-  const progressPercent = dashboard.todayGoal.completionPercent;
-  const activeDurationMinutes = activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration);
-  const timerProgress = Math.min(100, Math.round((elapsedSeconds / Math.max(1, activeDurationMinutes * 60)) * 100));
-  const nav: Array<{ id: Screen; label: string }> = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "timer", label: "Timer" },
-    { id: "analytics", label: "Analytics" },
-    { id: "streak", label: "Streak" },
-    { id: "settings", label: "Settings" }
+  const navItems: Array<{ id: Screen; label: string; icon: any }> = [
+    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
+    { id: "timer", label: "Focus Timer", icon: Timer },
+    { id: "analytics", label: "Neural Engine", icon: BarChart3 },
+    { id: "streak", label: "Momentum", icon: Flame },
+    { id: "settings", label: "Config", icon: Settings }
   ];
 
   return (
-    <main className={`shell app-shell ${punishmentActive ? "punishment-screen" : ""}`}>
-      <div className="cursor-glow" aria-hidden />
-      <aside className="card sidebar">
-        <h1>GrindLock</h1>
-        <p className="muted">Discipline Driven OS</p>
-        <nav className="sidebar-nav">
-          {nav.map((item) => (
-            <button key={item.id} className={screen === item.id ? "nav-btn active" : "nav-btn"} onClick={() => setScreen(item.id)}>{item.label}</button>
+    <div className="app-container">
+      <div className="cursor-glow" />
+      
+      <aside className="sidebar">
+        <div className="mb-12">
+          <h1 className="display-md text-2xl tracking-tighter">GRINDLOCK<span className="text-accent">.</span></h1>
+          <p className="text-[10px] font-black tracking-[0.2em] uppercase opacity-40">Discipline Hub</p>
+        </div>
+
+        <nav className="flex-1">
+          {navItems.map((item) => (
+            <button 
+              key={item.id} 
+              className={`nav-btn w-full ${screen === item.id ? "active" : ""}`}
+              onClick={() => setScreen(item.id)}
+            >
+              <item.icon size={18} />
+              {item.label}
+            </button>
           ))}
-          <Link href="/signout" className="nav-btn">Sign Out</Link>
         </nav>
+
+        <div className="mt-auto pt-8 border-t border-white/5">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-full bg-gradient-accent flex items-center justify-center font-bold text-white">
+              {user.name.charAt(0)}
+            </div>
+            <div className="overflow-hidden">
+              <p className="text-sm font-bold truncate">{user.name}</p>
+              <p className="text-[10px] text-muted uppercase tracking-widest">Lvl {dashboard.gamification.level}</p>
+            </div>
+          </div>
+          <Link href="/signout" className="nav-btn opacity-50 hover:opacity-100">
+            <LogOut size={16} />
+            Eject
+          </Link>
+        </div>
       </aside>
 
-      <div className="main-column">
-        <header className="topbar card">
+      <main className="main-view">
+        <header className="flex items-center justify-between mb-12">
           <div>
-            <h2>Performance Console</h2>
-            <p className="muted">Stay locked in. No excuses.</p>
+            <h2 className="display-md text-3xl">{navItems.find(n => n.id === screen)?.label}</h2>
+            <p className="text-xs text-muted font-medium mt-1">
+              System Health: <span className="text-success">Optimal</span>
+            </p>
           </div>
-          <div className="topbar-stats">
-            <span>XP: {dashboard.gamification.xp}</span>
-            <span>Level: {dashboard.gamification.level}</span>
-            <button onClick={quickStartPomodoro}>Start 25m Focus</button>
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">XP Points</p>
+              <p className="text-xl font-black">{dashboard.gamification.xp}</p>
+            </div>
+            <button className="btn-primary text-xs py-2 px-6" onClick={() => setScreen("timer")}>
+              LOCKED IN
+            </button>
           </div>
         </header>
 
-        <div className="page-stage">
-          <AnimatePresence mode="wait">
-            {screen === "dashboard" && (
-              <motion.section
-                key="dashboard"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="page screen-panel"
-              >
-                {!ritualDoneToday && (
-                  <button className="ritual-cta" onClick={handleStartRitual}>
-                    {dashboard.startRitual.title}
-                  </button>
-                )}
-                
-                <div className="goal-ring-wrap">
-                  <div className="goal-ring" style={{ ["--ring-fill" as string]: `${progressPercent}%` }}>
-                    <span>{progressPercent}%</span>
-                    <small>Completed</small>
+        <AnimatePresence mode="wait">
+          {screen === "dashboard" && (
+            <motion.div 
+              key="dashboard"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-8"
+            >
+              {!ritualDoneToday && (
+                <button 
+                  className="w-full p-8 glass-card border-none flex items-center justify-between group hover:scale-[1.01] transition-all"
+                  onClick={() => { localStorage.setItem(ritualKey, "done"); setRitualDoneToday(true); setScreen("timer"); }}
+                >
+                  <div className="text-left">
+                    <p className="text-xs font-black tracking-[0.2em] text-accent uppercase mb-2">Protocol Pending</p>
+                    <h3 className="display-md text-2xl">{dashboard.startRitual.title || "START PROTOCOL"}</h3>
                   </div>
-                </div>
-
-                <div className="kpi-grid">
-                  <article>
-                    <p>Daily Goal</p>
-                    <h3>{dashboard.todayGoal.targetMinutes}m</h3>
-                  </article>
-                  <article>
-                    <p>Focus Time</p>
-                    <h3>{dashboard.todayGoal.studiedMinutes}m</h3>
-                  </article>
-                  <article>
-                    <p>Momentum</p>
-                    <h3>{dashboard.momentum.score}%</h3>
-                  </article>
-                  <article>
-                    <p>Focus Score</p>
-                    <h3>{dashboard.focusScore.score}%</h3>
-                  </article>
-                </div>
-
-                <div className="card pressure-box">
-                  <p className="accent-text uppercase text-[10px] font-bold tracking-widest mb-2">System Status</p>
-                  <p className="text-lg font-medium">{dashboard.timePressure.message}</p>
-                </div>
-
-                {dashboard.pressureNotifications?.length ? (
-                  <div className="flex flex-col gap-4">
-                    {dashboard.pressureNotifications.map((item, idx) => (
-                      <article key={`${item}-${idx}`} className="alert-card">
-                        <span className="pulse-dot" />
-                        <p>{item}</p>
-                      </article>
-                    ))}
+                  <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                    <ChevronRight className="text-accent" />
                   </div>
-                ) : null}
+                </button>
+              )}
 
-                <div className="card glass-panel mt-4">
-                  <div className="flex items-center gap-4 mb-4">
-                    <span className="text-2xl">👥</span>
-                    <div>
-                      <h3 className="text-sm font-bold">Network Synergy</h3>
-                      <p className="text-xs muted">{liveMessage || "No active sync partners"}</p>
-                    </div>
+              <div className="stats-grid">
+                <article className="stat-card">
+                  <div className="label flex items-center gap-2"><Target size={14} /> Today's Mission</div>
+                  <div className="value">{dashboard.todayGoal.targetMinutes}m</div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-muted uppercase">Progress</p>
+                    <p className="text-xs font-bold text-accent">{dashboard.todayGoal.completionPercent}%</p>
                   </div>
-                  <div className="row wrap">
-                    <input 
-                      placeholder="Partner's Email (e.g. rival@study.com)" 
-                      className="flex-1"
-                      value={friendEmail} 
-                      onChange={(e) => setFriendEmail(e.target.value)} 
+                  <div className="h-1 bg-white/5 rounded-full mt-2 overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${dashboard.todayGoal.completionPercent}%` }}
+                      className="h-full bg-accent"
                     />
-                    <button onClick={handleAddFriend}>Add</button>
                   </div>
-                </div>
-              </motion.section>
-            )}
+                </article>
+                <article className="stat-card">
+                  <div className="label flex items-center gap-2"><Flame size={14} /> Current Streak</div>
+                  <div className="value">{dashboard.streak.current}d</div>
+                  <p className="text-xs text-muted mt-2 font-medium">Record: {dashboard.streak.longest} days</p>
+                </article>
+                <article className="stat-card">
+                  <div className="label flex items-center gap-2"><Activity size={14} /> Focus Score</div>
+                  <div className="value">{dashboard.focusScore.score}%</div>
+                  <p className="text-xs text-muted mt-2 font-medium">State: <span className="text-success capitalize">{dashboard.focusScore.label}</span></p>
+                </article>
+                <article className="stat-card">
+                  <div className="label flex items-center gap-2"><Zap size={14} /> Resilience</div>
+                  <div className="value">{dashboard.momentum.score}%</div>
+                  <p className="text-xs text-muted mt-2 font-medium">{dashboard.momentum.message}</p>
+                </article>
+              </div>
 
-            {screen === "timer" && (
-              <motion.section
-                key="timer"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.05 }}
-                transition={{ duration: 0.4 }}
-                className="page screen-panel timer-screen"
-              >
-                <div className="timer-center">
-                  <div 
-                    className={`timer-ring big ${activeSession?.status === "running" ? "pulse-active" : ""}`} 
-                    style={{ ["--ring-fill" as string]: `${timerProgress}%` }}
-                  >
-                    <span>{formatHMS(elapsedSeconds)}</span>
-                  </div>
-                </div>
-
-                <div className="glass-panel p-6 rounded-3xl flex flex-col gap-8 w-full max-w-2xl mx-auto">
-                  <div className="row justify-center gap-4">
-                    <button 
-                      className={studyMode === "pomodoro" ? "nav-btn active" : "nav-btn"} 
-                      onClick={() => { setStudyMode("pomodoro"); setPlannedDuration(25); }}
-                    >
-                      Pomodoro (25)
-                    </button>
-                    <button 
-                      className={studyMode === "deep" ? "nav-btn active" : "nav-btn"} 
-                      onClick={() => { setStudyMode("deep"); setPlannedDuration(50); }}
-                    >
-                      Deep Work (50)
-                    </button>
-                    <button 
-                      className={studyMode === "custom" ? "nav-btn active" : "nav-btn"} 
-                      onClick={() => setStudyMode("custom")}
-                    >
-                      Custom
-                    </button>
-                  </div>
-
-                  <div className="grid two gap-6">
-                    <div className="flex flex-col gap-2 text-left">
-                      <label>Subject Focus</label>
-                      <select value={subject} onChange={(e) => setSubject(e.target.value)}>
-                        <option>General</option>
-                        <option>Math</option>
-                        <option>Science</option>
-                        <option>Programming</option>
-                      </select>
+              <div className="grid grid-cols-3 gap-8">
+                <div className="col-span-2 glass-card p-8">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-muted mb-6">Status Intelligence</h3>
+                  <div className="flex items-start gap-6 p-6 bg-white/5 rounded-3xl border border-white/5">
+                    <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center shrink-0">
+                      <ShieldCheck className="text-accent" />
                     </div>
-                    
-                    <div className="flex flex-col gap-2 text-left">
-                      <label>Session Type</label>
-                      <label className="toggle-row glass p-3 rounded-xl border border-white/5">
-                        <span className="text-xs font-bold uppercase tracking-wider">Risk Mode</span>
-                        <input type="checkbox" checked={riskMode} onChange={(e) => setRiskMode(e.target.checked)} />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="row wrap justify-center gap-4">
-                    <button className="primary-glow px-12" onClick={handleStart} disabled={Boolean(activeSession)}>Initialize Session</button>
-                    <button className="secondary ghost" onClick={handlePauseResume} disabled={!activeSession}>
-                      {activeSession?.status === "paused" ? "Resume" : "Pause"}
-                    </button>
-                    <button className="danger ghost" onClick={handleEnd} disabled={!activeSession}>Terminate</button>
-                  </div>
-                  
-                  {timerAlert && <p className="timer-alert">{timerAlert}</p>}
-                </div>
-              </motion.section>
-            )}
-
-            {screen === "analytics" && (
-              <motion.section
-                key="analytics"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.4 }}
-                className="page screen-panel python-analytics-panel"
-              >
-                <div className="flex items-center justify-between mb-8">
-                  <div>
-                    <h2 className="text-4xl font-black tracking-tighter gradient-text">DEEP ENGINE.</h2>
-                    <p className="muted text-xs font-bold tracking-[0.2em] uppercase">Neural Performance Analytics</p>
-                  </div>
-                  <div className="px-4 py-2 glass-light rounded-full text-[10px] font-bold text-accent uppercase tracking-widest flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                    System Live
-                  </div>
-                </div>
-                
-                {loadingAnalytics ? (
-                  <div className="shimmer-wrap">
-                    <div className="shimmer-block" style={{ height: "120px" }} />
-                    <div className="shimmer-block" style={{ height: "400px" }} />
-                  </div>
-                ) : pythonAnalytics && !pythonAnalytics.error ? (
-                  <div className="flex flex-col gap-8">
-                    <div className="kpi-grid">
-                      <article className="stat-card blue">
-                        <p>Efficiency</p>
-                        <h3>{pythonAnalytics.consistency_score}%</h3>
-                      </article>
-                      <article className="stat-card purple">
-                        <p>Avg Session</p>
-                        <h3>{pythonAnalytics.average_study_time}m</h3>
-                      </article>
-                      <article className="stat-card pink">
-                        <p>Focus Peak</p>
-                        <h3>{pythonAnalytics.focus_score}%</h3>
-                      </article>
-                    </div>
-
-                    <div className="grid two gap-6">
-                      <article className="card insight-card border-l-4 border-accent">
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-accent mb-4">Neural Insight</h4>
-                        <p className="text-lg font-medium leading-relaxed">{pythonAnalytics.message}</p>
-                      </article>
-                      <article className="card insight-card border-l-4 border-danger">
-                        <h4 className="text-xs font-black uppercase tracking-[0.2em] text-danger mb-4">Performance Leak</h4>
-                        <p className="text-lg font-medium leading-relaxed">{pythonAnalytics.weak_pattern}</p>
-                      </article>
-                    </div>
-
-                    {pythonAnalytics.graphs?.focus_trend && (
-                      <article className="card p-4 overflow-hidden">
-                        <img 
-                          src={`data:image/png;base64,${pythonAnalytics.graphs.focus_trend}`} 
-                          alt="Trend" 
-                          className="w-full h-auto rounded-xl opacity-90 transition-opacity hover:opacity-100" 
-                        />
-                      </article>
-                    )}
-                  </div>
-                ) : (
-                  <article className="card border-l-4 border-danger">
-                    <h3 className="text-xl font-bold mb-2">Offline.</h3>
-                    <p className="muted">Neural engine is currently unreachable. Check back when online.</p>
-                  </article>
-                )}
-              </motion.section>
-            )}
-
-            {screen === "streak" && (
-              <motion.section
-                key="streak"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.1 }}
-                className="page screen-panel text-center"
-              >
-                <div className="streak-flame">🔥</div>
-                <h2 className="text-5xl font-black mb-12 uppercase tracking-tighter">Day {dashboard.streak.current}</h2>
-                <div className="kpi-grid">
-                  <article><p>Best Streak</p><h3>{dashboard.streak.longest}d</h3></article>
-                  <article><p>Consistency</p><h3>{dashboard.consistencyScore7d}%</h3></article>
-                </div>
-                <div className="badges mt-12 overflow-x-auto pb-4">
-                  {(dashboard.gamification.badges || []).map((badge) => (
-                    <div key={badge} className="badge unlocked min-w-[120px]">{badge}</div>
-                  ))}
-                </div>
-              </motion.section>
-            )}
-
-            {screen === "settings" && (
-              <motion.section
-                key="settings"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="page screen-panel max-w-2xl"
-              >
-                <h2 className="text-3xl font-black mb-8 uppercase tracking-tighter">System Config</h2>
-                <div className="grid gap-8">
-                  <div className="grid two gap-6">
-                    <div className="flex flex-col gap-2">
-                      <label>Daily Mission (Min)</label>
-                      <input type="number" value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} />
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <label>Weekly Sprint (Min)</label>
-                      <input type="number" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} />
+                    <div>
+                      <p className="text-lg font-medium leading-relaxed">{dashboard.timePressure.message}</p>
+                      <p className="text-sm text-muted mt-2 italic">"{dashboard.futureYouReminder}"</p>
                     </div>
                   </div>
                   
-                  <div className="flex flex-col gap-2">
-                    <label>Self Identity</label>
+                  {dashboard.pressureNotifications?.length ? (
+                    <div className="mt-6 flex flex-col gap-3">
+                      {dashboard.pressureNotifications.map((item, i) => (
+                        <div key={i} className="flex items-center gap-4 p-4 glass-light rounded-2xl border-l-2 border-danger">
+                          <AlertTriangle size={14} className="text-danger" />
+                          <p className="text-sm font-medium">{item}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="glass-card p-8">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-muted mb-6">Network Sync</h3>
+                  {liveFriends.length > 0 ? (
+                    <div className="space-y-4">
+                      {liveFriends.slice(0, 3).map((f, i) => (
+                        <div key={i} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-bold">
+                              {f.name.charAt(0)}
+                            </div>
+                            <p className="text-sm font-bold">{f.name}</p>
+                          </div>
+                          {f.studyingNow && <span className="w-2 h-2 rounded-full bg-success animate-pulse" />}
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-xs text-muted">No synchronization active.</p>}
+                  
+                  <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-4">
+                    <input 
+                      placeholder="Partner Email" 
+                      className="text-xs" 
+                      value={friendEmail}
+                      onChange={(e) => setFriendEmail(e.target.value)}
+                    />
+                    <button className="btn-primary text-xs py-3" onClick={() => { addFriend(user._id, friendEmail); setFriendEmail(""); refreshAll(user._id); }}>Add Entity</button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {screen === "timer" && (
+            <motion.div 
+              key="timer" 
+              initial={{ opacity: 0, scale: 0.98 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              className="timer-container"
+            >
+              <div className="mb-12 flex gap-4">
+                <button 
+                  className={`nav-btn px-6 ${studyMode === "pomodoro" ? "active" : ""}`}
+                  onClick={() => { setStudyMode("pomodoro"); setPlannedDuration(25); }}
+                >
+                  Pomodoro
+                </button>
+                <button 
+                  className={`nav-btn px-6 ${studyMode === "deep" ? "active" : ""}`}
+                  onClick={() => { setStudyMode("deep"); setPlannedDuration(50); }}
+                >
+                  Deep Work
+                </button>
+                <button 
+                  className={`nav-btn px-6 ${studyMode === "custom" ? "active" : ""}`}
+                  onClick={() => setStudyMode("custom")}
+                >
+                  Custom
+                </button>
+              </div>
+
+              <PremiumTimer 
+                activeSession={activeSession}
+                studyMode={studyMode}
+                plannedDuration={plannedDuration}
+              />
+
+              <div className="mt-16 glass-card p-10 w-full max-w-xl">
+                <div className="grid grid-cols-2 gap-8 mb-10">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted">Subject Focus</label>
+                    <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+                      <option>General</option>
+                      <option>Math</option>
+                      <option>Science</option>
+                      <option>Programming</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted">Session Rules</label>
+                    <label className="flex items-center justify-between p-3 glass-light rounded-xl cursor-pointer">
+                      <span className="text-xs font-bold">RISK MODE</span>
+                      <input type="checkbox" className="w-auto" checked={riskMode} onChange={(e) => setRiskMode(e.target.checked)} />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  {!activeSession ? (
+                    <button className="btn-primary flex-1 py-4 text-sm tracking-widest" onClick={handleStart}>INITIALIZE</button>
+                  ) : (
+                    <>
+                      <button className="flex-1 py-4 glass text-sm font-bold tracking-widest hover:bg-white/5 transition-colors" onClick={handlePauseResume}>
+                        {activeSession.status === "paused" ? "REENGAGE" : "PAUSE"}
+                      </button>
+                      <button className="flex-1 py-4 bg-danger/10 text-danger border border-danger/20 text-sm font-bold tracking-widest hover:bg-danger/20 transition-colors" onClick={handleEnd}>TERMINATE</button>
+                    </>
+                  )}
+                </div>
+                {timerAlert && <p className="mt-6 text-center text-xs font-bold text-danger uppercase tracking-widest animate-pulse">{timerAlert}</p>}
+              </div>
+            </motion.div>
+          )}
+
+          {screen === "analytics" && (
+            <motion.div 
+              key="analytics"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="space-y-8"
+            >
+              {loadingAnalytics ? (
+                <div className="loading-shimmer h-96 rounded-3xl" />
+              ) : pythonAnalytics && !pythonAnalytics.error ? (
+                <>
+                  <div className="stats-grid">
+                    <article className="stat-card">
+                      <div className="label">Neural Efficiency</div>
+                      <div className="value">{pythonAnalytics.consistency_score}%</div>
+                    </article>
+                    <article className="stat-card">
+                      <div className="label">Avg Focus Block</div>
+                      <div className="value">{pythonAnalytics.average_study_time}m</div>
+                    </article>
+                    <article className="stat-card">
+                      <div className="label">Cognitive Load Peak</div>
+                      <div className="value">{pythonAnalytics.focus_score}%</div>
+                    </article>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="glass-card p-8 border-l-4 border-l-accent">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-accent mb-4">Core Insight</h4>
+                      <p className="text-xl font-medium leading-relaxed">{pythonAnalytics.message}</p>
+                    </div>
+                    <div className="glass-card p-8 border-l-4 border-l-danger">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-danger mb-4">Performance Leak</h4>
+                      <p className="text-xl font-medium leading-relaxed">{pythonAnalytics.weak_pattern}</p>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="glass-card p-12 text-center">
+                  <h3 className="text-xl font-bold mb-2">Engine Offline</h3>
+                  <p className="text-muted">Currently unable to process neural data patterns.</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {screen === "settings" && (
+            <motion.div 
+              key="settings"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="max-w-2xl space-y-12"
+            >
+              <section className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted">Mission Config</h3>
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold">Daily Target (Min)</label>
+                    <input type="number" value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold">Weekly Quota (Min)</label>
+                    <input type="number" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} />
+                  </div>
+                </div>
+                <button className="btn-primary" onClick={handleGoalUpdate}>Sync Config</button>
+              </section>
+
+              <section className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted">Identity Profile</h3>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold">Commitment Level</label>
                     <select value={identityType} onChange={(e) => setIdentityType(e.target.value as any)}>
                       <option value="Casual">Casual</option>
-                      <option value="Serious">Serious (Recommended)</option>
+                      <option value="Serious">Serious</option>
                       <option value="Hardcore">Hardcore</option>
                     </select>
                   </div>
-
-                  <div className="flex flex-col gap-2">
-                    <label>The "Why" (Motivation)</label>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold">Motivation Core (The "Why")</label>
                     <textarea value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} rows={3} />
                   </div>
-
-                  <div className="row wrap mt-4">
-                    <button className="primary-glow" onClick={handleGoalUpdate}>Sync Configuration</button>
-                    <button className="secondary ghost" onClick={handleIdentityUpdate}>Update Identity</button>
-                  </div>
+                  <button className="btn-primary" onClick={handleIdentityUpdate}>Update Identity</button>
                 </div>
-              </motion.section>
-            )}
-          </AnimatePresence>
-          {error && (
-            <div className="mt-8">
-              <article className="alert-card animate-pulse">
-                <span className="pulse-dot" />
-                <p className="text-danger font-bold uppercase tracking-wider text-xs">System Fault Detected</p>
-                <p className="flex-1">{error}</p>
-                <div className="flex gap-4">
-                  <button className="text-[10px] uppercase font-bold underline" onClick={() => { localStorage.setItem("study-tracker-pref-mock", "true"); window.location.reload(); }}>Switch to Standalone Mode</button>
-                  <button className="text-[10px] uppercase font-bold underline" onClick={() => setError("")}>Dismiss</button>
-                </div>
-              </article>
-            </div>
+              </section>
+            </motion.div>
           )}
-        </div>
+
+          {screen === "streak" && (
+             <motion.div 
+             key="streak"
+             initial={{ opacity: 0, scale: 0.9 }}
+             animate={{ opacity: 1, scale: 1 }}
+             className="flex flex-col items-center justify-center p-20 text-center"
+           >
+             <div className="text-8xl mb-8 filter drop-shadow-[0_0_30px_rgba(255,80,0,0.4)]">🔥</div>
+             <h2 className="display-lg text-7xl mb-4">{dashboard.streak.current}</h2>
+             <p className="text-xs font-black tracking-[0.5em] uppercase text-accent mb-12">Consecutive Cycles</p>
+             
+             <div className="flex gap-12">
+               <div className="text-center">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Longest Link</p>
+                 <p className="text-3xl font-black">{dashboard.streak.longest}d</p>
+               </div>
+               <div className="text-center">
+                 <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Consistency</p>
+                 <p className="text-3xl font-black">{dashboard.consistencyScore7d}%</p>
+               </div>
+             </div>
+           </motion.div>
+          )}
+        </AnimatePresence>
+
+        {error && (
+          <div className="fixed bottom-10 right-10 z-[100] max-w-sm">
+            <div className="p-6 glass border-l-4 border-l-danger shadow-2xl animate-bounce-short">
+              <div className="flex gap-4">
+                <AlertTriangle className="text-danger shrink-0" size={20} />
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-danger mb-1">System Error</p>
+                  <p className="text-sm font-medium">{error}</p>
+                </div>
+              </div>
+              <button 
+                className="mt-4 text-[10px] font-black uppercase tracking-widest opacity-50 hover:opacity-100"
+                onClick={() => setError("")}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSession: StudySession | null, studyMode: string, plannedDuration: number }) {
+  const [elapsed, setElapsed] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!activeSession) {
+      setElapsed(0);
+      setProgress(0);
+      return;
+    }
+
+    const init = elapsedForSession(activeSession);
+    setElapsed(init);
+
+    if (activeSession.status !== "running") return;
+
+    const interval = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [activeSession]);
+
+  useEffect(() => {
+    const totalSecs = (activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration)) * 60;
+    setProgress(Math.min(100, (elapsed / Math.max(1, totalSecs)) * 100));
+  }, [elapsed, activeSession, studyMode, plannedDuration]);
+
+  return (
+    <div className="relative flex items-center justify-center">
+      <div 
+        className="timer-circle" 
+        style={{ ["--progress" as string]: `${progress}%` }} 
+      />
+      <div className={`timer-display ${activeSession?.status === "running" ? "animate-pulse-timer" : ""}`}>
+        {formatHMS(elapsed)}
       </div>
-    </main>
+      {activeSession?.status === "running" && (
+        <div className="absolute inset-0 rounded-full border border-accent/20 animate-ping opacity-20" />
+      )}
+    </div>
+  );
+}
   );
 }

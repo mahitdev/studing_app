@@ -33,69 +33,61 @@ export default function SignUpPage() {
   };
 
   return (
-    <main className="auth-page">
-      <div className="auth-container">
+    <main className="auth-wrapper">
+      <div className="absolute inset-0 z-0">
         <FloatingScene />
       </div>
 
       <motion.section 
-        initial={{ opacity: 0, scale: 0.9, rotateY: 10 }}
-        animate={{ opacity: 1, scale: 1, rotateY: 0 }}
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-        className="auth-card max-w-[540px]"
+        className="auth-form max-w-[500px]"
       >
-        <h1>Create Account</h1>
+        <h1>Create Identity</h1>
         
-        <div className="flex flex-col gap-4 text-left w-full">
-          <div className="flex flex-col gap-1.5">
-            <label>Full Name</label>
+        <div className="flex flex-col gap-5 text-left w-full">
+          <div className="space-y-1.5">
+            <label>Operative Name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Focused Student" />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+          <div className="space-y-1.5">
+            <label>Secure Email</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@domain.com" />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label>Password</label>
+          <div className="space-y-1.5">
+            <label>Access Key</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 characters" />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label>Study Identity</label>
-            <select value={identity} onChange={(e) => setIdentity(e.target.value as "Casual" | "Serious" | "Hardcore")}>
-              <option value="Casual">Casual</option>
-              <option value="Serious">Serious</option>
-              <option value="Hardcore">Hardcore</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <label>Why are you studying?</label>
-            <textarea 
-              value={why} 
-              onChange={(e) => setWhy(e.target.value)} 
-              placeholder="Your high-stakes motivation..." 
-              rows={2}
-              className="resize-none"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label>Commitment</label>
+              <select value={identity} onChange={(e) => setIdentity(e.target.value as "Casual" | "Serious" | "Hardcore")}>
+                <option value="Casual">Casual</option>
+                <option value="Serious">Serious</option>
+                <option value="Hardcore">Hardcore</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <label>Objective</label>
+              <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Goal/Motivation" />
+            </div>
           </div>
         </div>
 
-        <button className="w-full mt-4 primary-glow py-4 text-lg" onClick={onSignup} disabled={loading}>
-          {loading ? "Initializing Journey..." : "Start My Journey"}
+        <button className="btn-primary w-full mt-8 py-4 text-sm tracking-widest uppercase font-bold" onClick={onSignup} disabled={loading}>
+          {loading ? "Initializing..." : "Register Operative"}
         </button>
-        <p className="text-sm mt-2">Already have account? <Link href="/signin" className="text-accent font-bold hover:underline">Sign in</Link></p>
+        <p className="text-xs text-center mt-6 text-muted font-medium">
+          Existing operative? <Link href="/signin" className="text-accent font-bold hover:underline">Verify Identity</Link>
+        </p>
         
         {error && (
-          <div className="error mt-4 flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-              <span>{error}</span>
+          <div className="mt-8 p-4 glass rounded-2xl border-l-2 border-danger animate-shake">
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse" />
+              <span className="text-xs font-bold text-danger uppercase tracking-wider">{error}</span>
             </div>
-            <button 
-              className="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 underline decoration-danger"
-              onClick={() => { localStorage.setItem("study-tracker-pref-mock", "true"); window.location.reload(); }}
-            >
-              Force Standalone Mode (Bypass Server)
-            </button>
           </div>
         )}
       </motion.section>

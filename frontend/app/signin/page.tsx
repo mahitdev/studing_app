@@ -45,8 +45,8 @@ export default function SignInPage() {
   };
 
   return (
-    <main className="auth-page">
-      <div className="auth-container">
+    <main className="auth-wrapper">
+      <div className="absolute inset-0 z-0">
         <FloatingScene />
       </div>
 
@@ -54,39 +54,37 @@ export default function SignInPage() {
         initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="auth-card max-w-[480px]"
+        className="auth-form"
       >
         <h1>Sign In</h1>
-        <div className="flex flex-col gap-4 text-left w-full">
-          <div className="flex flex-col gap-1.5">
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+        <div className="flex flex-col gap-6 text-left w-full">
+          <div className="space-y-2">
+            <label>Email Address</label>
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@domain.com" />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label>Password</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" />
+          <div className="space-y-2">
+            <label>Master Password</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
           </div>
         </div>
         
-        <button className="w-full mt-2 primary-glow py-4 text-lg" onClick={onLogin} disabled={loading}>
-          {loading ? "Accessing Core..." : "Sign In"}
+        <button className="btn-primary w-full mt-8 py-4 text-sm tracking-widest uppercase font-bold" onClick={onLogin} disabled={loading}>
+          {loading ? "Decrypting..." : "Access System"}
         </button>
-        <button className="ghost w-full py-3" onClick={onGuest} disabled={loading}>Continue as Guest</button>
+        <button className="w-full py-4 text-xs font-bold text-muted uppercase tracking-widest hover:text-white transition-colors" onClick={onGuest} disabled={loading}>
+          Enter as Guest
+        </button>
         
-        <p className="text-sm mt-2">New here? <Link href="/signup" className="text-accent font-bold hover:underline">Create account</Link></p>
+        <p className="text-xs text-center mt-6 text-muted font-medium">
+          New operative? <Link href="/signup" className="text-accent font-bold hover:underline">Register Identity</Link>
+        </p>
         
         {error && (
-          <div className="error mt-4 flex flex-col items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-danger animate-pulse" />
-              <span>{error}</span>
+          <div className="mt-8 p-4 glass rounded-2xl border-l-2 border-danger animate-shake">
+            <div className="flex items-center gap-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse" />
+              <span className="text-xs font-bold text-danger uppercase tracking-wider">{error}</span>
             </div>
-            <button 
-              className="text-[10px] uppercase tracking-widest font-bold opacity-60 hover:opacity-100 underline decoration-danger"
-              onClick={() => { localStorage.setItem("study-tracker-pref-mock", "true"); window.location.reload(); }}
-            >
-              Force Standalone Mode (Bypass Server)
-            </button>
           </div>
         )}
       </motion.section>

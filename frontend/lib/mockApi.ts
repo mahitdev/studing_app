@@ -87,6 +87,7 @@ function defaultDashboard(store: Store): Dashboard {
   });
 
   return {
+    user: store.user || { _id: "mock-user", name: "Guest", college: "None", badges: [] },
     todayGoal: {
       _id: "mock-goal",
       userId: store.user?._id || "mock-user",
@@ -430,6 +431,18 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
 
   if (path.endsWith("/friends/add")) {
     return { friends: [] } as T;
+  }
+
+  const analyticsMatch = path.match(/^\/users\/([^/]+)\/analytics$/);
+  if (analyticsMatch && method === "GET") {
+    return {
+      consistency_score: 85,
+      average_study_time: 45,
+      focus_score: 92,
+      message: "Your neural engagement is optimal. Keep pushing.",
+      weak_pattern: "You tend to lose focus after 90 minutes. Take structured breaks.",
+      graphs: null
+    } as T;
   }
 
   return {} as T;

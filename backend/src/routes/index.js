@@ -308,27 +308,48 @@ router.get("/users/:userId/analytics", async (req, res, next) => {
     
     // Fetch from python microservice with timeout
     const analyticsUrl = process.env.ANALYTICS_SERVICE_URL || "http://localhost:8000";
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(`${analyticsUrl}/analyze`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ sessions }),
-      signal: AbortSignal.timeout(10000)
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
-        return res.status(502).json({ message: "Analytics service unavailable", status: response.status });
+        const errorDetail = await response.text().catch(() => "Unknown error");
+        console.error(`Analytics service error [${response.status}]: ${errorDetail}`);
+        return res.status(502).json({ 
+          message: "Analytics engine is currently recalibrating.", 
+          error: "Service Error",
+          status: response.status 
+        });
     }
 
     const analyticsData = await response.json();
     res.json(analyticsData);
   } catch (err) {
-    console.error("Analytics Error:", err);
-    if (err.name === 'TimeoutError' || err.name === 'AbortError') {
-      return res.status(504).json({ message: "Analytics service timed out", error: "Gateway Timeout" });
+    if (err.name === 'AbortError' || err.name === 'TimeoutError') {
+      console.warn("Analytics request timed out.");
+      return res.status(504).json({ message: "Analytics engine timed out. Please try again.", error: "Gateway Timeout" });
     }
-    res.status(502).json({ message: "Analytics service unavailable", error: err.message });
+    
+    // Check for connection refused
+    if (err.code === 'ECONNREFUSED') {
+      console.error("Analytics service (python) is not running at", process.env.ANALYTICS_SERVICE_URL || "http://localhost:8000");
+      return res.status(503).json({ 
+        message: "Neural analytics engine is offline. Start the python service.", 
+        error: "Service Unavailable" 
+      });
+    }
+
+    console.error("Internal Analytics Error:", err);
+    res.status(502).json({ message: "Analytics engine encountered an anomaly.", error: err.message });
   }
 });
 

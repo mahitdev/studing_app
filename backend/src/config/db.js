@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 
+const { MongoMemoryServer } = require("mongodb-memory-server");
+
 const connectDB = async () => {
   const uri = process.env.MONGODB_URI;
 
@@ -11,15 +13,20 @@ const connectDB = async () => {
 
   try {
     await mongoose.connect(finalUri, {
-      serverSelectionTimeoutMS: 5000
+      serverSelectionTimeoutMS: 2000
     });
     console.log(`✅ MongoDB connected to: ${finalUri.includes("@") ? finalUri.split("@")[1].split("/")[0] : finalUri}`);
   } catch (err) {
-    console.error("❌ MongoDB connection failed:", err.message);
-    if (!uri) {
-      console.error("💡 TIP: Make sure your local MongoDB is running or provide a valid MONGODB_URI in .env");
+    console.warn(`⚠️ MongoDB connection to ${finalUri} failed. Falling back to in-memory database...`);
+    try {
+      const mongoServer = await MongoMemoryServer.create();
+      const memoryUri = mongoServer.getUri();
+      await mongoose.connect(memoryUri);
+      console.log(`✅ MongoDB (In-Memory) connected to: ${memoryUri}`);
+    } catch (memErr) {
+      console.error("❌ Failed to start in-memory MongoDB:", memErr.message);
+      throw err;
     }
-    throw err;
   }
 };
 

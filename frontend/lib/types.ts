@@ -19,6 +19,7 @@ export type DailyGoal = {
 };
 
 export type Dashboard = {
+  user: User;
   todayGoal: DailyGoal;
   identity: {
     type: "Casual" | "Serious" | "Hardcore";

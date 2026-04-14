@@ -23,7 +23,7 @@ function AnimatedBlob({ position, speed, color, distort, radius, factor = 1 }: a
 
   return (
     <Float speed={speed * 2} rotationIntensity={0.5} floatIntensity={1}>
-      <Sphere ref={mesh} position={position} args={[radius, 64, 64]}>
+      <Sphere ref={mesh} position={position} args={[radius, 32, 32]}>
         <MeshDistortMaterial
           color={color}
           attach="material"
@@ -51,10 +51,10 @@ function GlassSphere({ position, radius, factor = 1.2 }: any) {
 
   return (
     <Float speed={1.5} rotationIntensity={1} floatIntensity={2}>
-      <Sphere ref={mesh} position={position} args={[radius, 64, 64]}>
+      <Sphere ref={mesh} position={position} args={[radius, 32, 32]}>
         <MeshTransmissionMaterial
           backside
-          samples={16}
+          samples={6}
           thickness={0.2}
           chromaticAberration={0.1}
           anisotropy={0.1}
@@ -123,7 +123,7 @@ export default function GrindLock3D() {
   return (
     <div className="fixed inset-0 -z-10 bg-[#000000]">
       <div className="absolute inset-0 bg-mesh opacity-50" />
-      <Canvas dpr={[1, 2]} gl={{ antialias: true, alpha: true }}>
+      <Canvas dpr={[1, 1.5]} gl={{ antialias: false, alpha: true }}>
         <Scene />
       </Canvas>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(123,97,255,0.1),transparent_80%)]" />

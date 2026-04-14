@@ -62,8 +62,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return mockRequest<T>(path, init);
   }
 
-  if (res.status >= 500) {
-    // Backend returned a server error — fall back to mock
+  if (res.status >= 500 || res.status === 404) {
+    // Backend returned a server error or missing route — fall back to mock
     return mockRequest<T>(path, init);
   }
 

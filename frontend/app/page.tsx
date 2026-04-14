@@ -83,7 +83,7 @@ export default function Home() {
             className="text-xl font-black tracking-tighter"
           >
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-white/40">
-              GRINDLOCK
+              GRINDLOCK<span className="text-accent">.</span>
             </span>
           </motion.div>
           
@@ -103,7 +103,7 @@ export default function Home() {
           >
             <Link 
               href="/signup"
-              className="px-8 py-3.5 rounded-full bg-white text-black font-bold text-sm tracking-tight hover:scale-105 transition-transform active:scale-95"
+              className="btn-primary py-3 px-8 text-[10px] tracking-[0.2em] uppercase font-black"
             >
               Start Free
             </Link>
@@ -115,7 +115,7 @@ export default function Home() {
       <div className="scroll-container w-full" ref={scrollContainerRef}>
         
         {/* HERO SECTION */}
-        <Section id="hero" className="flex flex-col items-center justify-center">
+        <Section id="hero" className="flex flex-col items-center justify-center pt-20">
           <div className="grid lg:grid-cols-2 gap-10 items-center w-full">
             <div className="text-center lg:text-left">
               <motion.div
@@ -123,11 +123,11 @@ export default function Home() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
               >
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-light text-[10px] font-bold uppercase tracking-[0.2em] text-accent mb-8">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-light text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-8">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                   Performance First
                 </div>
-                <h1 className="text-7xl md:text-[9rem] font-black tracking-tighter leading-[0.85] mb-10 gradient-text pb-4">
+                <h1 className="display-lg text-7xl md:text-[9rem] mb-10 leading-[0.85] gradient-text pt-4">
                   Discipline<br />
                   <span className="opacity-90">Your Time.</span>
                 </h1>
@@ -139,10 +139,9 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row items-center gap-8 justify-center lg:justify-start">
                   <Link 
                     href="/signup"
-                    className="group px-12 py-5 rounded-full bg-accent text-white font-bold text-lg shadow-2xl shadow-accent/20 transition-all hover:scale-105 active:scale-95 flex items-center gap-3"
+                    className="btn-primary px-12 py-5 text-sm font-black tracking-widest uppercase"
                   >
                     Start Tracking
-                    <span className="group-hover:translate-x-1 transition-transform">→</span>
                   </Link>
                   <LandingWaitlistForm />
                 </div>
@@ -166,8 +165,8 @@ export default function Home() {
         {/* FEATURES SECTION */}
         <Section id="features">
           <div className="text-center mb-24">
-            <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-6 gradient-text">ENGINEERED FOR ELITE.</h2>
-            <p className="text-white/90 text-xl font-medium">Tools that force consistency where motivation fails.</p>
+            <h2 className="display-lg text-4xl md:text-7xl mb-6 gradient-text uppercase">Engineered for Elite.</h2>
+            <p className="text-white/60 text-lg font-bold tracking-[0.2em] uppercase">Tools that force consistency</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -195,7 +194,7 @@ export default function Home() {
         {/* PROCESS SECTION */}
         <Section id="process">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-4xl md:text-7xl font-black tracking-tighter mb-20 gradient-text">THE ASCENT.</h2>
+            <h2 className="display-lg text-4xl md:text-7xl mb-24 gradient-text uppercase">The Ascent.</h2>
             
             <div className="space-y-32">
               {[
@@ -203,11 +202,11 @@ export default function Home() {
                 { step: "02", title: "Enter the Void", desc: "Engage the atomic timer. All distractions are filtered. Only the work remains." },
                 { step: "03", title: "Review & Refine", desc: "Analyze every second. Build streaks that are impossible to break." }
               ].map((item, idx) => (
-                <div key={idx} className="flex flex-col md:flex-row items-center gap-10 text-left">
-                  <div className="text-8xl font-black text-white/[0.08]">{item.step}</div>
+                <div key={idx} className="flex flex-col md:flex-row items-center gap-16 text-left">
+                  <div className="text-9xl font-black text-white/[0.05] font-display">{item.step}</div>
                   <div>
-                    <h3 className="text-4xl font-black mb-4 tracking-tight">{item.title}</h3>
-                    <p className="text-xl text-white/90 leading-relaxed font-medium">{item.desc}</p>
+                    <h3 className="display-md text-4xl mb-4 tracking-tight">{item.title}</h3>
+                    <p className="text-xl text-white/70 leading-relaxed font-medium">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -216,18 +215,18 @@ export default function Home() {
         </Section>
 
         {/* FOOTER / FINAL CTA */}
-        <Section id="footer" className="min-h-[60vh] flex flex-col items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-6xl md:text-[8rem] font-black tracking-tighter mb-12 gradient-text">OWN YOUR FUTURE.</h2>
+        <Section id="footer" className="min-h-[70vh] flex flex-col items-center justify-center">
+          <div className="text-center w-full">
+            <h2 className="display-lg text-6xl md:text-[8rem] mb-12 gradient-text uppercase">Own Your Future.</h2>
             <Link 
               href="/signup"
-              className="px-16 py-6 rounded-full bg-white text-black font-black text-2xl hover:scale-110 transition-transform active:scale-95 shadow-[0_0_50px_rgba(255,255,255,0.2)]"
+              className="btn-primary px-16 py-6 text-2xl font-black tracking-widest uppercase shadow-[0_0_50px_var(--accent-glow)]"
             >
               Get Started Now
             </Link>
             
-            <div className="mt-32 pt-16 border-t border-white/15 flex flex-col md:flex-row items-center justify-between w-full opacity-60 gap-10">
-              <div className="text-xl font-black tracking-tighter">GRINDLOCK</div>
+            <div className="mt-32 pt-16 border-t border-white/10 flex flex-col md:flex-row items-center justify-between w-full opacity-50 gap-10">
+              <div className="text-xl font-black tracking-tighter">GRINDLOCK<span className="text-accent">.</span></div>
               <div className="flex gap-12 font-bold tracking-[0.2em] uppercase text-[10px]">
                 <a href="#" className="hover:text-white transition-colors">Twitter</a>
                 <a href="#" className="hover:text-white transition-colors">Discord</a>
