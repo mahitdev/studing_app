@@ -44,42 +44,50 @@ export default function SignUpPage() {
         transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
         className="auth-form max-w-[500px]"
       >
-        <h1>Create Identity</h1>
+        <h1>Create Account</h1>
         
-        <div className="flex flex-col gap-5 text-left w-full">
-          <div className="space-y-1.5">
-            <label>Operative Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Focused Student" />
-          </div>
-          <div className="space-y-1.5">
-            <label>Secure Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@domain.com" />
-          </div>
-          <div className="space-y-1.5">
-            <label>Access Key</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Minimum 8 characters" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-6 text-left w-full mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div className="space-y-1.5">
-              <label>Commitment</label>
+              <label>Full Name</label>
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Focused Student" />
+            </div>
+            <div className="space-y-1.5">
+              <label>Secure Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@domain.com" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="space-y-1.5">
+              <label>Master Password</label>
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Min. 8 characters" />
+            </div>
+            <div className="space-y-1.5">
+              <label>Commitment Level</label>
               <select value={identity} onChange={(e) => setIdentity(e.target.value as "Casual" | "Serious" | "Hardcore")}>
                 <option value="Casual">Casual</option>
                 <option value="Serious">Serious</option>
                 <option value="Hardcore">Hardcore</option>
               </select>
             </div>
-            <div className="space-y-1.5">
-              <label>Objective</label>
-              <input value={why} onChange={(e) => setWhy(e.target.value)} placeholder="Goal/Motivation" />
-            </div>
+          </div>
+          
+          <div className="space-y-1.5">
+            <label>Why are you studying?</label>
+            <input 
+              value={why} 
+              onChange={(e) => setWhy(e.target.value)} 
+              placeholder="Your high-stakes motivation..." 
+            />
           </div>
         </div>
 
         <button className="btn-primary w-full mt-8 py-4 text-sm tracking-widest uppercase font-bold" onClick={onSignup} disabled={loading}>
-          {loading ? "Initializing..." : "Register Operative"}
+          {loading ? "Initializing..." : "Start My Journey"}
         </button>
         <p className="text-xs text-center mt-6 text-muted font-medium">
-          Existing operative? <Link href="/signin" className="text-accent font-bold hover:underline">Verify Identity</Link>
+          Already have account? <Link href="/signin" className="text-accent font-bold hover:underline">Sign in</Link>
         </p>
         
         {error && (

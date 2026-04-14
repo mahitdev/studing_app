@@ -58,8 +58,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     clearTimeout(id);
   } catch (err) {
     clearTimeout(id);
-    // Backend is configured but unreachable/timeout — fall back to mock
-    return mockRequest<T>(path, init);
+    // Explicitly handle connectivity failure for user feedback
+    if (!HAS_BACKEND || (err as Error).name === 'AbortError') {
+      return mockRequest<T>(path, init);
+    }
+    
+    // If we're here, it means backend IS configured but we failed to reach it
+    throw new Error(`Connection Error: Unable to reach server at ${API_BASE}. Ensure backend is running.`);
   }
 
   if (res.status >= 500 || res.status === 404) {
