@@ -827,11 +827,6 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSes
       <div className={`timer-display ${activeSession?.status === "running" ? "animate-pulse-timer" : ""}`}>
         {formatHMS(elapsed)}
       </div>
-      {activeSession?.status === "running" && (
-        <div className="absolute inset-0 rounded-full border border-accent/20 animate-ping opacity-20" />
-      )}
     </div>
-  );
-}
   );
 }
