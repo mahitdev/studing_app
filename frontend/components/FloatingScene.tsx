@@ -10,27 +10,24 @@ function FloatingBlob({ position, color, scale = 1, speed = 1 }: { position: [nu
 
   useFrame((state) => {
     if (meshRef.current) {
-      meshRef.current.rotation.x = state.clock.elapsedTime * 0.1 * speed;
-      meshRef.current.rotation.y = state.clock.elapsedTime * 0.15 * speed;
+      meshRef.current.rotation.x = state.clock.elapsedTime * 0.05 * speed;
+      meshRef.current.rotation.y = state.clock.elapsedTime * 0.08 * speed;
     }
   });
 
   return (
-    <Float speed={1.5 * speed} rotationIntensity={0.5} floatIntensity={1}>
+    <Float speed={1 * speed} rotationIntensity={0.2} floatIntensity={0.5}>
       <mesh ref={meshRef} position={position} scale={scale}>
-        <icosahedronGeometry args={[1, 4]} />
-        <MeshTransmissionMaterial
-          backside
-          samples={4}
-          thickness={0.5}
-          chromaticAberration={0.1}
-          anisotropy={0.3}
-          distortion={0.2}
-          distortionScale={0.3}
-          temporalDistortion={0.1}
+        <icosahedronGeometry args={[1, 2]} />
+        <meshPhysicalMaterial
           color={color}
-          transmission={0.9}
-          roughness={0.1}
+          transmission={0.8}
+          roughness={0.2}
+          thickness={0.5}
+          ior={1.2}
+          reflectivity={0.3}
+          transparent
+          opacity={0.6}
         />
       </mesh>
     </Float>
@@ -124,16 +121,14 @@ function Scene() {
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 0, 8]} fov={50} />
-      <Environment preset="night" />
       
-      <ambientLight intensity={0.2} />
+      <ambientLight intensity={0.4} />
       <pointLight position={[10, 10, 10]} intensity={1} color="#4f78ff" />
       <pointLight position={[-10, -10, -10]} intensity={0.5} color="#7a63f6" />
 
       <FloatingBlob position={[-4, 2, -3]} color="#a78bfa" scale={0.8} speed={0.8} />
       <FloatingBlob position={[4, -1, -4]} color="#60a5fa" scale={1.2} speed={1.2} />
       <FloatingBlob position={[-3, -2, -5]} color="#f9a8d4" scale={0.6} speed={0.6} />
-      <FloatingBlob position={[3, 2.5, -6]} color="#fde68a" scale={0.5} speed={0.9} />
 
       <GlassPanel position={[0, 0, 0]} />
 

@@ -147,8 +147,14 @@ export default function StudyTrackerApp() {
       if (typeof running?.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
     } catch (err) {
       console.error("Refresh failed:", err);
-      setError("Sync failed. Check connection.");
+      // Don't set error if the app can still function via mock
     }
+  };
+
+  const handleManualOffline = () => {
+    localStorage.setItem("study-tracker-pref-mock", "true");
+    setError("");
+    window.location.reload();
   };
 
   useEffect(() => {
@@ -758,16 +764,24 @@ export default function StudyTrackerApp() {
               <div className="flex gap-4">
                 <AlertTriangle className="text-danger shrink-0" size={20} />
                 <div>
-                  <p className="text-xs font-black uppercase tracking-widest text-danger mb-1">System Error</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-danger mb-1">System Liaison Error</p>
                   <p className="text-sm font-medium">{error}</p>
                 </div>
               </div>
-              <button 
-                className="mt-4 text-[10px] font-black uppercase tracking-widest opacity-50 hover:opacity-100"
-                onClick={() => setError("")}
-              >
-                Dismiss
-              </button>
+              <div className="flex gap-4 mt-4">
+                <button 
+                  className="text-[10px] font-black uppercase tracking-widest bg-white/5 px-3 py-2 rounded-lg hover:bg-white/10"
+                  onClick={handleManualOffline}
+                >
+                  Force Offline Mode
+                </button>
+                <button 
+                  className="text-[10px] font-black uppercase tracking-widest opacity-50 hover:opacity-100 px-3 py-2"
+                  onClick={() => setError("")}
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
           </div>
         )}
