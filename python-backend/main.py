@@ -193,7 +193,6 @@ def analyze_sessions(payload: AnalyticsRequest):
         ax1.set_facecolor('none')
         graphs['focus_trend'] = create_base64_plot(fig1)
 
-    # Graph 2: Weekday performance comparison
     if not grouped_days.empty:
         fig2, ax2 = plt.subplots(figsize=(8, 4))
         day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']

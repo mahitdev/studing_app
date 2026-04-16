@@ -735,6 +735,7 @@ const dashboardForUser = async (userId) => {
   const selfRank = weeklySelfRank(goals);
   const monthly = monthlyProgress(goals);
   const replay = sessionReplay(todaySessions);
+  
   const pressure = pressureNotifications(remainingMinutes, streak, weakDay, recovery);
 
   return {
