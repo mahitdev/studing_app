@@ -246,10 +246,18 @@ export default function StudyTrackerApp() {
     window.addEventListener("mousemove", record);
     window.addEventListener("keydown", record);
     window.addEventListener("click", record);
+
+    const handleMove = (e: MouseEvent) => {
+      document.documentElement.style.setProperty("--mx", `${e.clientX}px`);
+      document.documentElement.style.setProperty("--my", `${e.clientY}px`);
+    };
+    window.addEventListener("mousemove", handleMove);
+
     return () => {
       window.removeEventListener("mousemove", record);
       window.removeEventListener("keydown", record);
       window.removeEventListener("click", record);
+      window.removeEventListener("mousemove", handleMove);
     };
   }, []);
 

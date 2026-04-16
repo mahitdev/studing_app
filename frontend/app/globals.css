@@ -266,26 +266,6 @@ body::after {
   animation: pulse-ring 3s infinite ease-in-out;
 }
 
-/* Auth Cards */
-.auth-wrapper {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at center, #0a0a0c 0%, #000 100%);
-  padding: 1.5rem;
-}
-
-.auth-form {
-  width: 100%;
-  max-width: 440px;
-  padding: 3rem;
-  border-radius: 32px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
-}
-
 /* Input Fields */
 input, select, textarea {
   width: 100%;
@@ -362,13 +342,16 @@ input:focus, select:focus, textarea:focus {
   position: fixed;
   width: 500px;
   height: 500px;
-  background: radial-gradient(circle, rgba(62, 99, 221, 0.04) 0%, transparent 70%);
+  background: radial-gradient(rgba(62, 99, 221, 0.04), transparent 70%);
   border-radius: 50%;
   pointer-events: none;
   z-index: 0;
   will-change: transform;
-  transform: translate3d(calc(var(--mx) - 50%), calc(var(--my) - 50%), 0);
+  transform: translate(-50%, -50%);
+  left: var(--mx, 50%);
+  top: var(--my, 50%);
 }
+
 /* Auth System */
 .auth-wrapper {
   min-height: 100vh;
@@ -401,7 +384,7 @@ input:focus, select:focus, textarea:focus {
   letter-spacing: -0.04em;
   margin-bottom: 2rem;
   text-align: center;
-  background: linear-gradient(to b, #fff, #888);
+  background: linear-gradient(to bottom, #fff, #888);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
