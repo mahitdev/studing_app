@@ -10,7 +10,7 @@ app.use(express.json());
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 30, // Increased to allow more attempts during setup
   message: { message: "Too many attempts. Please try again in 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false
@@ -25,7 +25,6 @@ const apiLimiter = rateLimit({
 });
 
 app.use("/api/auth", authLimiter);
-app.use("/api", apiLimiter);
 app.use("/api", routes);
 
 app.use((err, _req, res, _next) => {

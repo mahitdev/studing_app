@@ -104,7 +104,7 @@ router.post("/waitlist/subscribe", async (req, res, next) => {
   }
 });
 
-router.post("/auth/register", authLimiter, async (req, res, next) => {
+router.post("/auth/register", async (req, res, next) => {
   try {
     const { name, email, password, college = "General", identityType = "Serious", motivationWhy = "" } = req.body;
     if (!email || !password) {
@@ -145,7 +145,7 @@ router.post("/auth/register", authLimiter, async (req, res, next) => {
   }
 });
 
-router.post("/auth/login", authLimiter, async (req, res, next) => {
+router.post("/auth/login", async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: (email || "").toLowerCase() });
