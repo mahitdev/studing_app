@@ -75,7 +75,7 @@ export default function Home() {
       <GrindLock3D />
 
       {/* Persistent Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-10 pointer-events-none">
+      <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-6 pointer-events-none">
         <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
@@ -115,31 +115,31 @@ export default function Home() {
       <div className="scroll-container w-full" ref={scrollContainerRef}>
         
         {/* HERO SECTION */}
-        <Section id="hero" className="flex flex-col items-center justify-center pt-20">
-          <div className="grid lg:grid-cols-2 gap-10 items-center w-full">
-            <div className="text-center lg:text-left">
+        <Section id="hero" className="flex flex-col items-center justify-center pt-24 min-h-screen !overflow-visible">
+          <div className="grid lg:grid-cols-2 gap-16 items-center w-full relative z-20">
+            <div className="text-center lg:text-left pr-4">
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
+                initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
               >
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-light text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-8">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-light text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-10">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                   Performance First
                 </div>
-                <h1 className="display-lg text-5xl md:text-[clamp(4rem,10vw,8rem)] mb-10 leading-[0.9] gradient-text pt-4 tracking-[-0.04em] [text-wrap:balance]">
+                <h1 className="display-lg text-4xl sm:text-6xl md:text-[clamp(3.5rem,8vw,7rem)] mb-10 leading-[0.95] gradient-text pt-4 tracking-[-0.05em] [text-wrap:balance]">
                   Discipline<br />
                   Your Time.
                 </h1>
-                <p className="text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0 [text-wrap:balance]">
+                <p className="text-lg md:text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0 [text-wrap:balance] opacity-70">
                   The high-end productivity engine for those who refuse to settle. 
                   Atomic focus, iron streaks, and cinematic analytics.
                 </p>
                 
-                <div className="flex flex-col sm:flex-row items-center gap-8 justify-center lg:justify-start">
+                <div className="flex flex-col sm:flex-row items-center gap-6 justify-center lg:justify-start">
                   <Link 
                     href="/signup"
-                    className="btn-primary px-12 py-5 text-sm font-black tracking-widest uppercase"
+                    className="btn-primary px-12 py-5 text-sm font-black tracking-widest uppercase transition-all hover:scale-105 active:scale-95"
                   >
                     Start Tracking
                   </Link>
