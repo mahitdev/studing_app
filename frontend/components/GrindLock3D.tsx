@@ -135,8 +135,8 @@ function Scene() {
         sectionSize={5}
         sectionThickness={1.5}
         sectionColor="#3e63dd"
-        cellColor="#ffffff"
-        cellThickness={0.5}
+        cellColor="#3e63dd"
+        cellThickness={0.3}
         position={[0, -4, 0]}
         rotation={[Math.PI / 2.2, 0, 0]}
       />

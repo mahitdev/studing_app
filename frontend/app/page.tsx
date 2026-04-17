@@ -127,11 +127,11 @@ export default function Home() {
                   <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                   Performance First
                 </div>
-                <h1 className="display-lg text-6xl md:text-[7.5rem] mb-10 leading-[0.9] gradient-text pt-4 tracking-[-0.04em]">
+                <h1 className="display-lg text-5xl md:text-[clamp(4rem,10vw,8rem)] mb-10 leading-[0.9] gradient-text pt-4 tracking-[-0.04em] [text-wrap:balance]">
                   Discipline<br />
                   Your Time.
                 </h1>
-                <p className="text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0">
+                <p className="text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0 [text-wrap:balance]">
                   The high-end productivity engine for those who refuse to settle. 
                   Atomic focus, iron streaks, and cinematic analytics.
                 </p>
