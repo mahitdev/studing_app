@@ -124,18 +124,14 @@ function MainPanel() {
     <group ref={group}>
       <mesh>
         <planeGeometry args={[3, 2]} />
-        <MeshTransmissionMaterial
-          backside
-          samples={16}
-          thickness={0.2}
-          chromaticAberration={0.05}
-          anisotropy={0.1}
-          distortion={0.1}
-          color="#ffffff"
-          transmission={0.95}
-          roughness={0.15}
+        <meshPhysicalMaterial
           transparent
-          opacity={0.8}
+          opacity={0.3}
+          roughness={0.1}
+          metalness={0.1}
+          transmission={1}
+          thickness={0.5}
+          color="#ffffff"
         />
       </mesh>
       
