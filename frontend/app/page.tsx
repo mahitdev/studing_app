@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform, AnimatePresence, useInView } from "framer-motion";
 import GrindLock3D from "../components/GrindLock3D";
@@ -127,11 +127,11 @@ export default function Home() {
                   <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
                   Performance First
                 </div>
-                <h1 className="display-lg text-4xl sm:text-6xl md:text-[clamp(3.5rem,8vw,7rem)] mb-10 leading-[0.95] gradient-text pt-4 tracking-[-0.05em] [text-wrap:balance]">
+                <h1 className="display-lg text-4xl sm:text-6xl md:text-[clamp(3.5rem,8vw,7rem)] mb-10 leading-[0.95] gradient-text pt-4 tracking-[-0.05em]">
                   Discipline<br />
                   Your Time.
                 </h1>
-                <p className="text-lg md:text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0 [text-wrap:balance] opacity-70">
+                <p className="text-lg md:text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0 opacity-70">
                   The high-end productivity engine for those who refuse to settle. 
                   Atomic focus, iron streaks, and cinematic analytics.
                 </p>

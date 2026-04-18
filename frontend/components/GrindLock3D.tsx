@@ -2,10 +2,19 @@
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Float, MeshDistortMaterial, Sphere, PerspectiveCamera, MeshTransmissionMaterial, Grid } from "@react-three/drei";
-import { useRef, useMemo, useState } from "react";
+import React, { useRef, useMemo, useState } from "react";
 import * as THREE from "three";
 
-function AnimatedBlob({ position, speed, color, distort, radius, factor = 1 }: any) {
+interface BlobProps {
+  position: [number, number, number];
+  speed: number;
+  color: string;
+  distort: number;
+  radius: number;
+  factor?: number;
+}
+
+function AnimatedBlob({ position, speed, color, distort, radius, factor = 1 }: BlobProps) {
   const mesh = useRef<THREE.Mesh>(null);
   
   useFrame((state) => {
@@ -13,7 +22,6 @@ function AnimatedBlob({ position, speed, color, distort, radius, factor = 1 }: a
       mesh.current.rotation.x = state.clock.getElapsedTime() * speed * 0.05;
       mesh.current.rotation.y = state.clock.getElapsedTime() * speed * 0.08;
       
-      // Reactive to mouse
       const targetX = state.mouse.x * factor;
       const targetY = state.mouse.y * factor;
       mesh.current.position.x += (targetX + position[0] - mesh.current.position.x) * 0.02;
@@ -37,7 +45,7 @@ function AnimatedBlob({ position, speed, color, distort, radius, factor = 1 }: a
   );
 }
 
-function GlassSphere({ position, radius, factor = 1.2 }: any) {
+function GlassSphere({ position, radius, factor = 1.2 }: { position: [number, number, number]; radius: number; factor?: number }) {
   const mesh = useRef<THREE.Mesh>(null);
   
   useFrame((state) => {
