@@ -67,14 +67,25 @@ function formatHMS(seconds: number) {
 }
 
 function elapsedForSession(session: StudySession, nowMs = Date.now()) {
+  if (!session || !session.startedAt) return 0;
+  
   const startedMs = new Date(session.startedAt).getTime();
+  if (isNaN(startedMs)) return 0;
+
   const totalMs = Math.max(0, nowMs - startedMs);
   const pausedMs = (session.pauses || []).reduce((sum, pause) => {
+    if (!pause.startedAt) return sum;
     const pauseStart = new Date(pause.startedAt).getTime();
+    if (isNaN(pauseStart)) return sum;
+    
     const pauseEnd = pause.endedAt ? new Date(pause.endedAt).getTime() : nowMs;
-    return sum + Math.max(0, pauseEnd - pauseStart);
+    const validEnd = isNaN(pauseEnd) ? nowMs : pauseEnd;
+    
+    return sum + Math.max(0, validEnd - pauseStart);
   }, 0);
-  return Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
+  
+  const res = Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
+  return isNaN(res) ? 0 : res;
 }
 
 export default function StudyTrackerApp() {
@@ -123,31 +134,41 @@ export default function StudyTrackerApp() {
 
   const refreshAll = async (userId: string) => {
     try {
+      // Parallel fetch but catch individual failures to avoid failing the whole refresh
       const [dash, todaySessions, live] = await Promise.all([
-        fetchDashboard(userId),
-        getTodaySessions(userId),
+        fetchDashboard(userId).catch(e => { console.error("Dash fail:", e); return null; }),
+        getTodaySessions(userId).catch(e => { console.error("Session fail:", e); return { sessions: [] }; }),
         getLiveFriends(userId).catch(() => ({ friends: [], studyingNowCount: 0, liveMessage: "" }))
       ]);
 
-      setDashboard(dash);
-      setUser(dash.user);
-      setGoalDaily(dash.goalTypes.dailyMinutes);
-      setGoalWeekly(dash.goalTypes.weeklyTargetMinutes);
-      setGoalSessions(dash.goalTypes.weeklySessionTarget);
-      setIdentityType(dash.identity.type);
-      setSessions(todaySessions.sessions || []);
-      setLiveFriends(live.friends || []);
-      setLiveMessage(live.liveMessage || "");
+      if (dash) {
+        setDashboard(dash);
+        setUser(dash.user);
+        setGoalDaily(dash.goalTypes.dailyMinutes);
+        setGoalWeekly(dash.goalTypes.weeklyTargetMinutes);
+        setGoalSessions(dash.goalTypes.weeklySessionTarget);
+        setIdentityType(dash.identity.type);
+      }
 
-      const running = (todaySessions.sessions || []).find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
-      setActiveSession(running);
-      if (running?.subject) setSubject(running.subject);
-      if (running?.studyMode) setStudyMode(running.studyMode);
-      if (running?.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
-      if (typeof running?.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+      if (todaySessions) {
+        const sessionList = todaySessions.sessions || [];
+        setSessions(sessionList);
+        
+        const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
+        setActiveSession(running);
+        if (running?.subject) setSubject(running.subject);
+        if (running?.studyMode) setStudyMode(running.studyMode);
+        if (running?.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
+        if (typeof running?.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+      }
+
+      if (live) {
+        setLiveFriends(live.friends || []);
+        setLiveMessage(live.liveMessage || "");
+      }
+      
     } catch (err) {
       console.error("Refresh failed:", err);
-      // Don't set error if the app can still function via mock
     }
   };
 
