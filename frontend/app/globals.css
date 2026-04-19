@@ -154,6 +154,9 @@ body::after {
   color: var(--muted);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 4px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
 }
 
 .nav-btn:hover {
@@ -234,7 +237,6 @@ body::after {
   text-shadow: 0 0 40px var(--accent-glow);
 }
 
-/* Buttons */
 .btn-primary {
   background: var(--accent);
   color: #fff;
@@ -243,6 +245,8 @@ body::after {
   font-weight: 600;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px var(--accent-glow);
+  cursor: pointer;
+  border: none;
 }
 
 .btn-primary:hover {

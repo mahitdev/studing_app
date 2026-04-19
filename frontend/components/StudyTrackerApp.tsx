@@ -425,9 +425,14 @@ export default function StudyTrackerApp() {
   if (!user || !dashboard) return (
     <div className="auth-wrapper">
       <div className="auth-form text-center">
-        <h1 className="display-lg mb-4">Unauthorized</h1>
-        <p className="text-muted mb-8">System access requires active authentication.</p>
-        <Link href="/signin" className="btn-primary inline-block">Renew Access</Link>
+        <h1 className="display-lg mb-4">Internal System Offline</h1>
+        <p className="text-muted mb-8 italic">
+          {error || "Could not synchronize with central intelligence. Attempting fallback..."}
+        </p>
+        <div className="flex flex-col gap-4">
+          <button className="btn-primary" onClick={() => window.location.reload()}>Retry Sync</button>
+          <button className="nav-btn justify-center" onClick={signOut}>Sign Out</button>
+        </div>
       </div>
     </div>
   );
