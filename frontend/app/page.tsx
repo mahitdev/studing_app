@@ -1,6 +1,6 @@
 "use client";
 
-// Production stable: v1.0.3
+// Production stable: v1.0.4
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { motion, useScroll, useTransform, AnimatePresence, useInView } from "framer-motion";
