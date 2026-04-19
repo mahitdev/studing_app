@@ -705,11 +705,14 @@ const dashboardForUser = async (userId) => {
   const aiCoach = coachSuggestions(sessions, deep, subjectStats.weakAlerts);
   const consistencyScore7d = weekly.weeklyCompletionPercent;
   const remainingMinutes = Math.max(0, (todayGoal?.targetMinutes || 0) - (todayGoal?.studiedMinutes || 0));
+  const hoursRemaining = Math.ceil(remainingMinutes / 60);
+  const timeMessage = remainingMinutes > 0
+    ? `${hoursRemaining} ${hoursRemaining === 1 ? 'hour' : 'hours'} left to finish goal`
+    : "Goal completed for today";
+
   const timePressure = {
     remainingMinutes,
-    message: remainingMinutes > 0
-      ? `${Math.ceil(remainingMinutes / 60)} hours left to finish goal`
-      : "Goal completed for today"
+    message: timeMessage
   };
   const smartReminder = remainingMinutes > 0
     ? `You're ${Math.ceil(remainingMinutes / 60)} hour behind today.`

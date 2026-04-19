@@ -378,13 +378,13 @@ export default function StudyTrackerApp() {
   const handleGoalUpdate = async () => {
     if (!user) return;
     try {
+      setError("");
       const { dashboard: updated } = await setGoalConfig(user._id, {
         dailyMinutes: goalDaily,
         weeklyTargetMinutes: goalWeekly,
         weeklySessionTarget: goalSessions
       });
-      setDashboard(updated);
-      setError("");
+      if (updated) setDashboard(updated);
     } catch (err) {
       setError("Failed to update goals.");
     }
@@ -393,11 +393,23 @@ export default function StudyTrackerApp() {
   const handleIdentityUpdate = async () => {
     if (!user) return;
     try {
-      const { dashboard: updated } = await setModes(user._id, settings.roastMode, identityType, motivationWhy);
-      setDashboard(updated);
       setError("");
+      const { dashboard: updated } = await setModes(user._id, settings.roastMode, identityType, motivationWhy);
+      if (updated) setDashboard(updated);
     } catch (err) {
       setError("Failed to update identity.");
+    }
+  };
+
+  const handleAddFriend = async () => {
+    if (!user || !friendEmail.trim()) return;
+    try {
+      setError("");
+      await addFriend(user._id, friendEmail);
+      setFriendEmail("");
+      await refreshAll(user._id);
+    } catch (err) {
+      setError("Could not find operative to sync.");
     }
   };
 
@@ -594,7 +606,7 @@ export default function StudyTrackerApp() {
                       value={friendEmail}
                       onChange={(e) => setFriendEmail(e.target.value)}
                     />
-                    <button className="btn-primary text-xs py-3" onClick={() => { addFriend(user._id, friendEmail); setFriendEmail(""); refreshAll(user._id); }}>Add Entity</button>
+                    <button className="btn-primary text-xs py-3" onClick={handleAddFriend}>Add Entity</button>
                   </div>
                 </div>
               </div>
