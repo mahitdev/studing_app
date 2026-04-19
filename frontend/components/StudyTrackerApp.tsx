@@ -842,15 +842,16 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSes
       return;
     }
 
-    const init = elapsedForSession(activeSession);
-    setElapsed(init);
+    // Use wall-clock calculation instead of simple increment to prevent drift
+    const updateTime = () => {
+      setElapsed(elapsedForSession(activeSession));
+    };
+
+    updateTime();
 
     if (activeSession.status !== "running") return;
 
-    const interval = setInterval(() => {
-      setElapsed((prev) => prev + 1);
-    }, 1000);
-
+    const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, [activeSession]);
 
