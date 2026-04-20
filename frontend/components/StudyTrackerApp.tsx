@@ -531,33 +531,33 @@ export default function StudyTrackerApp() {
               <div className="stats-grid">
                 <article className="stat-card">
                   <div className="label flex items-center gap-2"><Target size={14} /> Today's Mission</div>
-                  <div className="value">{dashboard.todayGoal.targetMinutes}m</div>
+                  <div className="value">{dashboard?.todayGoal?.targetMinutes || 0}m</div>
                   <div className="mt-4 flex items-center justify-between">
                     <p className="text-[10px] font-bold text-muted uppercase">Progress</p>
-                    <p className="text-xs font-bold text-accent">{dashboard.todayGoal.completionPercent}%</p>
+                    <p className="text-xs font-bold text-accent">{dashboard?.todayGoal?.completionPercent || 0}%</p>
                   </div>
                   <div className="h-1 bg-white/5 rounded-full mt-2 overflow-hidden">
                     <motion.div 
                       initial={{ width: 0 }}
-                      animate={{ width: `${dashboard.todayGoal.completionPercent}%` }}
+                      animate={{ width: `${dashboard?.todayGoal?.completionPercent || 0}%` }}
                       className="h-full bg-accent"
                     />
                   </div>
                 </article>
                 <article className="stat-card">
                   <div className="label flex items-center gap-2"><Flame size={14} /> Current Streak</div>
-                  <div className="value">{dashboard.streak.current}d</div>
-                  <p className="text-xs text-muted mt-2 font-medium">Record: {dashboard.streak.longest} days</p>
+                  <div className="value">{dashboard?.streak?.current || 0}d</div>
+                  <p className="text-xs text-muted mt-2 font-medium">Record: {dashboard?.streak?.longest || 0} days</p>
                 </article>
                 <article className="stat-card">
                   <div className="label flex items-center gap-2"><Activity size={14} /> Focus Score</div>
-                  <div className="value">{dashboard.focusScore.score}%</div>
-                  <p className="text-xs text-muted mt-2 font-medium">State: <span className="text-success capitalize">{dashboard.focusScore.label}</span></p>
+                  <div className="value">{dashboard?.focusScore?.score || 0}%</div>
+                  <p className="text-xs text-muted mt-2 font-medium">State: <span className="text-success capitalize">{dashboard?.focusScore?.label || "Analyzing"}</span></p>
                 </article>
                 <article className="stat-card">
                   <div className="label flex items-center gap-2"><Zap size={14} /> Resilience</div>
-                  <div className="value">{dashboard.momentum.score}%</div>
-                  <p className="text-xs text-muted mt-2 font-medium">{dashboard.momentum.message}</p>
+                  <div className="value">{dashboard?.momentum?.score || 0}%</div>
+                  <p className="text-xs text-muted mt-2 font-medium">{dashboard?.momentum?.message || "Steady state"}</p>
                 </article>
               </div>
 
