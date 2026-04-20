@@ -18,10 +18,17 @@ export const metadata: Metadata = {
   robots: "index, follow",
 };
 
+import GrindLock3D from "../components/GrindLock3D";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${bodyFont.variable} ${displayFont.variable}`}>{children}</body>
+      <body className={`${bodyFont.variable} ${displayFont.variable}`}>
+        <GrindLock3D />
+        <div className="relative z-10">
+          {children}
+        </div>
+      </body>
     </html>
   );
 }

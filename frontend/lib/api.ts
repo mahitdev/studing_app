@@ -40,32 +40,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
   let res: Response;
   const token = getAuthToken();
-  const controller = new AbortController();
-  // 15 second timeout for production database cold starts
-  const id = setTimeout(() => controller.abort(), 15000);
-
   try {
     const fullUrl = `${API_BASE}${path}`.replace(/([^:]\/)\/+/g, "$1");
-    res = await fetch(fullUrl, {
+    const response = await fetch(fullUrl, {
       ...init,
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
         ...(init?.headers || {})
       },
-      signal: controller.signal,
       cache: "no-store"
+    }).catch((err) => {
+      console.warn(`Connection to ${path} failed, attempting mock fallback:`, err.message);
+      return null;
     });
-    clearTimeout(id);
-  } catch (err) {
-    clearTimeout(id);
-    // If it's a timeout or connection refused, fallback to mock if preferred, or throw clear error
-    if (!HAS_BACKEND || (err as Error).name === 'AbortError') {
-      console.warn("API Request fallback to mock due to timeout or abort:", path);
+
+    if (!response) {
       return mockRequest<T>(path, init);
     }
-    
-    throw new Error(`Connection Error: Unable to reach server at ${API_BASE}. Status: ${err instanceof Error ? err.message : 'Unknown'}`);
   }
 
   // Handle server-side errors gracefully by falling back to mock data

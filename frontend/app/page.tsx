@@ -71,7 +71,7 @@ export default function Home() {
 
   return (
     <main className="relative text-white selection:bg-accent/30 selection:text-white min-h-screen">
-      <GrindLock3D />
+      {/* 3D background provided by RootLayout */}
 
       {/* Persistent Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-6 pointer-events-none">

@@ -34,9 +34,7 @@ export default function SignUpPage() {
 
   return (
     <main className="auth-wrapper">
-      <div className="absolute inset-0 z-0">
-        <FloatingScene />
-      </div>
+      {/* 3D background provided by RootLayout */}
 
       <motion.section 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
