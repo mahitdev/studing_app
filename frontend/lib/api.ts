@@ -38,11 +38,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return mockRequest<T>(path, init);
   }
 
-  let res: Response;
-  const token = getAuthToken();
+  let res: Response | null = null;
   try {
     const fullUrl = `${API_BASE}${path}`.replace(/([^:]\/)\/+/g, "$1");
-    const response = await fetch(fullUrl, {
+    res = await fetch(fullUrl, {
       ...init,
       headers: {
         "Content-Type": "application/json",
@@ -50,14 +49,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         ...(init?.headers || {})
       },
       cache: "no-store"
-    }).catch((err) => {
-      console.warn(`Connection to ${path} failed, attempting mock fallback:`, err.message);
-      return null;
     });
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.warn(`Connection to ${path} failed, attempting mock fallback:`, errorMsg);
+    return mockRequest<T>(path, init);
+  }
 
-    if (!response) {
-      return mockRequest<T>(path, init);
-    }
+  if (!res) {
+    return mockRequest<T>(path, init);
   }
 
   // Handle server-side errors gracefully by falling back to mock data

@@ -17,7 +17,8 @@ import {
   setModes,
   startSession,
   syncOfflineSessions,
-  fetchAnalytics
+  fetchAnalytics,
+  clearAuthSession
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 import { 
@@ -34,10 +35,13 @@ import {
   Users,
   ChevronRight,
   ShieldCheck,
-  AlertTriangle
+  AlertTriangle,
+  Swords,
+  Camera,
+  Play
 } from "lucide-react";
 
-type Screen = "dashboard" | "timer" | "analytics" | "streak" | "settings";
+type Screen = "dashboard" | "timer" | "analytics" | "streak" | "settings" | "colosseum";
 
 type AppSettings = {
   preferredStudyTime: string;
@@ -122,6 +126,17 @@ export default function StudyTrackerApp() {
   const [pythonAnalytics, setPythonAnalytics] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
+  const [lastSyncAt, setLastSyncAt] = useState<number>(Date.now());
+  
+  // New "Premium" Features States
+  const [microTasks, setMicroTasks] = useState<{ id: string; label: string; done: boolean }[]>([]);
+  const [newMicroTask, setNewMicroTask] = useState("");
+  const [ambientTrack, setAmbientTrack] = useState<string>("none");
+  const [webcamEnabled, setWebcamEnabled] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
 
   const hiddenAt = useRef<number | null>(null);
   const lastActivityAt = useRef<number>(Date.now());
@@ -148,6 +163,7 @@ export default function StudyTrackerApp() {
         setGoalWeekly(dash.goalTypes.weeklyTargetMinutes);
         setGoalSessions(dash.goalTypes.weeklySessionTarget);
         setIdentityType(dash.identity.type);
+        if (dash.user.email && !summaryEmail) setSummaryEmail(dash.user.email);
       }
 
       if (todaySessions) {
@@ -188,6 +204,24 @@ export default function StudyTrackerApp() {
       }
     }
 
+    // Load session-local state from storage to prevent data loss on refresh
+    const sessionStateKey = "gl-session-state";
+    const savedState = sessionStorage.getItem(sessionStateKey);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState);
+        if (parsed.inactiveSeconds) setInactiveSeconds(parsed.inactiveSeconds);
+        if (parsed.notes) setNotes(parsed.notes);
+        if (parsed.subject) setSubject(parsed.subject);
+        if (parsed.antiCheatFlags) setAntiCheatFlags(parsed.antiCheatFlags);
+        if (parsed.microTasks) setMicroTasks(parsed.microTasks);
+      } catch (e) { console.error("Session state recovery failed", e); }
+    }
+
+    if ("Notification" in window) {
+      Notification.requestPermission().then(setNotificationPermission);
+    }
+
     const init = async () => {
       try {
         setLoading(true);
@@ -208,6 +242,22 @@ export default function StudyTrackerApp() {
 
     init();
   }, []);
+
+  // Persist session-local state
+  useEffect(() => {
+    if (activeSession) {
+      sessionStorage.setItem("gl-session-state", JSON.stringify({
+        inactiveSeconds,
+        notes,
+        subject,
+        antiCheatFlags,
+        microTasks
+      }));
+    } else {
+      sessionStorage.removeItem("gl-session-state");
+      setMicroTasks([]); // Clear micro-tasks when session ends
+    }
+  }, [activeSession, inactiveSeconds, notes, subject, antiCheatFlags, microTasks]);
 
   useEffect(() => {
     if (screen === "analytics" && user && !analyticsLoaded && !loadingAnalytics) {
@@ -245,6 +295,9 @@ export default function StudyTrackerApp() {
           const { session } = await pauseSession(user._id, activeSession._id, "tab-switch");
           setActiveSession(session);
           setTimerAlert("Focus bro... you switched tabs 👀");
+          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            new Notification("GrindLock Protocol", { body: "You switched tabs. Focus lost. Penalty applied." });
+          }
         } catch {
           setTimerAlert("Focus lost. Resume manually.");
         }
@@ -252,7 +305,11 @@ export default function StudyTrackerApp() {
 
       if (!document.hidden && hiddenAt.current) {
         const delta = Math.round((Date.now() - hiddenAt.current) / 1000);
-        setInactiveSeconds((prev) => prev + Math.max(0, delta));
+        // Only increment inactiveSeconds if the session was NOT paused.
+        // If it was paused, the time is already accounted for in pauseSeconds.
+        if (activeSession.status === "running") {
+           setInactiveSeconds((prev) => prev + Math.max(0, delta));
+        }
         setAntiCheatFlags((prev) => prev + 1);
         hiddenAt.current = null;
       }
@@ -286,7 +343,7 @@ export default function StudyTrackerApp() {
     if (!activeSession || activeSession.status !== "running" || !user) return;
     const idleTimer = setInterval(async () => {
       const idleFor = Math.floor((Date.now() - lastActivityAt.current) / 1000);
-      if (idleFor >= 120) {
+      if (idleFor >= 120 && activeSession.status === "running") {
         try {
           const { session } = await pauseSession(user._id, activeSession._id, "idle-detected");
           setActiveSession(session);
@@ -296,10 +353,16 @@ export default function StudyTrackerApp() {
           // ignore
         }
       }
+      
+      // Heartbeat: keep dashboard fresh and prevent session expiration
+      if (Date.now() - lastSyncAt > 60000) {
+        refreshAll(user._id);
+        setLastSyncAt(Date.now());
+      }
     }, 15000);
 
     return () => clearInterval(idleTimer);
-  }, [activeSession, user]);
+  }, [activeSession, user, lastSyncAt]);
 
   useEffect(() => {
     let rafId: number;
@@ -313,6 +376,31 @@ export default function StudyTrackerApp() {
     window.addEventListener("mousemove", onMove);
     return () => window.removeEventListener("mousemove", onMove);
   }, []);
+
+  // Webcam Presence Tracking
+  useEffect(() => {
+    let stream: MediaStream | null = null;
+    if (webcamEnabled && activeSession?.status === "running") {
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(s => {
+          stream = s;
+          if (videoRef.current) videoRef.current.srcObject = s;
+        })
+        .catch(() => {
+          setTimerAlert("CAMERA ACCESS DENIED. PRESENCE MODE FAILED.");
+          setWebcamEnabled(false);
+        });
+    } else {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
+        tracks.forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+      }
+    }
+    return () => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    };
+  }, [webcamEnabled, activeSession?.status]);
 
   const handleStart = async () => {
     if (!user) return;
@@ -413,6 +501,20 @@ export default function StudyTrackerApp() {
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!user || !summaryEmail.trim()) return;
+    try {
+      setEmailStatus("transmitting");
+      const result = await sendProgressEmail(user._id, summaryEmail);
+      setEmailStatus("delivered");
+      setTimeout(() => setEmailStatus(""), 3000);
+    } catch (err) {
+      console.error(err);
+      setEmailStatus("failed");
+      setTimeout(() => setEmailStatus(""), 3000);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-vh-100 bg-black">
       <div className="flex flex-col items-center gap-4">
@@ -431,7 +533,7 @@ export default function StudyTrackerApp() {
         </p>
         <div className="flex flex-col gap-4">
           <button className="btn-primary" onClick={() => window.location.reload()}>Retry Sync</button>
-          <button className="nav-btn justify-center" onClick={signOut}>Sign Out</button>
+          <button className="nav-btn justify-center" onClick={() => { clearAuthSession(); window.location.href = '/signin'; }}>Sign Out</button>
         </div>
       </div>
     </div>
@@ -442,6 +544,7 @@ export default function StudyTrackerApp() {
     { id: "timer", label: "Focus Timer", icon: Timer },
     { id: "analytics", label: "Neural Engine", icon: BarChart3 },
     { id: "streak", label: "Momentum", icon: Flame },
+    { id: "colosseum", label: "Colosseum", icon: Swords },
     { id: "settings", label: "Config", icon: Settings }
   ];
 
@@ -490,7 +593,7 @@ export default function StudyTrackerApp() {
           <div>
             <h2 className="display-md text-3xl">{navItems.find(n => n.id === screen)?.label}</h2>
             <p className="text-xs text-muted font-medium mt-1">
-              System Health: <span className="text-success">Optimal</span>
+              System Health: <span className="text-success blink">Optimal</span> • Last Sync: {new Date(lastSyncAt).toLocaleTimeString()}
             </p>
           </div>
           <div className="flex items-center gap-6">
@@ -670,8 +773,55 @@ export default function StudyTrackerApp() {
                       <span className="text-xs font-bold">RISK MODE</span>
                       <input type="checkbox" className="w-auto" checked={riskMode} onChange={(e) => setRiskMode(e.target.checked)} />
                     </label>
+                    <label className="flex items-center justify-between p-3 glass-light rounded-xl cursor-pointer hover:border-accent/30 transition-colors border border-transparent">
+                      <span className="text-[10px] font-black tracking-widest flex items-center gap-2"><Camera size={12}/> PRESENCE</span>
+                      <input type="checkbox" className="w-auto" checked={webcamEnabled} onChange={(e) => setWebcamEnabled(e.target.checked)} />
+                    </label>
                   </div>
                 </div>
+                  
+                  <div className="space-y-2 mb-8">
+                     <label className="text-[10px] font-black uppercase tracking-widest text-muted">Ambient Engine</label>
+                     <div className="flex gap-2">
+                       <select className="flex-1" value={ambientTrack} onChange={(e) => setAmbientTrack(e.target.value)}>
+                         <option value="none">Disabled</option>
+                         <option value="brown">Brown Noise</option>
+                         <option value="lofi">Lo-Fi Frequencies</option>
+                       </select>
+                       <button className="btn-primary px-6" onClick={() => { if(audioRef.current) { audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause() } }}>
+                         <Play size={14}/>
+                       </button>
+                     </div>
+                  </div>
+
+                  <div className="mb-8 p-6 glass-light rounded-2xl relative overflow-hidden group">
+                    <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-accent mb-4"><Target size={14} /> Micro-Tasks</h4>
+                    <div className="space-y-3 mb-4">
+                      {microTasks.length === 0 && <p className="text-xs text-muted font-medium">Stack tasks to maximize dopamine upon completion.</p>}
+                      {microTasks.map((task) => (
+                        <div key={task.id} className="flex items-center gap-3 bg-black/20 p-2 pl-3 rounded-lg border border-white/5 relative overflow-hidden">
+                          {task.done && <motion.div layoutId="strike" className="absolute left-0 w-full h-[2px] bg-accent top-1/2 opacity-50" />}
+                          <input type="checkbox" checked={task.done} className="w-4 h-4 accent-accent" onChange={() => setMicroTasks(prev => prev.map(t => t.id === task.id ? { ...t, done: !t.done } : t))} />
+                          <span className={`text-sm flex-1 truncate ${task.done ? "text-muted" : "font-semibold"} transition-colors`}>{task.label}</span>
+                          <button className="text-danger/50 hover:text-danger transition-colors px-2" onClick={() => setMicroTasks(prev => prev.filter(t => t.id !== task.id))}>×</button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 relative z-10">
+                      <input type="text" className="flex-1 bg-black/50 text-sm border-white/10" placeholder="Add micro-task..." value={newMicroTask} onChange={(e) => setNewMicroTask(e.target.value)} onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newMicroTask.trim()) {
+                          setMicroTasks(prev => [...prev, { id: Date.now().toString(), label: newMicroTask.trim(), done: false }]);
+                          setNewMicroTask("");
+                        }
+                      }} />
+                      <button className="btn-primary font-black px-4" onClick={() => {
+                        if (newMicroTask.trim()) {
+                          setMicroTasks(prev => [...prev, { id: Date.now().toString(), label: newMicroTask.trim(), done: false }]);
+                          setNewMicroTask("");
+                        }
+                      }}>+</button>
+                    </div>
+                  </div>
 
                 <div className="flex items-center gap-4">
                   {!activeSession ? (
@@ -776,6 +926,35 @@ export default function StudyTrackerApp() {
                   <button className="btn-primary" onClick={handleIdentityUpdate}>Update Identity</button>
                 </div>
               </section>
+
+              <section className="space-y-6">
+                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted">Transmission Protocol</h3>
+                <div className="glass-card p-6 border-l-4 border-l-accent space-y-4">
+                  <p className="text-xs font-medium text-white/70 italic">Transmit your current progress summary to your command center (email).</p>
+                  <div className="flex gap-3">
+                    <input 
+                      type="email" 
+                      placeholder="commander@example.com" 
+                      value={summaryEmail} 
+                      onChange={(e) => setSummaryEmail(e.target.value)}
+                      className="flex-1"
+                    />
+                    <button 
+                      className={`px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${
+                        emailStatus === "delivered" ? "bg-success text-white" : 
+                        emailStatus === "failed" ? "bg-danger text-white" : 
+                        "bg-white/10 hover:bg-white/20 text-white"
+                      }`}
+                      onClick={handleSendEmail}
+                      disabled={emailStatus === "transmitting"}
+                    >
+                      {emailStatus === "transmitting" ? "SENDING..." : 
+                       emailStatus === "delivered" ? "SENT" : 
+                       emailStatus === "failed" ? "RETRY" : "TRANSMIT"}
+                    </button>
+                  </div>
+                </div>
+              </section>
             </motion.div>
           )}
 
@@ -801,6 +980,43 @@ export default function StudyTrackerApp() {
                </div>
              </div>
            </motion.div>
+          )}
+
+          {screen === "colosseum" && (
+            <motion.div key="colosseum" className="space-y-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <div className="flex items-center justify-between">
+                <h3 className="display-sm text-3xl uppercase tracking-tighter">Live Arena</h3>
+                <span className="px-4 py-1.5 bg-success/10 text-success text-xs font-bold rounded-full tracking-widest uppercase">
+                  {liveFriends.filter(f => f.studyingNow).length} / {liveFriends.length} Comrades Active
+                </span>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {liveFriends.length > 0 ? liveFriends.map(friend => (
+                  <div key={friend.userId} className="glass-card p-6 flex justify-between items-center border border-white/5 hover:border-white/10 transition-colors">
+                    <div className="flex gap-4 items-center">
+                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                        <Users size={16} className="text-white/50" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-lg">{friend.name}</p>
+                        <p className="text-xs text-muted tracking-widest uppercase font-black">Lvl {friend.level}</p>
+                      </div>
+                    </div>
+                    {friend.studyingNow ? (
+                      <span className="px-3 py-1 bg-success/20 text-success text-xs font-black rounded-full animate-pulse-timer border border-success/30 shadow-[0_0_15px_rgba(34,197,94,0.3)]">IN ZONE</span>
+                    ) : (
+                      <span className="px-3 py-1 bg-white/5 text-white/30 text-[10px] font-black tracking-widest uppercase rounded-md">Resting</span>
+                    )}
+                  </div>
+                )) : (
+                  <div className="col-span-1 md:col-span-2 glass-light p-10 text-center rounded-2xl">
+                    <p className="text-muted text-sm font-medium tracking-widest uppercase mb-4">No comrades spotted in the arena.</p>
+                    <button className="btn-primary px-8 py-3 text-xs" onClick={() => setScreen("settings")}>Recruit Friends</button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           )}
         </AnimatePresence>
 
@@ -831,6 +1047,22 @@ export default function StudyTrackerApp() {
             </div>
           </div>
         )}
+        {/* Ambient Audio & Hardcore Presence Elements */}
+        {ambientTrack !== "none" && (
+          <audio 
+            ref={audioRef} 
+            src={ambientTrack === "brown" ? "https://cdn.pixabay.com/download/audio/2021/04/10/audio_50b0b8c6ab.mp3?filename=brown-noise-10-minutes-76077.mp3" : "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"} 
+            loop 
+            className="hidden" 
+          />
+        )}
+        <div className={`fixed bottom-6 right-6 w-48 rounded-xl overflow-hidden shadow-2xl border ${webcamEnabled && activeSession?.status === "running" ? "border-danger opacity-100" : "border-white/5 opacity-0 pointer-events-none"} transition-opacity duration-1000 z-50`}>
+          <div className="absolute top-0 left-0 w-full bg-danger/80 text-[8px] font-black tracking-[0.2em] uppercase px-2 py-1 flex items-center justify-between z-10 backdrop-blur-md">
+            <span>Presence Scanner</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+          </div>
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto grayscale opacity-80" />
+        </div>
       </main>
     </div>
   );
@@ -839,11 +1071,13 @@ export default function StudyTrackerApp() {
 function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSession: StudySession | null, studyMode: string, plannedDuration: number }) {
   const [elapsed, setElapsed] = useState(0);
   const [progress, setProgress] = useState(0);
+  const notifiedRef = useRef(false);
 
   useEffect(() => {
     if (!activeSession) {
       setElapsed(0);
       setProgress(0);
+      notifiedRef.current = false;
       return;
     }
 
@@ -863,6 +1097,13 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSes
   useEffect(() => {
     const totalSecs = (activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration)) * 60;
     setProgress(Math.min(100, (elapsed / Math.max(1, totalSecs)) * 100));
+
+    if (elapsed >= totalSecs && totalSecs > 0 && !notifiedRef.current) {
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        new Notification("GrindLock Alert", { body: "Target duration reached. Take a break or lock in for overtime." });
+      }
+      notifiedRef.current = true;
+    }
   }, [elapsed, activeSession, studyMode, plannedDuration]);
 
   return (

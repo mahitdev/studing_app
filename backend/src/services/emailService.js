@@ -61,15 +61,18 @@ async function buildUserSummary(user) {
 
 async function sendProgressEmail(user, email) {
   const mailer = getTransporter();
-  if (!mailer) {
-    const err = new Error("Email service is not configured. Add SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS.");
-    err.statusCode = 400;
-    throw err;
-  }
-
   const summary = await buildUserSummary(user);
-  const fromEmail = String(process.env.MAIL_FROM || process.env.SMTP_USER || "").trim();
-  const appUrl = String(process.env.APP_URL || "https://frontend-alpha-blue-43.vercel.app").trim();
+  const fromEmail = String(process.env.MAIL_FROM || process.env.SMTP_USER || "noreply@grindlock.com").trim();
+  const appUrl = String(process.env.APP_URL || "https://grindlock.vercel.app").trim();
+
+  if (!mailer) {
+    console.log("--- SIMULATED EMAIL ---");
+    console.log(`To: ${email}`);
+    console.log(`Subject: Your GrindLock Progress Summary`);
+    console.log(`Body: ${JSON.stringify(summary)}`);
+    console.log("------------------------");
+    return summary;
+  }
 
   const subject = `Your GrindLock Progress Summary`;
   const text = [

@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   keywords: ["productivity", "study tracker", "focus timer", "pomodoro", "analytics", "student tools", "GrindLock"],
   authors: [{ name: "GrindLock Team" }],
   robots: "index, follow",
+  manifest: "/manifest.json",
 };
 
 import GrindLock3D from "../components/GrindLock3D";
