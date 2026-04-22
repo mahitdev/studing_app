@@ -445,5 +445,19 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
     } as T;
   }
 
+  if (path === "/auth/login" || path === "/auth/register" || path === "/users/bootstrap") {
+    const user = { _id: "mock-user-123", name: body?.name || "Guest Operative", email: body?.email || "guest@grindlock.com", badges: [], level: 1, xp: 0, college: body?.college || "Unknown" };
+    store.user = user;
+    store.identityType = body?.identityType || "Serious";
+    saveStore(store);
+    return { user, token: "mock-jwt-token-777", dashboard: defaultDashboard(store) } as T;
+  }
+
+  const emailSummaryMatch = path.match(/^\/users\/([^/]+)\/email-summary$/);
+  if (emailSummaryMatch && method === "POST") {
+    console.log("--- MOCK EMAIL DELIVERED ---", "\nTo:", body?.email, "\nContent: Weekly Progress Summary");
+    return { ok: true, message: "Progress email successfully simulated via Mock API.", summary: { totalHours: 12.5, weeklyHours: 5.2, completionRate: 85 } } as T;
+  }
+
   return {} as T;
 }
