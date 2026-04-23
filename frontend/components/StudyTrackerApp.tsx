@@ -35,10 +35,10 @@ import {
   Users,
   ChevronRight,
   ShieldCheck,
-  AlertTriangle,
   Swords,
   Camera,
-  Play
+  Play,
+  Pause
 } from "lucide-react";
 
 type Screen = "dashboard" | "timer" | "analytics" | "streak" | "settings" | "colosseum";
@@ -132,11 +132,20 @@ export default function StudyTrackerApp() {
   const [microTasks, setMicroTasks] = useState<{ id: string; label: string; done: boolean }[]>([]);
   const [newMicroTask, setNewMicroTask] = useState("");
   const [ambientTrack, setAmbientTrack] = useState<string>("none");
+  const [ambientPlaying, setAmbientPlaying] = useState(false);
   const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Sync ambient play state with real audio element events
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.onplay = () => setAmbientPlaying(true);
+      audioRef.current.onpause = () => setAmbientPlaying(false);
+    }
+  }, [ambientTrack]);
 
   const hiddenAt = useRef<number | null>(null);
   const lastActivityAt = useRef<number>(Date.now());
@@ -788,8 +797,16 @@ export default function StudyTrackerApp() {
                          <option value="brown">Brown Noise</option>
                          <option value="lofi">Lo-Fi Frequencies</option>
                        </select>
-                       <button className="btn-primary px-6" onClick={() => { if(audioRef.current) { audioRef.current.paused ? audioRef.current.play() : audioRef.current.pause() } }}>
-                         <Play size={14}/>
+                       <button className="btn-primary px-6" onClick={() => { 
+                         if(audioRef.current) { 
+                           if (audioRef.current.paused) {
+                             audioRef.current.play().catch(e => console.warn("Autoplay blocked", e));
+                           } else {
+                             audioRef.current.pause();
+                           }
+                         } 
+                       }}>
+                         {ambientPlaying ? <Pause size={14}/> : <Play size={14}/>}
                        </button>
                      </div>
                   </div>

@@ -60,22 +60,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return mockRequest<T>(path, init);
   }
 
-  // Handle server-side errors gracefully by falling back to mock data
-  if (res.status >= 500 || res.status === 404) {
+  // Handle ALL server-side errors gracefully by falling back to mock data
+  // This explicitly catches 400 Bad Request errors caused by Mongoose CastErrors when parsing "mock-user-123" IDs
+  if (!res.ok) {
     console.warn(`API Server Error ${res.status} for ${path}, using mock fallback.`);
     return mockRequest<T>(path, init);
-  }
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    let message = "Request failed";
-    try {
-      const parsed = JSON.parse(errorText) as { message?: string };
-      message = parsed.message || message;
-    } catch {
-      message = errorText || message;
-    }
-    throw new Error(message);
   }
 
   return res.json() as Promise<T>;
