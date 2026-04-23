@@ -1,241 +1,184 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
-import Link from "next/link";
-import { motion, useScroll, useTransform, AnimatePresence, useInView } from "framer-motion";
-import GrindLock3D from "../components/GrindLock3D";
-import GrindLockHeroPanel from "../components/GrindLockHeroPanel";
-import LandingWaitlistForm from "../components/LandingWaitlistForm";
+import React, { useRef, useState, useMemo } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { Environment, MeshTransmissionMaterial, Text, Float, Stars, Icosahedron } from "@react-three/drei";
+import { motion } from "framer-motion-3d";
+import * as THREE from "three";
+import { useRouter } from "next/navigation";
 
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function Luxury3DButton({ position, label, onClick, width = 3 }: any) {
+  const [hovered, setHovered] = useState(false);
+  const [clicked, setClicked] = useState(false);
+  
   return (
-    <Link 
-      href={href} 
-      className="text-xs font-bold uppercase tracking-widest text-white hover:text-white transition-colors duration-300"
+    <motion.group 
+      position={position}
+      animate={{ z: clicked ? -0.4 : hovered ? 0.2 : 0 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
-      {children}
-    </Link>
-  );
-}
-
-function Section({ children, id, className = "" }: { children: React.ReactNode, id?: string, className?: string }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { amount: 0.3 });
-
-  return (
-    <section 
-      id={id} 
-      ref={ref}
-      className={`section-full relative overflow-hidden px-8 ${className}`}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-        transition={{ duration: 1, ease: [0.2, 0.8, 0.2, 1] }}
-        className="w-full max-w-7xl mx-auto"
+      <mesh 
+        onPointerOver={() => setHovered(true)} 
+        onPointerOut={() => { setHovered(false); setClicked(false); }}
+        onPointerDown={() => setClicked(true)}
+        onPointerUp={() => { setClicked(false); if(hovered) onClick(); }}
       >
-        {children}
-      </motion.div>
-    </section>
+        <boxGeometry args={[width, 1.2, 0.4]} />
+        <MeshTransmissionMaterial 
+          backside
+          samples={4}
+          thickness={1.5}
+          roughness={0.1}
+          transmission={0.95}
+          ior={1.5}
+          chromaticAberration={0.05}
+          color={hovered ? "#00F0FF" : "#1A1A1A"}
+        />
+      </mesh>
+      <Text 
+        position={[0, 0, 0.21]} 
+        fontSize={0.3} 
+        color={hovered ? "#00F0FF" : "white"} 
+        anchorX="center" 
+        anchorY="middle"
+        font="https://fonts.gstatic.com/s/inter/v12/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfMZhrib2Bg-4.ttf"
+      >
+        {label}
+      </Text>
+    </motion.group>
   );
 }
 
-function FeatureCard({ title, icon, description, delay }: { title: string; icon: string; description: string; delay: number }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.6, delay, ease: [0.2, 0.8, 0.2, 1] }}
-      whileHover={{ y: -10, scale: 1.02 }}
-      className="glass p-10 rounded-[2rem] group relative overflow-hidden"
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-      <div className="relative z-10">
-        <div className="text-4xl mb-8 group-hover:scale-110 transition-transform duration-500 ease-out">{icon}</div>
-        <h3 className="text-2xl font-bold text-white mb-4 tracking-tight">{title}</h3>
-        <p className="text-white leading-relaxed font-medium opacity-80">{description}</p>
-      </div>
-    </motion.div>
-  );
-}
-
-export default function Home() {
-  const [mounted, setMounted] = useState(false);
-  const scrollContainerRef = useRef(null);
-
-  useEffect(() => {
-    setMounted(true);
+function DataOcean() {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const { geometry } = useMemo(() => {
+    const geo = new THREE.PlaneGeometry(100, 100, 100, 100);
+    geo.rotateX(-Math.PI / 2);
+    return { geometry: geo };
   }, []);
 
-  if (!mounted) return <div className="min-h-screen bg-[#000000]" />;
+  useFrame((state) => {
+    if (meshRef.current) {
+      const positionAttribute = meshRef.current.geometry.attributes.position;
+      const vertex = new THREE.Vector3();
+      const time = state.clock.getElapsedTime();
+      
+      const mouseX = (state.pointer.x * 10);
+      const mouseY = (state.pointer.y * 10);
+
+      for (let i = 0; i < positionAttribute.count; i++) {
+        vertex.fromBufferAttribute(positionAttribute, i);
+        
+        // Base ripple
+        const dist = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
+        let y = Math.sin(dist * 0.5 - time * 2) * 0.5;
+        
+        // Mouse ripple interaction
+        const dx = vertex.x - mouseX;
+        const dz = vertex.z - mouseY; // using mouseY for Z axis translation
+        const mouseDist = Math.sqrt(dx * dx + dz * dz);
+        
+        if (mouseDist < 10) {
+          y += Math.sin(mouseDist * 2 - time * 5) * (10 - mouseDist) * 0.1;
+        }
+
+        positionAttribute.setY(i, y);
+      }
+      positionAttribute.needsUpdate = true;
+    }
+  });
 
   return (
-    <main className="relative text-white selection:bg-accent/30 selection:text-white min-h-screen">
-      {/* 3D background provided by RootLayout */}
+    <mesh ref={meshRef} position={[0, -6, -20]}>
+      <primitive object={geometry} attach="geometry" />
+      <meshBasicMaterial color="#00F0FF" wireframe transparent opacity={0.15} />
+    </mesh>
+  );
+}
 
-      {/* Persistent Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-[100] px-8 py-6 pointer-events-none">
-        <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto">
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="text-xl font-black tracking-tighter"
-          >
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-white/40">
-              GRINDLOCK<span className="text-accent">.</span>
-            </span>
-          </motion.div>
-          
-          <motion.div 
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="hidden md:flex items-center gap-12 glass-light px-10 py-4 rounded-full"
-          >
-            <NavLink href="#features">Features</NavLink>
-            <NavLink href="#process">Process</NavLink>
-            <NavLink href="/signin">Sign In</NavLink>
-          </motion.div>
+function MasterAIAgent() {
+  const ref = useRef<THREE.Group>(null);
+  
+  useFrame((state) => {
+    if (ref.current) {
+      ref.current.rotation.y += 0.005;
+      ref.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
+    }
+  });
 
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <Link 
-              href="/signup"
-              className="btn-primary py-3 px-8 text-[10px] tracking-[0.2em] uppercase font-black"
-            >
-              Start Free
-            </Link>
-          </motion.div>
-        </div>
-      </nav>
+  return (
+    <Float speed={2} floatIntensity={1} floatingRange={[-0.3, 0.3]}>
+      <group ref={ref} position={[0, 1.5, -2]}>
+        <Icosahedron args={[2, 0]}>
+          <meshStandardMaterial color="#050505" roughness={0.5} metalness={0.8} />
+        </Icosahedron>
+        <Icosahedron args={[2.02, 0]}>
+          <meshBasicMaterial color="#00F0FF" wireframe transparent opacity={0.5} />
+        </Icosahedron>
+        <pointLight color="#00F0FF" intensity={20} distance={10} />
+      </group>
+    </Float>
+  );
+}
 
-      {/* Scrollable Content */}
-      <div className="scroll-container w-full" ref={scrollContainerRef}>
-        
-        {/* HERO SECTION */}
-        <Section id="hero" className="flex flex-col items-center justify-center pt-24 min-h-screen !overflow-visible">
-          <div className="grid lg:grid-cols-2 gap-16 items-center w-full relative z-20">
-            <div className="text-center lg:text-left pr-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-light text-[10px] font-black uppercase tracking-[0.2em] text-accent mb-10">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                  Performance First
-                </div>
-                <h1 className="display-lg text-4xl sm:text-6xl md:text-[clamp(3.5rem,8vw,7rem)] mb-10 leading-[0.95] gradient-text pt-4 tracking-[-0.05em]">
-                  Discipline<br />
-                  Your Time.
-                </h1>
-                <p className="text-lg md:text-xl text-white/80 mb-12 max-w-xl leading-relaxed font-medium mx-auto lg:mx-0 opacity-70">
-                  The high-end productivity engine for those who refuse to settle. 
-                  Atomic focus, iron streaks, and cinematic analytics.
-                </p>
-                
-                <div className="flex flex-col sm:flex-row items-center gap-6 justify-center lg:justify-start">
-                  <Link 
-                    href="/signup"
-                    className="btn-primary px-12 py-5 text-sm font-black tracking-widest uppercase transition-all hover:scale-105 active:scale-95"
-                  >
-                    Start Tracking
-                  </Link>
-                  <LandingWaitlistForm />
-                </div>
-              </motion.div>
-            </div>
+export default function LuxuryLandingPage() {
+  const router = useRouter();
 
-            <div className="hidden lg:block relative perspective-1000">
-              <motion.div
-                initial={{ opacity: 0, rotateY: 30, scale: 0.9 }}
-                animate={{ opacity: 1, rotateY: 0, scale: 1 }}
-                transition={{ duration: 2, ease: [0.16, 1, 0.3, 1] }}
-                className="relative"
-              >
-                <div className="absolute inset-0 bg-accent/20 blur-[150px] rounded-full animate-pulse" />
-                <GrindLockHeroPanel />
-              </motion.div>
-            </div>
-          </div>
-        </Section>
-
-        {/* FEATURES SECTION */}
-        <Section id="features">
-          <div className="text-center mb-24">
-            <h2 className="display-lg text-4xl md:text-7xl mb-6 gradient-text uppercase">Engineered for Elite.</h2>
-            <p className="text-white/60 text-lg font-bold tracking-[0.2em] uppercase">Tools that force consistency</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <FeatureCard 
-              title="Atomic Timer"
-              icon="⚡"
-              description="High-precision tracking with deep work optimization and flow-state detection."
-              delay={0.1}
-            />
-            <FeatureCard 
-              title="Iron Strength"
-              icon="💎"
-              description="Gamified consistency blocks that reward momentum and eliminate mediocrity."
-              delay={0.2}
-            />
-            <FeatureCard 
-              title="Deep Insights"
-              icon="👁️"
-              description="Advanced data visualization that exposes your focus leaks and performance peaks."
-              delay={0.3}
-            />
-          </div>
-        </Section>
-
-        {/* PROCESS SECTION */}
-        <Section id="process">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="display-lg text-4xl md:text-7xl mb-24 gradient-text uppercase">The Ascent.</h2>
-            
-            <div className="space-y-32">
-              {[
-                { step: "01", title: "Set the Objective", desc: "Define your high-stakes tasks and lock in your session parameters." },
-                { step: "02", title: "Enter the Void", desc: "Engage the atomic timer. All distractions are filtered. Only the work remains." },
-                { step: "03", title: "Review & Refine", desc: "Analyze every second. Build streaks that are impossible to break." }
-              ].map((item, idx) => (
-                <div key={idx} className="flex flex-col md:flex-row items-center gap-16 text-left">
-                  <div className="text-9xl font-black text-white/[0.05] font-display">{item.step}</div>
-                  <div>
-                    <h3 className="display-md text-4xl mb-4 tracking-tight">{item.title}</h3>
-                    <p className="text-xl text-white/70 leading-relaxed font-medium">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Section>
-
-        {/* FOOTER / FINAL CTA */}
-        <Section id="footer" className="min-h-[70vh] flex flex-col items-center justify-center">
-          <div className="text-center w-full">
-            <h2 className="display-lg text-6xl md:text-[8rem] mb-12 gradient-text uppercase">Own Your Future.</h2>
-            <Link 
-              href="/signup"
-              className="btn-primary px-16 py-6 text-2xl font-black tracking-widest uppercase shadow-[0_0_50px_var(--accent-glow)]"
-            >
-              Get Started Now
-            </Link>
-            
-            <div className="mt-32 pt-16 border-t border-white/10 flex flex-col md:flex-row items-center justify-between w-full opacity-50 gap-10">
-              <div className="text-xl font-black tracking-tighter">GRINDLOCK<span className="text-accent">.</span></div>
-              <div className="flex gap-12 font-bold tracking-[0.2em] uppercase text-[10px]">
-                <a href="#" className="hover:text-white transition-colors">Twitter</a>
-                <a href="#" className="hover:text-white transition-colors">Discord</a>
-                <a href="#" className="hover:text-white transition-colors">GitHub</a>
-              </div>
-              <div className="text-[10px] font-bold tracking-[0.2em] uppercase">© 2026 ALPHA PROJECT</div>
-            </div>
-          </div>
-        </Section>
+  return (
+    <div className="w-full h-screen bg-[#050505] overflow-hidden relative selection:bg-[#00F0FF] selection:text-[#050505]">
+      {/* HTML Overlay */}
+      <div className="absolute top-0 left-0 w-full p-8 md:px-16 z-10 pointer-events-none flex justify-between items-center">
+        <h1 className="text-2xl md:text-4xl font-black text-white tracking-widest uppercase flex items-center gap-2">
+          GrindLock<span className="text-[#00F0FF] animate-pulse">.</span>
+        </h1>
+        <p className="hidden md:block text-[#1A1A1A] font-black uppercase tracking-[0.3em] bg-[#00F0FF] px-4 py-1 text-xs rounded-full">System Active</p>
       </div>
-    </main>
+      
+      <div className="absolute bottom-10 left-0 w-full z-10 pointer-events-none flex justify-center text-center px-4">
+        <p className="text-white/40 tracking-widest uppercase text-xs font-bold max-w-xl">
+          The high-end productivity engine for those who refuse to settle.
+        </p>
+      </div>
+
+      {/* 3D Scene */}
+      <Canvas camera={{ position: [0, 1, 10], fov: 45 }}>
+        <color attach="background" args={["#050505"]} />
+        <Environment preset="city" />
+        
+        <ambientLight intensity={0.5} />
+        <directionalLight position={[10, 10, 5]} intensity={1.5} color="#00F0FF" />
+        <pointLight position={[-10, -10, -10]} intensity={1} color="#ffffff" />
+        
+        <DataOcean />
+        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+        <MasterAIAgent />
+
+        {/* Spatial Navigation Panels */}
+        <motion.group 
+          initial={{ y: -10, opacity: 0, scale: 0.8 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut", type: "spring", stiffness: 50, damping: 20 }}
+          position={[0, -2.5, 0]}
+        >
+          <Luxury3DButton 
+            position={[-3.5, 0, 0]} 
+            label="SIGN IN" 
+            onClick={() => router.push("/signin")}
+            width={2.8}
+          />
+          <Luxury3DButton 
+            position={[0, 0, 0]} 
+            label="INITIALIZE" 
+            onClick={() => router.push("/signup")}
+            width={4}
+          />
+          <Luxury3DButton 
+            position={[3.5, 0, 0]} 
+            label="DATA CORE" 
+            onClick={() => router.push("/dashboard")}
+            width={2.8}
+          />
+        </motion.group>
+      </Canvas>
+    </div>
   );
 }
