@@ -6,12 +6,14 @@ import { motion } from "framer-motion-3d";
 import * as THREE from "three";
 import { useRouter } from "next/navigation";
 
+const MotionGroup = motion.group as any;
+
 function Luxury3DButton({ position, label, onClick, width = 3 }: any) {
   const [hovered, setHovered] = useState(false);
   const [clicked, setClicked] = useState(false);
   
   return (
-    <motion.group 
+    <MotionGroup 
       position={position}
       animate={{ z: clicked ? -0.4 : hovered ? 0.2 : 0 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -44,7 +46,7 @@ function Luxury3DButton({ position, label, onClick, width = 3 }: any) {
       >
         {label}
       </Text>
-    </motion.group>
+    </MotionGroup>
   );
 }
 
@@ -153,7 +155,7 @@ export default function LuxuryLandingPage() {
         <MasterAIAgent />
 
         {/* Spatial Navigation Panels */}
-        <motion.group 
+        <MotionGroup 
           initial={{ y: -10, opacity: 0, scale: 0.8 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           transition={{ duration: 1.5, ease: "easeOut", type: "spring", stiffness: 50, damping: 20 }}
@@ -177,7 +179,7 @@ export default function LuxuryLandingPage() {
             onClick={() => router.push("/dashboard")}
             width={2.8}
           />
-        </motion.group>
+        </MotionGroup>
       </Canvas>
     </div>
   );
