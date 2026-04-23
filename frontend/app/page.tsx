@@ -26,13 +26,13 @@ function Luxury3DButton({ position, label, onClick, width = 3 }: any) {
       >
         <boxGeometry args={[width, 1.2, 0.4]} />
         <MeshTransmissionMaterial 
-          backside
-          samples={4}
+          backside={false}
+          resolution={256}
+          samples={2}
           thickness={1.5}
-          roughness={0.1}
-          transmission={0.95}
+          roughness={0.2}
+          transmission={0.9}
           ior={1.5}
-          chromaticAberration={0.05}
           color={hovered ? "#00F0FF" : "#1A1A1A"}
         />
       </mesh>
@@ -53,7 +53,8 @@ function Luxury3DButton({ position, label, onClick, width = 3 }: any) {
 function DataOcean() {
   const meshRef = useRef<THREE.Mesh>(null);
   const { geometry } = useMemo(() => {
-    const geo = new THREE.PlaneGeometry(100, 100, 100, 100);
+    // Highly optimized vertex count to brutally eliminate lag (was 100x100 -> dropped to 40x40)
+    const geo = new THREE.PlaneGeometry(100, 100, 40, 40);
     geo.rotateX(-Math.PI / 2);
     return { geometry: geo };
   }, []);
@@ -92,7 +93,7 @@ function DataOcean() {
   return (
     <mesh ref={meshRef} position={[0, -6, -20]}>
       <primitive object={geometry} attach="geometry" />
-      <meshBasicMaterial color="#00F0FF" wireframe transparent opacity={0.15} />
+      <meshBasicMaterial color="#00F0FF" wireframe transparent opacity={0.1} />
     </mesh>
   );
 }
@@ -151,7 +152,7 @@ export default function LuxuryLandingPage() {
         <pointLight position={[-10, -10, -10]} intensity={1} color="#ffffff" />
         
         <DataOcean />
-        <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
+        <Stars radius={100} depth={50} count={2000} factor={4} saturation={0} fade speed={1} />
         <MasterAIAgent />
 
         {/* Spatial Navigation Panels */}
