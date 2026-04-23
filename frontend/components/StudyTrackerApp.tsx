@@ -35,6 +35,7 @@ import {
   Users,
   ChevronRight,
   ShieldCheck,
+  AlertTriangle,
   Swords,
   Camera,
   Play,
