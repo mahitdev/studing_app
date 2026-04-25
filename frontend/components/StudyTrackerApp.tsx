@@ -102,7 +102,8 @@ export default function StudyTrackerApp() {
   const [liveFriends, setLiveFriends] = useState<LiveFriend[]>([]);
   const [liveMessage, setLiveMessage] = useState("");
   const [friendEmail, setFriendEmail] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
   const [activeSession, setActiveSession] = useState<StudySession | null>(null);
   const [inactiveSeconds, setInactiveSeconds] = useState(0);
   const [subject, setSubject] = useState("General");
@@ -239,14 +240,15 @@ export default function StudyTrackerApp() {
         const authToken = localStorage.getItem(authTokenKey);
         if (!userId || !authToken) {
           setLoading(false);
+          setIsInitializing(false);
           return;
         }
 
         await refreshAll(userId);
       } catch (err) {
-        setError((err as Error).message || "Failed to initialize app");
+        console.warn("Bootstrap sync failed:", err);
       } finally {
-        setLoading(false);
+        setIsInitializing(false);
       }
     };
 
@@ -413,34 +415,31 @@ export default function StudyTrackerApp() {
   }, [webcamEnabled, activeSession?.status]);
 
   const handleStart = async () => {
-    if (!user) return;
+    if (!user || isActionLoading) return;
     try {
-      setLoading(true);
+      setIsActionLoading(true);
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
       const { session } = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
       
-      // Update state locally first for instant feedback
       setActiveSession(session);
       setInactiveSeconds(0);
       setIsOfflineSession(false);
       setTimerAlert("");
       
-      // Then sync with server to get updated XP/Goal status
       await refreshAll(user._id);
-      
-      // Force navigation to timer if starting from elsewhere
       setScreen("timer");
     } catch (err) {
       console.error("Failed to start session:", err);
-      setTimerAlert("Protocol Initialization Failed. Check Network.");
+      setTimerAlert("System Fault: Protocol Rejection.");
     } finally {
-      setLoading(false);
+      setIsActionLoading(false);
     }
   };
 
   const handlePauseResume = async () => {
-    if (!user || !activeSession) return;
+    if (!user || !activeSession || isActionLoading) return;
     try {
+      setIsActionLoading(true);
       if (activeSession.status === "running") {
         const { session } = await pauseSession(user._id, activeSession._id, "manual");
         setActiveSession(session);
@@ -450,13 +449,16 @@ export default function StudyTrackerApp() {
         setTimerAlert("");
       }
     } catch (err) {
-      setError("Update failed.");
+      setError("Transmission Failure.");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
   const handleEnd = async () => {
-    if (!user || !activeSession) return;
+    if (!user || !activeSession || isActionLoading) return;
     try {
+      setIsActionLoading(true);
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
       const { dashboard: updated } = await endSession(
         user._id,
@@ -481,12 +483,15 @@ export default function StudyTrackerApp() {
       await refreshAll(user._id);
     } catch (err) {
       setError("Failed to end session properly.");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
   const handleGoalUpdate = async () => {
-    if (!user) return;
+    if (!user || isActionLoading) return;
     try {
+      setIsActionLoading(true);
       setError("");
       const { dashboard: updated } = await setGoalConfig(user._id, {
         dailyMinutes: goalDaily,
@@ -496,35 +501,44 @@ export default function StudyTrackerApp() {
       if (updated) setDashboard(updated);
     } catch (err) {
       setError("Failed to update goals.");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
   const handleIdentityUpdate = async () => {
-    if (!user) return;
+    if (!user || isActionLoading) return;
     try {
+      setIsActionLoading(true);
       setError("");
       const { dashboard: updated } = await setModes(user._id, settings.roastMode, identityType, motivationWhy);
       if (updated) setDashboard(updated);
     } catch (err) {
       setError("Failed to update identity.");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
   const handleAddFriend = async () => {
-    if (!user || !friendEmail.trim()) return;
+    if (!user || !friendEmail.trim() || isActionLoading) return;
     try {
+      setIsActionLoading(true);
       setError("");
       await addFriend(user._id, friendEmail);
       setFriendEmail("");
       await refreshAll(user._id);
     } catch (err) {
       setError("Could not find operative to sync.");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
   const handleSendEmail = async () => {
-    if (!user || !summaryEmail.trim()) return;
+    if (!user || !summaryEmail.trim() || isActionLoading) return;
     try {
+      setIsActionLoading(true);
       setEmailStatus("transmitting");
       const result = await sendProgressEmail(user._id, summaryEmail);
       setEmailStatus("delivered");
@@ -533,14 +547,16 @@ export default function StudyTrackerApp() {
       console.error(err);
       setEmailStatus("failed");
       setTimeout(() => setEmailStatus(""), 3000);
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-vh-100 bg-black">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-bold tracking-[0.3em] uppercase opacity-50">Initializing OS...</p>
+  if (isInitializing && !user) return (
+    <div className="auth-wrapper relative z-50 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-6">
+        <div className="w-12 h-12 rounded-full border-2 border-accent border-t-transparent animate-spin" />
+        <p className="text-xs font-black tracking-widest text-accent animate-pulse uppercase">Synchronizing OS...</p>
       </div>
     </div>
   );
