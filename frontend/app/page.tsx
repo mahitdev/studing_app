@@ -2,6 +2,7 @@
 import React, { useRef, useState, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Environment, MeshTransmissionMaterial, Text, Float, Stars, Icosahedron } from "@react-three/drei";
+import { motion as framerMotion } from "framer-motion";
 import { motion } from "framer-motion-3d";
 import * as THREE from "three";
 import { useRouter } from "next/navigation";
@@ -127,19 +128,59 @@ export default function LuxuryLandingPage() {
   const router = useRouter();
 
   return (
-    <div className="w-full h-screen bg-[#050505] overflow-hidden relative selection:bg-[#00F0FF] selection:text-[#050505]">
-      {/* HTML Overlay */}
-      <div className="absolute top-0 left-0 w-full p-8 md:px-16 z-10 pointer-events-none flex justify-between items-center">
-        <h1 className="text-2xl md:text-4xl font-black text-white tracking-widest uppercase flex items-center gap-2">
-          GrindLock<span className="text-[#00F0FF] animate-pulse">.</span>
-        </h1>
-        <p className="hidden md:block text-[#1A1A1A] font-black uppercase tracking-[0.3em] bg-[#00F0FF] px-4 py-1 text-xs rounded-full">System Active</p>
-      </div>
-      
-      <div className="absolute bottom-10 left-0 w-full z-10 pointer-events-none flex justify-center text-center px-4">
-        <p className="text-white/40 tracking-widest uppercase text-xs font-bold max-w-xl">
-          The high-end productivity engine for those who refuse to settle.
-        </p>
+    <div className="w-full h-screen bg-[#050505] overflow-hidden relative selection:bg-[#00F0FF] selection:text-[#050505] font-sans">
+      {/* Dynamic HTML Hero Overlay */}
+      <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between">
+        
+        {/* Navbar */}
+        <div className="w-full p-8 md:px-16 flex justify-between items-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <h1 className="text-2xl md:text-3xl font-black text-white tracking-widest uppercase flex items-center gap-2">
+            GrindLock<span className="text-[#00F0FF] animate-pulse shadow-[0_0_10px_#00F0FF]">.</span>
+          </h1>
+          <div className="hidden md:flex items-center gap-6">
+            <span className="text-xs font-bold text-white/50 tracking-widest uppercase">V 1.0.0</span>
+            <p className="text-[#1A1A1A] font-black uppercase tracking-[0.3em] bg-[#00F0FF] px-4 py-1.5 text-[10px] rounded-full shadow-[0_0_15px_rgba(0,240,255,0.4)]">System Active</p>
+          </div>
+        </div>
+
+        {/* Center Hero Text */}
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-4 -mt-24 pointer-events-none">
+          <framerMotion.div 
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            className="space-y-6 max-w-4xl"
+          >
+            <div className="inline-block border border-white/10 bg-white/5 backdrop-blur-md px-4 py-1.5 rounded-full mb-4">
+              <span className="text-[#00F0FF] text-[10px] font-bold tracking-[0.2em] uppercase">The Ultimate Productivity OS</span>
+            </div>
+            <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter uppercase leading-[0.9]">
+              Master Your Focus.<br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/80 to-[#00F0FF]">Hack Your Potential.</span>
+            </h2>
+            <p className="text-white/50 tracking-widest uppercase text-xs md:text-sm font-medium max-w-2xl mx-auto leading-relaxed">
+              A premium, neural-inspired operating system designed for extreme discipline. Enter the simulation and permanently rewire your work ethic.
+            </p>
+          </framerMotion.div>
+        </div>
+
+        {/* Bottom Feature Bar */}
+        <div className="w-full p-8 md:px-16 flex flex-col md:flex-row justify-between items-end gap-6 animate-fade-in" style={{ animationDelay: '1s' }}>
+          <div className="flex gap-4">
+            <div className="glass-light p-4 rounded-xl border-l-2 border-[#00F0FF] max-w-[200px]">
+              <h4 className="text-white font-bold text-[10px] tracking-widest uppercase mb-1">Deep Work Mechanics</h4>
+              <p className="text-white/40 text-[10px] leading-relaxed">Mongoose-backed session tracking with anti-cheat protocols.</p>
+            </div>
+            <div className="glass-light p-4 rounded-xl border-l-2 border-white/20 max-w-[200px] hidden sm:block">
+              <h4 className="text-white font-bold text-[10px] tracking-widest uppercase mb-1">Neural Analytics</h4>
+              <p className="text-white/40 text-[10px] leading-relaxed">Python-powered machine learning performance projections.</p>
+            </div>
+          </div>
+          <p className="text-white/30 text-[10px] tracking-[0.2em] uppercase font-bold text-right">
+            Scroll down to interact with the 3D interface
+          </p>
+        </div>
+
       </div>
 
       {/* 3D Scene */}
@@ -159,7 +200,7 @@ export default function LuxuryLandingPage() {
         <MotionGroup 
           initial={{ y: -10, opacity: 0, scale: 0.8 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
-          transition={{ duration: 1.5, ease: "easeOut", type: "spring", stiffness: 50, damping: 20 }}
+          transition={{ duration: 1.5, ease: "easeOut", type: "spring", stiffness: 50, damping: 20, delay: 1 }}
           position={[0, -2.5, 0]}
         >
           <Luxury3DButton 
