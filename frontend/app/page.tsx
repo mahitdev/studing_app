@@ -198,10 +198,10 @@ export default function LuxuryLandingPage() {
 
         {/* Spatial Navigation Panels */}
         <MotionGroup 
-          initial={{ y: -10, opacity: 0, scale: 0.8 }}
-          animate={{ y: -4.5, opacity: 1, scale: 1 }}
+          initial={{ y: -10, opacity: 0, scale: 0.6 }}
+          animate={{ y: -3.2, opacity: 1, scale: 0.8 }}
           transition={{ duration: 1.5, ease: "easeOut", type: "spring", stiffness: 50, damping: 20, delay: 1 }}
-          position={[0, -4.5, 0]}
+          position={[0, -3.2, 0]}
         >
           <Luxury3DButton 
             position={[-3.5, 0, 0]} 
