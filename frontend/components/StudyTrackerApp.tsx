@@ -415,15 +415,26 @@ export default function StudyTrackerApp() {
   const handleStart = async () => {
     if (!user) return;
     try {
+      setLoading(true);
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
       const { session } = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
+      
+      // Update state locally first for instant feedback
       setActiveSession(session);
       setInactiveSeconds(0);
       setIsOfflineSession(false);
       setTimerAlert("");
+      
+      // Then sync with server to get updated XP/Goal status
       await refreshAll(user._id);
+      
+      // Force navigation to timer if starting from elsewhere
+      setScreen("timer");
     } catch (err) {
-      setError("Could not start session.");
+      console.error("Failed to start session:", err);
+      setTimerAlert("Protocol Initialization Failed. Check Network.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -611,8 +622,18 @@ export default function StudyTrackerApp() {
               <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">XP Points</p>
               <p className="text-xl font-black">{dashboard.gamification.xp}</p>
             </div>
-            <button className="btn-primary text-xs py-2 px-6" onClick={() => setScreen("timer")}>
-              LOCKED IN
+            <button 
+              className={`btn-primary text-xs py-2 px-6 transition-all ${activeSession ? "bg-danger/20 border-danger/40 text-danger hover:bg-danger/30" : ""}`} 
+              onClick={() => {
+                if (activeSession) {
+                  setScreen("timer");
+                } else {
+                  handleStart();
+                  setScreen("timer");
+                }
+              }}
+            >
+              {activeSession ? "EN ROUTE" : "LOCKED IN"}
             </button>
           </div>
         </header>
