@@ -199,7 +199,7 @@ export default function LuxuryLandingPage() {
         {/* Spatial Navigation Panels */}
         <MotionGroup 
           initial={{ y: -10, opacity: 0, scale: 0.8 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
+          animate={{ y: -4.5, opacity: 1, scale: 1 }}
           transition={{ duration: 1.5, ease: "easeOut", type: "spring", stiffness: 50, damping: 20, delay: 1 }}
           position={[0, -4.5, 0]}
         >
