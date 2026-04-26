@@ -674,28 +674,35 @@ export default function StudyTrackerApp() {
         </header>
 
         <AnimatePresence>
-          {screen === "dashboard" && dashboard && (
+          {screen === "dashboard" && (
             <motion.div 
               key="dashboard"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="space-y-8"
+              className="space-y-10"
             >
-              {!ritualDoneToday && (
-                <button 
-                  className="w-full p-8 glass-card border-none flex items-center justify-between group hover:scale-[1.01] transition-all"
-                  onClick={() => { localStorage.setItem(ritualKey, "done"); setRitualDoneToday(true); setScreen("timer"); }}
-                >
-                  <div className="text-left">
-                    <p className="text-xs font-black tracking-[0.2em] text-accent uppercase mb-2">Protocol Pending</p>
-                    <h3 className="display-md text-2xl">{dashboard?.startRitual?.title || "START PROTOCOL"}</h3>
-                  </div>
-                  <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
-                    <ChevronRight className="text-accent" />
-                  </div>
-                </button>
-              )}
+              {!dashboard ? (
+                <div className="flex flex-col items-center justify-center py-20 opacity-50">
+                  <RefreshCw className="animate-spin mb-4" size={32} />
+                  <p className="text-xs font-black tracking-widest uppercase">Fetching Mission Data...</p>
+                </div>
+              ) : (
+                <>
+                  {!ritualDoneToday && (
+                    <button 
+                      className="w-full p-8 glass-card border-none flex items-center justify-between group hover:scale-[1.01] transition-all"
+                      onClick={() => { localStorage.setItem(ritualKey, "done"); setRitualDoneToday(true); setScreen("timer"); }}
+                    >
+                      <div className="text-left">
+                        <p className="text-xs font-black tracking-[0.2em] text-accent uppercase mb-2">Protocol Pending</p>
+                        <h3 className="display-md text-2xl">{dashboard?.startRitual?.title || "START PROTOCOL"}</h3>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+                        <ChevronRight className="text-accent" />
+                      </div>
+                    </button>
+                  )}
 
               <div className="stats-grid">
                 <article className="stat-card">
@@ -783,7 +790,8 @@ export default function StudyTrackerApp() {
                     <button className="btn-primary text-xs py-3" onClick={handleAddFriend}>Add Entity</button>
                   </div>
                 </div>
-              </div>
+                </>
+              )}
             </motion.div>
           )}
 
