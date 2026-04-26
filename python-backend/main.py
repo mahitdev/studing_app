@@ -173,38 +173,32 @@ def analyze_sessions(payload: AnalyticsRequest):
     else:
         ml_insights["prediction_text"] = "Need more than 5 sessions to unlock AI predictions."
 
-    # 5. Graph Analysis
-    graphs = {}
+    # 6. Burnout Detection Algorithm (Advanced Heuristics)
+    burnout_risk = "Low"
+    burnout_score = 0
+    intervention_message = "Your neural load is optimal. Keep going."
 
-    sns.set_theme(style="darkgrid")
-    sns.set_palette("husl")
+    # Heuristic: If focused minutes per day > 480 (8 hours) consistently
+    daily_totals = df.groupby('date')['focusedMinutes'].sum()
+    high_intensity_days = daily_totals[daily_totals > 480].count()
+    
+    # Heuristic: If average focus score is declining over the last 3 days
+    recent_focus = df.sort_values('startedAt', ascending=False).head(5)['focusedMinutes'].mean()
+    historical_focus = df['focusedMinutes'].mean()
+    
+    if high_intensity_days >= 2:
+        burnout_score += 40
+    if recent_focus < historical_focus * 0.7:
+        burnout_score += 30
+    if df['pauseCount'].mean() > 5:
+        burnout_score += 20
 
-    # Graph 1: Studying history over days
-    df_date_agg = df.groupby('date')['focusedMinutes'].sum().reset_index()
-    if not df_date_agg.empty:
-        fig1, ax1 = plt.subplots(figsize=(8, 4))
-        sns.lineplot(data=df_date_agg, x='date', y='focusedMinutes', ax=ax1, marker='o', linewidth=2, color="#7B61FF")
-        ax1.set_title('Study Focus Time Over Time', color='white')
-        ax1.set_xlabel('Date', color='white')
-        ax1.set_ylabel('Focused Minutes', color='white')
-        ax1.tick_params(colors='white')
-        ax1.xaxis.set_major_locator(plt.MaxNLocator(5))
-        fig1.patch.set_facecolor('none')
-        ax1.set_facecolor('none')
-        graphs['focus_trend'] = create_base64_plot(fig1)
-
-    if not grouped_days.empty:
-        fig2, ax2 = plt.subplots(figsize=(8, 4))
-        day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-        grouped_days_sorted = grouped_days.reindex(day_order).fillna(0).reset_index()
-        sns.barplot(data=grouped_days_sorted, x='weekday', y='focusedMinutes', ax=ax2, palette='magma')
-        ax2.set_title('Focus Time by Day of Week', color='white')
-        ax2.set_xlabel('Day', color='white')
-        ax2.set_ylabel('Total Focus (mins)', color='white')
-        ax2.tick_params(colors='white', rotation=45)
-        fig2.patch.set_facecolor('none')
-        ax2.set_facecolor('none')
-        graphs['weekday_performance'] = create_base64_plot(fig2)
+    if burnout_score >= 70:
+        burnout_risk = "CRITICAL"
+        intervention_message = "CRITICAL BURN-OUT DETECTED: Disconnect immediately. Your focus efficiency is tanking."
+    elif burnout_score >= 40:
+        burnout_risk = "MODERATE"
+        intervention_message = "Neural strain detected. Consider a 15-minute bio-break."
 
     return {
         "average_study_time": average_study_time,
@@ -214,6 +208,11 @@ def analyze_sessions(payload: AnalyticsRequest):
         "weak_pattern": weak_pattern_text,
         "message": message,
         "ml_insights": ml_insights,
+        "burnout": {
+            "risk": burnout_risk,
+            "score": burnout_score,
+            "intervention": intervention_message
+        },
         "graphs": graphs
     }
 

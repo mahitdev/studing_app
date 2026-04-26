@@ -54,7 +54,9 @@ import {
   Camera,
   Play,
   Pause,
-  RefreshCw
+  RefreshCw,
+  Mic,
+  MicOff
 } from "lucide-react";
 
 ChartJS.register(
@@ -326,7 +328,50 @@ export default function StudyTrackerApp() {
     }
   }, [user]);
 
-  // Persist session-local state
+  // Voice Commands Intelligence
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && (window as any).webkitSpeechRecognition) {
+      const SpeechRecognition = (window as any).webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
+
+      recognition.onresult = (event: any) => {
+        const command = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        console.log("[GrindLock] Voice Command Received:", command);
+
+        if (command.includes("start session")) handleStart();
+        if (command.includes("pause session") || command.includes("resume session")) handlePauseResume();
+        if (command.includes("end session") || command.includes("terminate session")) handleEnd();
+        
+        setTimerAlert(`Voice command: "${command}" processed.`);
+        setTimeout(() => setTimerAlert(""), 3000);
+      };
+
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => { if (isListening) recognition.start(); };
+      recognitionRef.current = recognition;
+    }
+  }, []);
+
+  const toggleVoice = () => {
+    if (!recognitionRef.current) {
+      setTimerAlert("Voice link unavailable in this environment.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current.start();
+      setIsListening(true);
+      setTimerAlert("Neural voice link active. Listening for commands...");
+    }
+  };
   useEffect(() => {
     if (activeSession) {
       sessionStorage.setItem("gl-session-state", JSON.stringify({
@@ -708,6 +753,13 @@ export default function StudyTrackerApp() {
           </div>
           <div className="flex items-center gap-6">
             <button 
+              className={`p-2 rounded-lg transition-all ${isListening ? "bg-accent/20 text-accent animate-pulse" : "nav-btn hover:bg-white/5"}`}
+              onClick={toggleVoice}
+              title="Neural Voice Link"
+            >
+              {isListening ? <Mic size={16} /> : <MicOff size={16} />}
+            </button>
+            <button 
               className="nav-btn p-2 hover:bg-white/5 rounded-lg transition-colors"
               onClick={() => user && refreshAll(user._id)}
               title="Force System Sync"
@@ -735,6 +787,17 @@ export default function StudyTrackerApp() {
         </header>
 
         <AnimatePresence>
+          {pythonAnalytics?.burnout?.risk !== "Low" && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="px-6 py-3 bg-danger/10 border border-danger/20 rounded-2xl mb-6 flex items-center gap-4"
+            >
+              <AlertTriangle className="text-danger" size={16} />
+              <p className="text-xs font-bold text-danger uppercase tracking-widest">{pythonAnalytics.burnout.intervention}</p>
+            </motion.div>
+          )}
+
           {screen === "dashboard" && (
             <motion.div 
               key="dashboard"
