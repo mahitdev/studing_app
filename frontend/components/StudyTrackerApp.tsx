@@ -235,11 +235,10 @@ export default function StudyTrackerApp() {
 
     const init = async () => {
       try {
-        setLoading(true);
+        setIsInitializing(true);
         const userId = localStorage.getItem(userKey);
         const authToken = localStorage.getItem(authTokenKey);
         if (!userId || !authToken) {
-          setLoading(false);
           setIsInitializing(false);
           return;
         }
@@ -614,8 +613,8 @@ export default function StudyTrackerApp() {
               {user.name.charAt(0)}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold truncate">{user.name}</p>
-              <p className="text-[10px] text-muted uppercase tracking-widest">Lvl {dashboard.gamification.level}</p>
+              <p className="text-sm font-bold truncate">{user?.name}</p>
+              <p className="text-[10px] text-muted uppercase tracking-widest">Lvl {dashboard?.gamification?.level || 1}</p>
             </div>
           </div>
           <Link href="/signout" className="nav-btn opacity-50 hover:opacity-100">
@@ -636,7 +635,7 @@ export default function StudyTrackerApp() {
           <div className="flex items-center gap-6">
             <div className="text-right">
               <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">XP Points</p>
-              <p className="text-xl font-black">{dashboard.gamification.xp}</p>
+              <p className="text-xl font-black">{dashboard?.gamification?.xp || 0}</p>
             </div>
             <button 
               className={`btn-primary text-xs py-2 px-6 transition-all ${activeSession ? "bg-danger/20 border-danger/40 text-danger hover:bg-danger/30" : ""}`} 
@@ -670,7 +669,7 @@ export default function StudyTrackerApp() {
                 >
                   <div className="text-left">
                     <p className="text-xs font-black tracking-[0.2em] text-accent uppercase mb-2">Protocol Pending</p>
-                    <h3 className="display-md text-2xl">{dashboard.startRitual.title || "START PROTOCOL"}</h3>
+                    <h3 className="display-md text-2xl">{dashboard?.startRitual?.title || "START PROTOCOL"}</h3>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
                     <ChevronRight className="text-accent" />
@@ -719,8 +718,8 @@ export default function StudyTrackerApp() {
                       <ShieldCheck className="text-accent" />
                     </div>
                     <div>
-                      <p className="text-lg font-medium leading-relaxed">{dashboard.timePressure.message}</p>
-                      <p className="text-sm text-muted mt-2 italic">"{dashboard.futureYouReminder}"</p>
+                      <p className="text-lg font-medium leading-relaxed">{dashboard?.timePressure?.message || "Analyzing mission status..."}</p>
+                      <p className="text-sm text-muted mt-2 italic">"{dashboard?.futureYouReminder || "The future depends on your current discipline."}"</p>
                     </div>
                   </div>
                   
@@ -1021,17 +1020,17 @@ export default function StudyTrackerApp() {
              className="flex flex-col items-center justify-center p-20 text-center"
            >
              <div className="text-8xl mb-8 filter drop-shadow-[0_0_30px_rgba(255,80,0,0.4)]">🔥</div>
-             <h2 className="display-lg text-7xl mb-4">{dashboard.streak.current}</h2>
+             <h2 className="display-lg text-7xl mb-4">{dashboard?.streak?.current || 0}</h2>
              <p className="text-xs font-black tracking-[0.5em] uppercase text-accent mb-12">Consecutive Cycles</p>
              
              <div className="flex gap-12">
                <div className="text-center">
                  <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Longest Link</p>
-                 <p className="text-3xl font-black">{dashboard.streak.longest}d</p>
+                 <p className="text-3xl font-black">{dashboard?.streak?.longest || 0}d</p>
                </div>
                <div className="text-center">
                  <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Consistency</p>
-                 <p className="text-3xl font-black">{dashboard.consistencyScore7d}%</p>
+                 <p className="text-3xl font-black">{dashboard?.consistencyScore7d || 0}%</p>
                </div>
              </div>
            </motion.div>
