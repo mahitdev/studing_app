@@ -19,7 +19,11 @@ import {
   startSession,
   syncOfflineSessions,
   fetchAnalytics,
-  clearAuthSession
+  clearAuthSession,
+  fetchRooms,
+  createRoom,
+  joinRoom,
+  getAICoachReply
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 import { 
@@ -60,7 +64,10 @@ import {
   Video,
   VideoOff,
   Wallet,
-  Maximize2
+  Maximize2,
+  MessageSquare,
+  Send,
+  Plus
 } from "lucide-react";
 
 ChartJS.register(
@@ -326,10 +333,44 @@ export default function StudyTrackerApp() {
   }, []);
 
   // Real-Time Neural Link (Socket.io)
+  const [isCoachOpen, setIsCoachOpen] = useState(false);
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<any>(null);
+
+  const loadRooms = async () => {
+    try {
+      const data = await fetchRooms();
+      setRooms(data);
+    } catch (err) {
+      console.error("Room sync failed", err);
+    }
+  };
+
   useEffect(() => {
-    if (user) {
-      socket.connect();
-      socket.emit("join-room", user._id);
+    if (screen === "colosseum") loadRooms();
+  }, [screen]);
+
+  const handleJoinRoom = async (roomId: string) => {
+    try {
+      const room = await joinRoom(user._id, roomId);
+      setCurrentRoom(room);
+      setTimerAlert(`Synchronized with ${room.name}.`);
+    } catch {
+      setError("Neutral connection to room failed.");
+    }
+  };
+
+  const handleCreateRoom = async () => {
+    try {
+      const name = prompt("Enter Room Name:");
+      if (!name) return;
+      const room = await createRoom(user._id, { name, activeSubject: subject });
+      setCurrentRoom(room);
+      loadRooms();
+    } catch {
+      setError("Room creation failed.");
+    }
+  };
 
       socket.on("friend-update", (data: any) => {
         console.log("[GrindLock] Real-time pulse received:", data);
@@ -775,6 +816,13 @@ export default function StudyTrackerApp() {
           </div>
           <div className="flex items-center gap-6">
             <button 
+              className={`p-2 rounded-lg transition-all ${isCoachOpen ? "bg-accent/20 text-accent" : "nav-btn hover:bg-white/5"}`}
+              onClick={() => setIsCoachOpen(true)}
+              title="Neural Coach"
+            >
+              <MessageSquare size={16} />
+            </button>
+            <button 
               className={`p-2 rounded-lg transition-all ${showChamber ? "bg-accent text-white" : "nav-btn hover:bg-white/5"}`}
               onClick={() => setShowChamber(true)}
               title="Live Study Chamber"
@@ -817,6 +865,7 @@ export default function StudyTrackerApp() {
 
         <AnimatePresence>
           {showChamber && <LiveStudyChamber onClose={() => setShowChamber(false)} />}
+          <NeuralCoach userId={user._id} isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
           
           {pythonAnalytics?.burnout?.risk !== "Low" && (
             <motion.div 
@@ -1197,36 +1246,50 @@ export default function StudyTrackerApp() {
           )}
 
           {screen === "colosseum" && (
-            <motion.div key="colosseum" className="space-y-8" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <motion.div 
+              key="colosseum"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-10"
+            >
               <div className="flex items-center justify-between">
-                <h3 className="display-sm text-3xl uppercase tracking-tighter">Live Arena</h3>
-                <span className="px-4 py-1.5 bg-success/10 text-success text-xs font-bold rounded-full tracking-widest uppercase">
-                  {liveFriends.filter(f => f.studyingNow).length} / {liveFriends.length} Comrades Active
-                </span>
+                <div>
+                  <h2 className="display-lg">The Colosseum</h2>
+                  <p className="text-muted font-medium mt-1">Live Study Clusters • Synchronized Discipline</p>
+                </div>
+                <button className="btn-primary flex items-center gap-2 px-6" onClick={handleCreateRoom}>
+                  <Plus size={16} /> Create Cluster
+                </button>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {liveFriends.length > 0 ? liveFriends.map(friend => (
-                  <div key={friend.userId} className="glass-card p-6 flex justify-between items-center border border-white/5 hover:border-white/10 transition-colors">
-                    <div className="flex gap-4 items-center">
-                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                        <Users size={16} className="text-white/50" />
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {rooms.map((room) => (
+                  <div key={room._id} className="glass-card p-8 group hover:border-accent/40 transition-all">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="px-3 py-1 rounded-full bg-accent/10 text-accent text-[10px] font-black uppercase tracking-widest">
+                        {room.activeSubject}
                       </div>
-                      <div>
-                        <p className="font-bold text-lg">{friend.name}</p>
-                        <p className="text-xs text-muted tracking-widest uppercase font-black">Lvl {friend.level}</p>
+                      <div className="flex items-center gap-2 text-muted">
+                        <Users size={12} />
+                        <span className="text-xs font-bold">{room.members?.length || 0}</span>
                       </div>
                     </div>
-                    {friend.studyingNow ? (
-                      <span className="px-3 py-1 bg-success/20 text-success text-xs font-black rounded-full animate-pulse-timer border border-success/30 shadow-[0_0_15px_rgba(34,197,94,0.3)]">IN ZONE</span>
-                    ) : (
-                      <span className="px-3 py-1 bg-white/5 text-white/30 text-[10px] font-black tracking-widest uppercase rounded-md">Resting</span>
-                    )}
+                    <h3 className="text-xl font-bold mb-2">{room.name}</h3>
+                    <p className="text-xs text-muted mb-8 line-clamp-2 italic">Commanded by {room.ownerId?.name || "Unknown Agent"}</p>
+                    <button 
+                      className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                        currentRoom?._id === room._id ? "bg-success/20 text-success border border-success/40" : "bg-white/5 hover:bg-white/10 text-white"
+                      }`}
+                      onClick={() => handleJoinRoom(room._id)}
+                    >
+                      {currentRoom?._id === room._id ? "SYNCHRONIZED" : "JOIN CLUSTER"}
+                    </button>
                   </div>
-                )) : (
-                  <div className="col-span-1 md:col-span-2 glass-light p-10 text-center rounded-2xl">
-                    <p className="text-muted text-sm font-medium tracking-widest uppercase mb-4">No comrades spotted in the arena.</p>
-                    <button className="btn-primary px-8 py-3 text-xs" onClick={() => setScreen("settings")}>Recruit Friends</button>
+                ))}
+                {rooms.length === 0 && (
+                  <div className="col-span-full glass-light p-20 text-center rounded-3xl opacity-50">
+                    <Swords className="mx-auto mb-6 text-muted" size={48} />
+                    <p className="text-sm font-black tracking-[0.3em] uppercase">No active clusters found</p>
                   </div>
                 )}
               </div>
@@ -1353,6 +1416,84 @@ function NeuralAnalytics({ data }: { data: any }) {
 }
 
 
+
+function NeuralCoach({ userId, isOpen, onClose }: { userId: string, isOpen: boolean, onClose: () => void }) {
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'coach', text: string }>>([
+    { role: 'coach', text: "Neural link established. I am your AI Focus Strategist. How can I optimize your session?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim() || isTyping) return;
+    const userMsg = input.trim();
+    setInput("");
+    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
+    setIsTyping(true);
+
+    try {
+      const { reply } = await getAICoachReply(userId, userMsg);
+      setMessages(prev => [...prev, { role: 'coach', text: reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: 'coach', text: "Neural transmission failed. Re-syncing..." }]);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div 
+          initial={{ x: 400, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 400, opacity: 0 }}
+          className="fixed top-0 right-0 h-full w-96 z-[110] glass-card border-l border-white/5 flex flex-col shadow-2xl"
+        >
+          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-accent/5">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+              <h3 className="text-xs font-black uppercase tracking-widest">Neural Strategist</h3>
+            </div>
+            <button onClick={onClose} className="nav-btn text-muted p-1">×</button>
+          </div>
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex ${m.role === 'user' ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${
+                  m.role === 'user' ? "bg-accent/10 border border-accent/20" : "bg-white/5 border border-white/10"
+                }`}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {isTyping && <div className="text-[10px] text-muted animate-pulse italic">Neural engine processing...</div>}
+          </div>
+          <div className="p-6 border-t border-white/5">
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={input} 
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                placeholder="Talk to your coach..."
+                className="flex-1 bg-black/40 border-white/5 rounded-xl px-4 py-3 text-sm focus:border-accent/50 outline-none transition-all"
+              />
+              <button onClick={handleSend} className="p-3 rounded-xl bg-accent text-white hover:bg-accent-hover transition-all">
+                <Send size={16} />
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 
 function LiveStudyChamber({ onClose }: { onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);

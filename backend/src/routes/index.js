@@ -6,6 +6,7 @@ const User = require("../models/User");
 const DailyGoal = require("../models/DailyGoal");
 const StudySession = require("../models/StudySession");
 const WaitlistEmail = require("../models/WaitlistEmail");
+const StudyRoom = require("../models/StudyRoom");
 const { sendProgressEmail } = require("../services/emailService");
 const {
   todayKey,
@@ -712,5 +713,79 @@ router.get("/leaderboard", async (req, res, next) => {
 });
 
 
+
+// --- STUDY ROOMS (COLOSSEUM) ---
+router.post("/rooms", async (req, res, next) => {
+  try {
+    const { name, description, ownerId, activeSubject, isPrivate } = req.body;
+    const room = await StudyRoom.create({
+      name,
+      description,
+      ownerId,
+      activeSubject,
+      isPrivate,
+      members: [ownerId]
+    });
+    res.status(201).json(room);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/rooms", async (req, res, next) => {
+  try {
+    const rooms = await StudyRoom.find({ isPrivate: false }).populate("ownerId", "name").limit(20);
+    res.json(rooms);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/rooms/:roomId/join", async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const { userId } = req.body;
+    const room = await StudyRoom.findByIdAndUpdate(
+      roomId,
+      { $addToSet: { members: userId } },
+      { new: true }
+    ).populate("members", "name level xp");
+    
+    const io = req.app.get("io");
+    if (io) {
+      io.to(roomId).emit("user-joined", { userId, roomId });
+    }
+    
+    res.json(room);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- AI COACHING ---
+router.post("/users/:userId/ai-coach", async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { message, context } = req.body;
+    
+    // Simulate AI logic based on user data
+    const user = await User.findById(userId);
+    const recentSessions = await StudySession.find({ userId }).sort({ createdAt: -1 }).limit(3);
+    const avgFocus = recentSessions.reduce((acc, s) => acc + (s.focusedMinutes || 0), 0) / (recentSessions.length || 1);
+    
+    let reply = "";
+    if (message.toLowerCase().includes("distracted")) {
+      reply = `Agent ${user.name}, your focus efficiency is at ${Math.round(avgFocus)}%. I recommend a 5-minute deep-breathing protocol. Your neural grid is currently overloaded.`;
+    } else if (message.toLowerCase().includes("tired")) {
+      reply = "Neural fatigue detected. Switch to a low-intensity task or activate the Bio-Break protocol immediately.";
+    } else {
+      reply = "Maintain the grind. Your momentum is building. The Colosseum awaits your victory.";
+    }
+
+    res.json({ reply, timestamp: new Date() });
+  } catch (err) {
+    next(err);
+  }
+});
 
 module.exports = router;

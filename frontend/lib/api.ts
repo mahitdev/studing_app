@@ -283,6 +283,31 @@ export async function sendProgressEmail(
   });
 }
 
+export async function fetchRooms(): Promise<any[]> {
+  return request("/rooms");
+}
+
+export async function createRoom(userId: string, data: any): Promise<any> {
+  return request("/rooms", {
+    method: "POST",
+    body: JSON.stringify({ ...data, ownerId: userId })
+  });
+}
+
+export async function joinRoom(userId: string, roomId: string): Promise<any> {
+  return request(`/rooms/${roomId}/join`, {
+    method: "POST",
+    body: JSON.stringify({ userId })
+  });
+}
+
+export async function getAICoachReply(userId: string, message: string): Promise<{ reply: string }> {
+  return request(`/users/${userId}/ai-coach`, {
+    method: "POST",
+    body: JSON.stringify({ message })
+  });
+}
+
 export async function fetchAnalytics(userId: string): Promise<any> {
   return request(`/users/${userId}/analytics`);
 }
