@@ -161,7 +161,6 @@ export default function StudyTrackerApp() {
 
   const refreshAll = async (userId: string) => {
     try {
-      // Parallel fetch but catch individual failures to avoid failing the whole refresh
       const [dash, todaySessions, live] = await Promise.all([
         fetchDashboard(userId).catch(e => { console.error("Dash fail:", e); return null; }),
         getTodaySessions(userId).catch(e => { console.error("Session fail:", e); return { sessions: [] }; }),
@@ -183,18 +182,25 @@ export default function StudyTrackerApp() {
         setSessions(sessionList);
         
         const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
-        setActiveSession(running);
-        if (running?.subject) setSubject(running.subject);
-        if (running?.studyMode) setStudyMode(running.studyMode);
-        if (running?.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
-        if (typeof running?.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+        
+        // Prevent race condition: don't overwrite if we just started a session locally and server hasn't synced yet
+        if (!activeSession || (running && running._id !== activeSession._id) || (running && running.status !== activeSession.status)) {
+           setActiveSession(running);
+        }
+        
+        if (running) {
+          if (running.subject) setSubject(running.subject);
+          if (running.studyMode) setStudyMode(running.studyMode);
+          if (running.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
+          if (typeof running.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+        }
       }
 
       if (live) {
         setLiveFriends(live.friends || []);
         setLiveMessage(live.liveMessage || "");
       }
-      
+      setLastSyncAt(Date.now());
     } catch (err) {
       console.error("Refresh failed:", err);
     }
@@ -634,6 +640,13 @@ export default function StudyTrackerApp() {
             </p>
           </div>
           <div className="flex items-center gap-6">
+            <button 
+              className="nav-btn p-2 hover:bg-white/5 rounded-lg transition-colors"
+              onClick={() => user && refreshAll(user._id)}
+              title="Force System Sync"
+            >
+              <RefreshCw size={16} className={isActionLoading ? "animate-spin" : ""} />
+            </button>
             <div className="text-right">
               <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">XP Points</p>
               <p className="text-xl font-black">{dashboard?.gamification?.xp || 0}</p>
