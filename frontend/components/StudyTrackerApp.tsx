@@ -379,10 +379,9 @@ export default function StudyTrackerApp() {
         refreshAll(user._id);
         setLastSyncAt(Date.now());
       }
-    }, 15000);
-
+    }, 30000);
     return () => clearInterval(idleTimer);
-  }, [activeSession, user, lastSyncAt]);
+  }, [activeSession?._id, activeSession?.status, user?._id, lastSyncAt]);
 
   useEffect(() => {
     let rafId: number;
@@ -573,16 +572,15 @@ export default function StudyTrackerApp() {
     </div>
   );
 
-  if (!user || !dashboard) return (
+  if (!user) return (
     <div className="auth-wrapper">
       <div className="auth-form text-center">
-        <h1 className="display-lg mb-4">Internal System Offline</h1>
+        <h1 className="display-lg mb-4">Authentication Required</h1>
         <p className="text-muted mb-8 italic">
-          {error || "Could not synchronize with central intelligence. Attempting fallback..."}
+          {error || "Protocol identity not confirmed. Please sign in to proceed."}
         </p>
         <div className="flex flex-col gap-4">
-          <button className="btn-primary" onClick={() => window.location.reload()}>Retry Sync</button>
-          <button className="nav-btn justify-center" onClick={() => { clearAuthSession(); window.location.href = '/signin'; }}>Sign Out</button>
+          <button className="btn-primary" onClick={() => window.location.href = '/signin'}>Go to Sign In</button>
         </div>
       </div>
     </div>
