@@ -183,8 +183,10 @@ export default function StudyTrackerApp() {
         
         const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
         
-        // Prevent race condition: don't overwrite if we just started a session locally and server hasn't synced yet
-        if (!activeSession || (running && running._id !== activeSession._id) || (running && running.status !== activeSession.status)) {
+        // Prevent race condition: don't overwrite if we have a valid local active session and the server is empty/stale
+        if (activeSession && !running) {
+           // Wait for next sync, don't kill the local session yet
+        } else if (!activeSession || (running && (running._id !== activeSession._id || running.status !== activeSession.status))) {
            setActiveSession(running);
         }
         
@@ -424,6 +426,9 @@ export default function StudyTrackerApp() {
     if (!user || isActionLoading) return;
     try {
       setIsActionLoading(true);
+      // Optimistic UI: change screen first to prevent 'blue line' flicker delay
+      setScreen("timer"); 
+      
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
       const { session } = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
       
@@ -433,10 +438,10 @@ export default function StudyTrackerApp() {
       setTimerAlert("");
       
       await refreshAll(user._id);
-      setScreen("timer");
     } catch (err) {
       console.error("Failed to start session:", err);
       setTimerAlert("System Fault: Protocol Rejection.");
+      setScreen("dashboard"); // Revert on failure
     } finally {
       setIsActionLoading(false);
     }
