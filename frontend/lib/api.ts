@@ -311,3 +311,21 @@ export async function getAICoachReply(userId: string, message: string): Promise<
 export async function fetchAnalytics(userId: string): Promise<any> {
   return request(`/users/${userId}/analytics`);
 }
+
+export async function challengeDuel(challengerId: string, opponentId: string, durationMinutes: number): Promise<any> {
+  return request("/duels", {
+    method: "POST",
+    body: JSON.stringify({ challengerId, opponentId, durationMinutes })
+  });
+}
+
+export async function fetchDuels(userId: string): Promise<any[]> {
+  return request(`/duels/${userId}`);
+}
+
+export async function syncDuelProgress(duelId: string, userId: string, progress: number): Promise<any> {
+  return request(`/duels/${duelId}/sync`, {
+    method: "POST",
+    body: JSON.stringify({ userId, progress })
+  });
+}

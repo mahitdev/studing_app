@@ -7,6 +7,7 @@ const DailyGoal = require("../models/DailyGoal");
 const StudySession = require("../models/StudySession");
 const WaitlistEmail = require("../models/WaitlistEmail");
 const StudyRoom = require("../models/StudyRoom");
+const Duel = require("../models/Duel");
 const { sendProgressEmail } = require("../services/emailService");
 const {
   todayKey,
@@ -783,6 +784,69 @@ router.post("/users/:userId/ai-coach", async (req, res, next) => {
     }
 
     res.json({ reply, timestamp: new Date() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- STUDY DUELS (APEX ARENA) ---
+router.post("/duels", async (req, res, next) => {
+  try {
+    const { challengerId, opponentId, durationMinutes } = req.body;
+    const duel = await Duel.create({ challengerId, opponentId, durationMinutes });
+    
+    const io = req.app.get("io");
+    if (io) {
+      io.to(opponentId).emit("duel-challenge", duel);
+    }
+    
+    res.status(201).json(duel);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/duels/:userId", async (req, res, next) => {
+  try {
+    const duels = await Duel.find({
+      $or: [{ challengerId: req.params.userId }, { opponentId: req.params.userId }],
+      status: { $in: ["pending", "active"] }
+    }).populate("challengerId opponentId", "name level xp");
+    res.json(duels);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/duels/:duelId/sync", async (req, res, next) => {
+  try {
+    const { duelId } = req.params;
+    const { userId, progress } = req.body;
+    
+    let duel = await Duel.findById(duelId);
+    if (String(duel.challengerId) === userId) {
+      duel.challengerProgress = progress;
+    } else {
+      duel.opponentProgress = progress;
+    }
+    
+    if (progress >= 100) {
+      duel.status = "completed";
+      duel.winnerId = userId;
+      // Award XP
+      const winner = await User.findById(userId);
+      winner.xp += duel.xpPrize;
+      await winner.save();
+    }
+    
+    await duel.save();
+    
+    const io = req.app.get("io");
+    if (io) {
+      io.to(duelId).emit("duel-update", duel);
+    }
+    
+    res.json(duel);
   } catch (err) {
     next(err);
   }

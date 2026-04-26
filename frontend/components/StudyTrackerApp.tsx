@@ -23,7 +23,10 @@ import {
   fetchRooms,
   createRoom,
   joinRoom,
-  getAICoachReply
+  getAICoachReply,
+  challengeDuel,
+  fetchDuels,
+  syncDuelProgress
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 import { 
@@ -67,7 +70,10 @@ import {
   Maximize2,
   MessageSquare,
   Send,
-  Plus
+  Plus,
+  Swords,
+  Trophy,
+  Box
 } from "lucide-react";
 
 ChartJS.register(
@@ -360,15 +366,38 @@ export default function StudyTrackerApp() {
     }
   };
 
-  const handleCreateRoom = async () => {
+  const [duels, setDuels] = useState<any[]>([]);
+  const [activeDuel, setActiveDuel] = useState<any>(null);
+
+  const loadDuels = async () => {
     try {
-      const name = prompt("Enter Room Name:");
-      if (!name) return;
-      const room = await createRoom(user._id, { name, activeSubject: subject });
-      setCurrentRoom(room);
-      loadRooms();
+      const data = await fetchDuels(user._id);
+      setDuels(data);
+    } catch (err) {
+      console.error("Duel sync failed", err);
+    }
+  };
+
+  useEffect(() => {
+    loadDuels();
+    const interval = setInterval(loadDuels, 15000); // Poll for new challenges
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (activeSession && activeDuel) {
+      const progress = (elapsed / (activeDuel.durationMinutes * 60)) * 100;
+      syncDuelProgress(activeDuel._id, user._id, Math.min(100, progress));
+    }
+  }, [elapsed, activeSession, activeDuel]);
+
+  const handleChallenge = async (opponentId: string) => {
+    try {
+      const duel = await challengeDuel(user._id, opponentId, 30);
+      setTimerAlert(`Challenge sent to agent. Awaiting synchronization.`);
+      loadDuels();
     } catch {
-      setError("Room creation failed.");
+      setError("Challenge transmission failed.");
     }
   };
 
@@ -966,10 +995,31 @@ export default function StudyTrackerApp() {
                   ) : null}
                 </div>
 
-                <div className="glass-card p-8">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-muted mb-6">Network Sync</h3>
-                  {liveFriends.length > 0 ? (
-                    <div className="space-y-4">
+                <div className="glass-card p-8 border-none bg-gradient-to-br from-accent/10 to-transparent">
+                  <h3 className="text-sm font-black uppercase tracking-widest text-muted mb-6 flex items-center justify-between">
+                    Network Intelligence 
+                    <span className="text-[10px] font-bold text-accent">{duels.length} Duels</span>
+                  </h3>
+                  
+                  <div className="space-y-6">
+                    {/* Active Duels */}
+                    {duels.map(duel => (
+                      <div key={duel._id} className="p-4 bg-accent/5 rounded-2xl border border-accent/20 flex items-center justify-between group hover:bg-accent/10 transition-all">
+                        <div>
+                          <p className="text-sm font-bold text-accent">{duel.challengerId._id === user._id ? duel.opponentId.name : duel.challengerId.name}</p>
+                          <p className="text-[10px] text-muted uppercase tracking-widest">DUEL ACTIVE • {duel.xpPrize} XP</p>
+                        </div>
+                        <button 
+                          className="px-3 py-1.5 bg-accent/20 text-accent text-[10px] font-black uppercase tracking-widest rounded-lg"
+                          onClick={() => { setActiveDuel(duel); setScreen("timer"); handleStart(); }}
+                        >
+                          ENGAGE
+                        </button>
+                      </div>
+                    ))}
+
+                    {/* Friend Sync */}
+                    <div className="space-y-4 pt-4 border-t border-white/5">
                       {liveFriends.slice(0, 3).map((f, i) => (
                         <div key={i} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -978,20 +1028,18 @@ export default function StudyTrackerApp() {
                             </div>
                             <p className="text-sm font-bold">{f.name}</p>
                           </div>
-                          {f.studyingNow && <span className="w-2 h-2 rounded-full bg-success animate-pulse" />}
+                          <button onClick={() => handleChallenge(f.userId)} title="Challenge to Duel">
+                            <Swords size={14} className="text-muted hover:text-accent transition-colors" />
+                          </button>
                         </div>
                       ))}
                     </div>
-                  ) : <p className="text-xs text-muted">No synchronization active.</p>}
+                  </div>
                   
                   <div className="mt-8 pt-8 border-t border-white/5 flex flex-col gap-4">
-                    <input 
-                      placeholder="Partner Email" 
-                      className="text-xs" 
-                      value={friendEmail}
-                      onChange={(e) => setFriendEmail(e.target.value)}
-                    />
-                    <button className="btn-primary text-xs py-3" onClick={handleAddFriend}>Add Entity</button>
+                    <button className="w-full py-3 glass rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/5 transition-all flex items-center justify-center gap-2">
+                      <Box size={14} /> Spatial Analytics
+                    </button>
                   </div>
                 </div>
                 </>
