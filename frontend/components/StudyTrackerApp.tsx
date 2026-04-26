@@ -204,7 +204,8 @@ export default function StudyTrackerApp() {
       }
       setLastSyncAt(Date.now());
     } catch (err) {
-      console.error("Refresh failed:", err);
+      console.error("[GrindLock] Core Sync Failure:", err);
+      setError("Protocol sync interrupted. Running in isolated mode.");
     }
   };
 
@@ -254,13 +255,21 @@ export default function StudyTrackerApp() {
 
         await refreshAll(userId);
       } catch (err) {
-        console.warn("Bootstrap sync failed:", err);
+        console.error("[GrindLock] Bootstrap critical failure:", err);
+        setError("Neural link severed. Attempting local override.");
       } finally {
         setIsInitializing(false);
       }
     };
 
+    const handleError = (e: PromiseRejectionEvent) => {
+      console.error("[GrindLock] Unhandled Protocol Error:", e.reason);
+      setTimerAlert(`System Warning: ${e.reason?.message || "Unknown Fault"}`);
+    };
+    window.addEventListener("unhandledrejection", handleError);
+
     init();
+    return () => window.removeEventListener("unhandledrejection", handleError);
   }, []);
 
   // Persist session-local state
