@@ -426,12 +426,13 @@ export default function StudyTrackerApp() {
     if (!user || isActionLoading) return;
     try {
       setIsActionLoading(true);
-      // Optimistic UI: change screen first to prevent 'blue line' flicker delay
+      console.log("[GrindLock] Initializing session protocol...");
       setScreen("timer"); 
       
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
       const { session } = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
       
+      console.log("[GrindLock] Session started/resumed:", session._id);
       setActiveSession(session);
       setInactiveSeconds(0);
       setIsOfflineSession(false);
@@ -439,9 +440,9 @@ export default function StudyTrackerApp() {
       
       await refreshAll(user._id);
     } catch (err) {
-      console.error("Failed to start session:", err);
+      console.error("[GrindLock] Session start failure:", err);
       setTimerAlert("System Fault: Protocol Rejection.");
-      setScreen("dashboard"); // Revert on failure
+      setScreen("dashboard");
     } finally {
       setIsActionLoading(false);
     }
@@ -672,8 +673,8 @@ export default function StudyTrackerApp() {
           </div>
         </header>
 
-        <AnimatePresence mode="wait">
-          {screen === "dashboard" && (
+        <AnimatePresence>
+          {screen === "dashboard" && dashboard && (
             <motion.div 
               key="dashboard"
               initial={{ opacity: 0, y: 10 }}
@@ -1167,7 +1168,7 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSes
 
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, [activeSession]);
+  }, [activeSession?._id, activeSession?.status]);
 
   useEffect(() => {
     const totalSecs = Math.max(1, (activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration)) * 60);
