@@ -4,6 +4,7 @@ import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+  socket,
   addFriend,
   endSession,
   fetchDashboard,
@@ -22,6 +23,19 @@ import {
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 import { 
+  Chart as ChartJS, 
+  CategoryScale, 
+  LinearScale, 
+  PointElement, 
+  LineElement, 
+  BarElement,
+  Title, 
+  Tooltip, 
+  Legend, 
+  Filler 
+} from "chart.js";
+import { Line, Bar } from "react-chartjs-2";
+import { 
   LayoutDashboard, 
   Timer, 
   BarChart3, 
@@ -39,8 +53,21 @@ import {
   Swords,
   Camera,
   Play,
-  Pause
+  Pause,
+  RefreshCw
 } from "lucide-react";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 type Screen = "dashboard" | "timer" | "analytics" | "streak" | "settings" | "colosseum";
 
@@ -63,6 +90,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   streakProtectionUsed: false,
   roastMode: true
 };
+
+
 
 function formatHMS(seconds: number) {
   const hrs = Math.floor(seconds / 3600).toString().padStart(2, "0");
@@ -271,6 +300,31 @@ export default function StudyTrackerApp() {
     init();
     return () => window.removeEventListener("unhandledrejection", handleError);
   }, []);
+
+  // Real-Time Neural Link (Socket.io)
+  useEffect(() => {
+    if (user) {
+      socket.connect();
+      socket.emit("join-room", user._id);
+
+      socket.on("friend-update", (data: any) => {
+        console.log("[GrindLock] Real-time pulse received:", data);
+        if (data.userId !== user._id) {
+          // If a friend started studying, show a quick toast
+          if (data.action === "started") {
+            setTimerAlert(`${data.subject} session started by an operative.`);
+            setTimeout(() => setTimerAlert(""), 5000);
+          }
+          refreshAll(user._id);
+        }
+      });
+
+      return () => {
+        socket.off("friend-update");
+        socket.disconnect();
+      };
+    }
+  }, [user]);
 
   // Persist session-local state
   useEffect(() => {
@@ -836,7 +890,6 @@ export default function StudyTrackerApp() {
                 studyMode={studyMode}
                 plannedDuration={plannedDuration}
               />
-
               <div className="mt-16 glass-card p-10 w-full max-w-xl">
                 <div className="grid grid-cols-2 gap-8 mb-10">
                   <div className="space-y-2">
@@ -934,46 +987,22 @@ export default function StudyTrackerApp() {
           {screen === "analytics" && (
             <motion.div 
               key="analytics"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-8"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-10"
             >
-              {loadingAnalytics ? (
-                <div className="loading-shimmer h-96 rounded-3xl" />
-              ) : pythonAnalytics && !pythonAnalytics.error ? (
-                <>
-                  <div className="stats-grid">
-                    <article className="stat-card">
-                      <div className="label">Neural Efficiency</div>
-                      <div className="value">{pythonAnalytics.consistency_score}%</div>
-                    </article>
-                    <article className="stat-card">
-                      <div className="label">Avg Focus Block</div>
-                      <div className="value">{pythonAnalytics.average_study_time}m</div>
-                    </article>
-                    <article className="stat-card">
-                      <div className="label">Cognitive Load Peak</div>
-                      <div className="value">{pythonAnalytics.focus_score}%</div>
-                    </article>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="glass-card p-8 border-l-4 border-l-accent">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-accent mb-4">Core Insight</h4>
-                      <p className="text-xl font-medium leading-relaxed">{pythonAnalytics.message}</p>
-                    </div>
-                    <div className="glass-card p-8 border-l-4 border-l-danger">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-danger mb-4">Performance Leak</h4>
-                      <p className="text-xl font-medium leading-relaxed">{pythonAnalytics.weak_pattern}</p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="glass-card p-12 text-center">
-                  <h3 className="text-xl font-bold mb-2">Engine Offline</h3>
-                  <p className="text-muted">Currently unable to process neural data patterns.</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="display-lg">Neural Analytics</h2>
+                  <p className="text-muted font-medium mt-1">Advanced cognitive performance intelligence.</p>
                 </div>
-              )}
+                <div className="p-4 glass-light rounded-2xl border-none">
+                  <p className="text-[10px] font-black tracking-widest text-muted uppercase mb-1">Status</p>
+                  <p className="text-xs font-bold text-accent">Active Protocol</p>
+                </div>
+              </div>
+              <NeuralAnalytics data={pythonAnalytics} />
             </motion.div>
           )}
 
@@ -1155,6 +1184,76 @@ export default function StudyTrackerApp() {
           <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto grayscale opacity-80" />
         </div>
       </main>
+    </div>
+  );
+}
+
+function NeuralAnalytics({ data }: { data: any }) {
+  if (!data || data.error || data.isSynthetic) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 glass-card">
+        <Zap className="text-accent mb-4 animate-pulse" size={48} />
+        <h3 className="display-sm mb-2 uppercase tracking-widest">Neural Link Offline</h3>
+        <p className="text-muted text-sm font-medium italic">"{data?.message || "Real-time analytics requires active mission history."}"</p>
+      </div>
+    );
+  }
+
+  const chartData = {
+    labels: data.dailyTrend?.labels || ["M", "T", "W", "T", "F", "S", "S"],
+    datasets: [{
+      label: "Focus Minutes",
+      data: data.dailyTrend?.values || [0, 0, 0, 0, 0, 0, 0],
+      borderColor: "#3e63dd",
+      backgroundColor: "rgba(62, 99, 221, 0.1)",
+      fill: true,
+      tension: 0.4,
+      pointRadius: 4,
+      pointBackgroundColor: "#3e63dd"
+    }]
+  };
+
+  const options = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: "rgba(0,0,0,0.8)",
+        titleFont: { family: "Inter", weight: "bold" },
+        bodyFont: { family: "Inter" },
+        padding: 12,
+        cornerRadius: 8
+      }
+    },
+    scales: {
+      y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#666" } },
+      x: { grid: { display: false }, ticks: { color: "#666" } }
+    }
+  };
+
+  return (
+    <div className="space-y-10">
+      <div className="grid grid-cols-2 gap-8">
+        <div className="glass-card p-8">
+          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted mb-8">Productivity Pulse (7D)</h4>
+          <div className="h-64">
+            <Line data={chartData} options={options} />
+          </div>
+        </div>
+        <div className="glass-card p-8">
+          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted mb-8">Neural Distribution</h4>
+          <div className="space-y-6">
+            {data.insights?.map((insight: string, i: number) => (
+              <div key={i} className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-accent/30 transition-colors">
+                <div className="w-8 h-8 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
+                  <Activity size={14} className="text-accent" />
+                </div>
+                <p className="text-sm font-medium leading-relaxed">{insight}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

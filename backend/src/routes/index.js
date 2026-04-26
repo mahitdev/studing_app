@@ -394,6 +394,11 @@ router.post("/users/:userId/sessions/start", async (req, res, next) => {
       riskMode: Boolean(riskMode)
     });
 
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("friend-update", { userId, action: "started", subject: session.subject });
+    }
+
     res.status(201).json({ session });
   } catch (err) {
     next(err);
@@ -417,6 +422,11 @@ router.post("/users/:userId/sessions/:sessionId/pause", async (req, res, next) =
     session.pauseCount += 1;
     session.pauses.push({ startedAt: new Date(), reason });
     await session.save();
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("friend-update", { userId, action: "paused" });
+    }
 
     res.json({ session });
   } catch (err) {
@@ -509,6 +519,11 @@ router.post("/users/:userId/sessions/:sessionId/end", async (req, res, next) => 
 
     const { goal } = await recalculateDailyTotals(userId, session.date);
     const dashboard = await dashboardForUser(userId);
+
+    const io = req.app.get("io");
+    if (io) {
+      io.emit("friend-update", { userId, action: "completed", focusedMinutes });
+    }
 
     res.json({ session, goal, dashboard });
   } catch (err) {

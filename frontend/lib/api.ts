@@ -1,5 +1,6 @@
 import { Dashboard, LeaderboardEntry, LiveFriend, StudySession, User } from "./types";
 import { mockRequest } from "./mockApi";
+import { io } from "socket.io-client";
 
 const AUTH_TOKEN_KEY = "study-tracker-auth-token";
 const USER_ID_KEY = "study-tracker-user-id";
@@ -7,6 +8,15 @@ const USER_ID_KEY = "study-tracker-user-id";
 // Use mock API whenever no explicit backend URL is configured.
 // This makes the app work standalone (both locally and on Vercel) without a backend.
 const HAS_BACKEND = Boolean(process.env.NEXT_PUBLIC_API_URL) && typeof window !== "undefined" && localStorage.getItem("study-tracker-pref-mock") !== "true";
+
+const API_BASE_RAW = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+const API_BASE = API_BASE_RAW.replace(/\/+$/, "");
+const SOCKET_URL = API_BASE.replace(/\/api$/, "");
+
+export const socket = io(SOCKET_URL, {
+  autoConnect: false,
+  reconnection: true
+});
 
 function normalizeApiBase(raw?: string) {
   const fallback = "http://localhost:5000/api";
