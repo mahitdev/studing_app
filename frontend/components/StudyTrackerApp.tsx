@@ -90,6 +90,7 @@ function elapsedForSession(session: StudySession, nowMs = Date.now()) {
   }, 0);
   
   const res = Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
+  // If the server clock is ahead, we might get 0. Return 0 and let it catch up.
   return isNaN(res) ? 0 : res;
 }
 
@@ -834,15 +835,17 @@ export default function StudyTrackerApp() {
                          <option value="brown">Brown Noise</option>
                          <option value="lofi">Lo-Fi Frequencies</option>
                        </select>
-                       <button className="btn-primary px-6" onClick={() => { 
-                         if(audioRef.current) { 
-                           if (audioRef.current.paused) {
-                             audioRef.current.play().catch(e => console.warn("Autoplay blocked", e));
-                           } else {
-                             audioRef.current.pause();
-                           }
-                         } 
-                       }}>
+                        <button className="btn-primary px-6" onClick={() => { 
+                          if (!audioRef.current || ambientTrack === "none") {
+                            setTimerAlert("Select an ambient track first.");
+                            return;
+                          }
+                          if (ambientPlaying) audioRef.current.pause();
+                          else audioRef.current.play().catch(e => {
+                            console.error("Audio playback blocked:", e);
+                            setTimerAlert("Playback blocked by browser. Click again.");
+                          });
+                        }}>
                          {ambientPlaying ? <Pause size={14}/> : <Play size={14}/>}
                        </button>
                      </div>
@@ -1149,12 +1152,15 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSes
   }, [activeSession]);
 
   useEffect(() => {
-    const totalSecs = (activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration)) * 60;
-    setProgress(Math.min(100, (elapsed / Math.max(1, totalSecs)) * 100));
+    const totalSecs = Math.max(1, (activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration)) * 60);
+    setProgress(Math.min(100, (elapsed / totalSecs) * 100));
 
-    if (elapsed >= totalSecs && totalSecs > 0 && !notifiedRef.current) {
+    if (activeSession?.status === "running" && elapsed >= totalSecs && !notifiedRef.current) {
       if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-        new Notification("GrindLock Alert", { body: "Target duration reached. Take a break or lock in for overtime." });
+        new Notification("GrindLock Alert", { 
+          body: "Target duration reached. Take a break or lock in for overtime.",
+          icon: "/favicon.ico"
+        });
       }
       notifiedRef.current = true;
     }
