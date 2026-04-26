@@ -56,7 +56,11 @@ import {
   Pause,
   RefreshCw,
   Mic,
-  MicOff
+  MicOff,
+  Video,
+  VideoOff,
+  Wallet,
+  Maximize2
 } from "lucide-react";
 
 ChartJS.register(
@@ -134,8 +138,26 @@ export default function StudyTrackerApp() {
   const [liveFriends, setLiveFriends] = useState<LiveFriend[]>([]);
   const [liveMessage, setLiveMessage] = useState("");
   const [friendEmail, setFriendEmail] = useState("");
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [showChamber, setShowChamber] = useState(false);
+  const [walletConnected, setWalletConnected] = useState(!!user?.ethAddress);
+
+  const handleConnectWallet = async () => {
+    setIsActionLoading(true);
+    setTimerAlert("Initializing neural wallet handshake...");
+    // Simulate Web3 Connection
+    setTimeout(async () => {
+      try {
+        const mockAddress = "0x" + Math.random().toString(16).slice(2, 10) + "..." + Math.random().toString(16).slice(2, 6);
+        await setModes(user._id, settings.roastMode, identityType as any, motivationWhy, mockAddress);
+        setWalletConnected(true);
+        setTimerAlert("Wallet synchronized. NFT badges unlocked.");
+      } catch {
+        setError("Neural handshake failed.");
+      } finally {
+        setIsActionLoading(false);
+      }
+    }, 2000);
+  };
   const [activeSession, setActiveSession] = useState<StudySession | null>(null);
   const [inactiveSeconds, setInactiveSeconds] = useState(0);
   const [subject, setSubject] = useState("General");
@@ -753,6 +775,13 @@ export default function StudyTrackerApp() {
           </div>
           <div className="flex items-center gap-6">
             <button 
+              className={`p-2 rounded-lg transition-all ${showChamber ? "bg-accent text-white" : "nav-btn hover:bg-white/5"}`}
+              onClick={() => setShowChamber(true)}
+              title="Live Study Chamber"
+            >
+              <Video size={16} />
+            </button>
+            <button 
               className={`p-2 rounded-lg transition-all ${isListening ? "bg-accent/20 text-accent animate-pulse" : "nav-btn hover:bg-white/5"}`}
               onClick={toggleVoice}
               title="Neural Voice Link"
@@ -787,6 +816,8 @@ export default function StudyTrackerApp() {
         </header>
 
         <AnimatePresence>
+          {showChamber && <LiveStudyChamber onClose={() => setShowChamber(false)} />}
+          
           {pythonAnalytics?.burnout?.risk !== "Low" && (
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
@@ -1318,6 +1349,72 @@ function NeuralAnalytics({ data }: { data: any }) {
         </div>
       </div>
     </div>
+  );
+}
+
+
+
+function LiveStudyChamber({ onClose }: { onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [streamActive, setStreamActive] = useState(false);
+
+  useEffect(() => {
+    async function startVideo() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          setStreamActive(true);
+        }
+      } catch (err) {
+        console.error("Camera access failed", err);
+      }
+    }
+    startVideo();
+    return () => {
+      const stream = videoRef.current?.srcObject as MediaStream;
+      stream?.getTracks().forEach(track => track.stop());
+    };
+  }, []);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-12 bg-black/80 backdrop-blur-xl"
+    >
+      <div className="w-full max-w-5xl aspect-video glass-card overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
+            <h3 className="display-sm text-xl uppercase tracking-tighter">Live Neural Chamber <span className="text-muted text-sm ml-2">#0432</span></h3>
+          </div>
+          <button onClick={onClose} className="nav-btn text-danger">DISCONNECT</button>
+        </div>
+        <div className="flex-1 relative bg-black/40">
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+          
+          {/* Simulated Peer Participants */}
+          <div className="absolute top-6 right-6 flex flex-col gap-4">
+            <div className="w-32 h-32 glass-card overflow-hidden border-accent/20">
+              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-accent">USER_881 (Muted)</div>
+            </div>
+            <div className="w-32 h-32 glass-card overflow-hidden border-white/10">
+              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-muted italic">AWAITING PEER...</div>
+            </div>
+          </div>
+
+          <div className="absolute bottom-10 left-10 flex items-center gap-6">
+            <div className="p-4 glass-light rounded-2xl flex items-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
+              <p className="text-xs font-bold tracking-widest uppercase">Global Accountability Active</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 

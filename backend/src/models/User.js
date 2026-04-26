@@ -19,7 +19,8 @@ const userSchema = new mongoose.Schema(
     },
     roastMode: { type: Boolean, default: true },
     identityType: { type: String, enum: ["Casual", "Serious", "Hardcore"], default: "Serious" },
-    motivationWhy: { type: String, default: "" }
+    motivationWhy: { type: String, default: "" },
+    ethAddress: { type: String, default: "" }
   },
   { timestamps: true }
 );
