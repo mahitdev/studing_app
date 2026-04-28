@@ -17,7 +17,18 @@ const studyRoomSchema = new mongoose.Schema(
     },
     ambientSettings: {
       noiseLevel: { type: String, default: "medium" },
-      theme: { type: String, default: "cyberpunk" }
+      theme: { type: String, default: "cyberpunk" },
+      track: { type: String, default: "none" }
+    },
+    sharedNotes: { type: String, default: "" },
+    replays: [{ type: mongoose.Schema.Types.ObjectId, ref: "StudySession" }],
+    groupStreak: { type: Number, default: 0 },
+    lastActiveAt: { type: Date, default: Date.now },
+    activeVotes: {
+      ambientTrack: {
+        trackId: String,
+        votes: [String] // array of user IDs
+      }
     }
   },
   { timestamps: true }

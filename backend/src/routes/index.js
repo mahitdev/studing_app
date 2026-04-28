@@ -782,6 +782,95 @@ router.put("/rooms/:roomId/settings", async (req, res, next) => {
   }
 });
 
+router.post("/rooms/:roomId/notes", async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const { notes, userId } = req.body;
+    const room = await StudyRoom.findByIdAndUpdate(roomId, { sharedNotes: notes }, { new: true });
+    const io = req.app.get("io");
+    if (io) {
+      io.to(roomId).emit("notes-updated", { roomId, notes, userId });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/rooms/:roomId/vote-ambient", async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const { trackId, userId } = req.body;
+    const room = await StudyRoom.findById(roomId);
+    
+    if (room.activeVotes.ambientTrack.trackId !== trackId) {
+      room.activeVotes.ambientTrack.trackId = trackId;
+      room.activeVotes.ambientTrack.votes = [userId];
+    } else {
+      if (!room.activeVotes.ambientTrack.votes.includes(userId)) {
+        room.activeVotes.ambientTrack.votes.push(userId);
+      }
+    }
+    
+    // If majority voted (simple logic for now)
+    if (room.activeVotes.ambientTrack.votes.length >= Math.ceil(room.members.length / 2)) {
+      room.ambientSettings.track = trackId;
+      room.activeVotes.ambientTrack.votes = [];
+      const io = req.app.get("io");
+      if (io) io.to(roomId).emit("ambient-changed", { trackId });
+    }
+    
+    await room.save();
+    res.json(room);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/rooms/:roomId/alert", async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const { userId, type, message } = req.body;
+    const user = await User.findById(userId);
+    const io = req.app.get("io");
+    if (io) {
+      io.to(roomId).emit("emergency-alert", { 
+        userId, 
+        userName: user?.name || "Operative", 
+        type, 
+        message: message || "Liaison requested. Focus burnout imminent." 
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/rooms/:roomId/ai-qa", async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const { message, userId } = req.body;
+    const user = await User.findById(userId);
+    
+    // Simulate AI group coaching response
+    const reply = `Operative ${user.name}, the group query has been analyzed. Protocol suggests synchronized deep-work intervals. Any further outliers?`;
+    
+    const io = req.app.get("io");
+    if (io) {
+      io.to(roomId).emit("ai-coach-broadcast", { 
+        text: reply, 
+        sender: "Neural Coach",
+        originalQuery: message,
+        userName: user.name
+      });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/users/:userId/ai-coach", async (req, res, next) => {
   try {
     const { userId } = req.params;
@@ -864,6 +953,26 @@ router.post("/duels/:duelId/sync", async (req, res, next) => {
     }
     
     res.json(duel);
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/rooms/:roomId/bet", async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const { userId, amount, outcome } = req.body;
+    const user = await User.findById(userId);
+    if (user.xp < amount) return res.status(400).json({ message: "Insufficient XP" });
+    
+    user.xp -= amount;
+    await user.save();
+    
+    const io = req.app.get("io");
+    if (io) {
+      io.to(roomId).emit("bet-placed", { userId, userName: user.name, amount, outcome });
+    }
+    res.json({ success: true, balance: user.xp });
   } catch (err) {
     next(err);
   }

@@ -28,7 +28,12 @@ import {
   getAICoachReply,
   challengeDuel,
   fetchDuels,
-  syncDuelProgress
+  syncDuelProgress,
+  updateRoomNotes,
+  voteAmbient,
+  broadcastEmergencyAlert,
+  submitGroupAIQuery,
+  placeXPBet
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 import { 
@@ -1605,7 +1610,12 @@ function LiveStudyChamber({ onClose, room, socket, userId }: { onClose: () => vo
   const [streamActive, setStreamActive] = useState(false);
   const [messages, setMessages] = useState<{user: string, text: string}[]>([]);
   const [chatInput, setChatInput] = useState("");
-  const [ambientSetting, setAmbientSetting] = useState(room?.ambientSettings || "default");
+  const [ambientSetting, setAmbientSetting] = useState(room?.ambientSettings?.track || "none");
+  const [sharedNotes, setSharedNotes] = useState(room?.sharedNotes || "");
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [isBettingOpen, setIsBettingOpen] = useState(false);
+  const [betAmount, setBetAmount] = useState(10);
 
   useEffect(() => {
     async function startVideo() {
@@ -1628,28 +1638,72 @@ function LiveStudyChamber({ onClose, room, socket, userId }: { onClose: () => vo
 
   useEffect(() => {
     if (!socket) return;
-    const handleRoomUpdate = (data: any) => {
+    socket.emit("join-room", room?._id);
+
+    socket.on("notes-updated", (data: any) => {
+      if (data.userId !== userId) setSharedNotes(data.notes);
+    });
+
+    socket.on("ambient-changed", (data: any) => {
+      setAmbientSetting(data.trackId);
+    });
+
+    socket.on("emergency-alert", (data: any) => {
+      setAlerts(prev => [...prev, data]);
+      setTimeout(() => setAlerts(prev => prev.filter(a => a !== data)), 5000);
+    });
+
+    socket.on("ai-coach-broadcast", (data: any) => {
+      setMessages(prev => [...prev, { user: "NEURAL_COACH", text: data.text }]);
+    });
+
+    socket.on("bet-placed", (data: any) => {
+      setMessages(prev => [...prev, { user: "SYSTEM", text: `${data.userName} bet ${data.amount} XP on ${data.outcome}` }]);
+    });
+
+    socket.on("room-action", (data: any) => {
       if (data.action === "chat") {
-        setMessages((prev) => [...prev, { user: data.sender || "Unknown", text: data.message }]);
+        setMessages((prev) => [...prev, { user: data.userName || "Unknown", text: data.message }]);
       }
-      if (data.action === "ambient-vote") {
-        setAmbientSetting(data.setting);
-      }
+    });
+
+    return () => {
+      socket.off("notes-updated");
+      socket.off("ambient-changed");
+      socket.off("emergency-alert");
+      socket.off("ai-coach-broadcast");
+      socket.off("bet-placed");
+      socket.off("room-action");
     };
-    socket.on("room-action", handleRoomUpdate);
-    return () => { socket.off("room-action", handleRoomUpdate); };
-  }, [socket]);
+  }, [socket, room?._id, userId]);
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newNotes = e.target.value;
+    setSharedNotes(newNotes);
+    updateRoomNotes(room._id, userId, newNotes);
+  };
 
   const sendChat = () => {
     if (!chatInput.trim() || !socket) return;
-    socket.emit("room-action", { action: "chat", roomId: room?._id, message: chatInput, sender: userId });
+    if (chatInput.startsWith("/coach ")) {
+      submitGroupAIQuery(room._id, userId, chatInput.replace("/coach ", ""));
+    } else {
+      socket.emit("room-action", { action: "chat", roomId: room?._id, message: chatInput, userId });
+    }
     setChatInput("");
   };
 
-  const voteAmbient = (setting: string) => {
-    if (!socket) return;
-    socket.emit("room-action", { action: "ambient-vote", roomId: room?._id, setting });
-    setAmbientSetting(setting);
+  const handleVoteAmbient = (trackId: string) => {
+    voteAmbient(room._id, userId, trackId);
+  };
+
+  const handleAlert = (type: string) => {
+    broadcastEmergencyAlert(room._id, userId, type, "Liaison requested. Focus burnout imminent.");
+  };
+
+  const handleBet = (outcome: string) => {
+    placeXPBet(room._id, userId, betAmount, outcome);
+    setIsBettingOpen(false);
   };
 
   return (
@@ -1657,85 +1711,185 @@ function LiveStudyChamber({ onClose, room, socket, userId }: { onClose: () => vo
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-12 bg-black/80 backdrop-blur-xl"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-3xl"
     >
-      <div className="w-full max-w-6xl h-[80vh] glass-card overflow-hidden flex">
-        {/* Main Video Area */}
-        <div className="flex-1 flex flex-col relative border-r border-white/5 bg-black/40">
-          <div className="absolute top-0 w-full p-6 z-10 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+      <div className="w-full max-w-7xl h-[90vh] glass-card overflow-hidden flex shadow-[0_0_100px_rgba(62,99,221,0.2)]">
+        {/* Main Workspace */}
+        <div className="flex-1 flex flex-col relative border-r border-white/5 bg-black/20">
+          <div className="absolute top-0 w-full p-6 z-20 flex justify-between items-center">
             <div className="flex items-center gap-4">
-              <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
-              <h3 className="display-sm text-xl uppercase tracking-tighter">Live Neural Chamber <span className="text-muted text-sm ml-2">{room?.name || "#0432"}</span></h3>
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_10px_#10b981]" />
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em]">{room?.name || "Neural Hub"}</h3>
+                <p className="text-[10px] text-muted font-bold tracking-widest uppercase mt-1">Cluster Protocol: Active</p>
+              </div>
             </div>
-            <button onClick={onClose} className="nav-btn text-danger">DISCONNECT</button>
-          </div>
-
-          <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transition-all ${ambientSetting === "focus-deep" ? "grayscale contrast-150" : ambientSetting === "neon" ? "sepia hue-rotate-90 saturate-200" : ""}`} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-
-          {/* Ambient Controls */}
-          <div className="absolute top-20 right-6 flex flex-col gap-2 z-10 bg-black/40 p-2 rounded-xl border border-white/10 backdrop-blur-md">
-            <p className="text-[10px] text-muted text-center font-bold tracking-widest mb-1">ENV</p>
-            {['default', 'focus-deep', 'neon'].map(s => (
-              <button 
-                key={s} 
-                onClick={() => voteAmbient(s)}
-                className={`text-[10px] px-2 py-1 rounded uppercase tracking-widest border ${ambientSetting === s ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-white'}`}
-              >
-                {s}
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsNotesOpen(!isNotesOpen)} className={`nav-btn p-3 ${isNotesOpen ? "bg-accent text-black" : ""}`}>
+                <Activity size={18} />
               </button>
-            ))}
+              <button onClick={() => handleAlert("burnout")} className="nav-btn p-3 bg-danger/10 text-danger border-danger/20 hover:bg-danger/20">
+                <AlertTriangle size={18} />
+              </button>
+              <button onClick={onClose} className="nav-btn px-6 py-3 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-widest">Disconnect</button>
+            </div>
           </div>
-          
-          <div className="absolute bottom-10 left-10 flex items-center gap-6 z-10">
-            <div className="p-4 glass-light rounded-2xl flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
-              <p className="text-xs font-bold tracking-widest uppercase">Global Accountability Active</p>
+
+          <div className="flex-1 relative overflow-hidden">
+            <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transition-all duration-1000 ${ambientSetting === "focus-deep" ? "grayscale contrast-125" : ambientSetting === "lofi" ? "sepia opacity-80" : ""}`} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 pointer-events-none" />
+            
+            {/* Alerts Overlay */}
+            <div className="absolute top-24 left-6 z-30 space-y-3">
+              {alerts.map((a, i) => (
+                <motion.div key={i} initial={{ x: -100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="p-4 glass border-l-4 border-l-danger bg-danger/5 shadow-2xl">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-danger">Distress Signal: {a.userName}</p>
+                  <p className="text-xs font-medium mt-1">{a.message}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Collaborative Notes Layer */}
+            <AnimatePresence>
+              {isNotesOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="absolute inset-20 z-40 glass-card p-10 shadow-2xl flex flex-col"
+                >
+                  <div className="flex justify-between items-center mb-8">
+                    <h4 className="text-xs font-black uppercase tracking-widest text-accent">Collaborative Neural Grid</h4>
+                    <button onClick={() => setIsNotesOpen(false)} className="nav-btn p-2">×</button>
+                  </div>
+                  <textarea 
+                    value={sharedNotes} 
+                    onChange={handleNotesChange}
+                    placeholder="Capture collective intelligence here..."
+                    className="flex-1 bg-white/5 rounded-2xl p-6 text-sm font-medium resize-none focus:outline-none border border-white/5 focus:border-accent/30 transition-all"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Bottom Control Bar */}
+          <div className="p-6 bg-black/40 backdrop-blur-md border-t border-white/5 flex items-center justify-between">
+            <div className="flex gap-4">
+              <div className="p-1 glass-light rounded-xl flex gap-1">
+                {['none', 'focus-deep', 'lofi', 'rain'].map(t => (
+                  <button 
+                    key={t}
+                    onClick={() => handleVoteAmbient(t)}
+                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ambientSetting === t ? "bg-accent text-black" : "text-muted hover:bg-white/5"}`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+               <button onClick={() => setIsBettingOpen(true)} className="flex items-center gap-2 px-4 py-2 glass-light rounded-xl hover:bg-white/10 transition-all">
+                  <Zap size={14} className="text-accent" />
+                  <span className="text-[10px] font-black tracking-widest uppercase">Place Bet</span>
+               </button>
+               <div className="text-right">
+                  <p className="text-[9px] font-black tracking-widest text-muted uppercase">Global Streak</p>
+                  <p className="text-lg font-black text-white leading-none mt-1">{room?.groupStreak || 0}d</p>
+               </div>
             </div>
           </div>
         </div>
 
-        {/* Sidebar: Participants & Spectator Chat */}
-        <div className="w-80 flex flex-col bg-[#050505]">
-          <div className="p-6 border-b border-white/5">
-            <h4 className="text-xs font-black uppercase tracking-widest text-muted">Squad & Spectators</h4>
+        {/* Sidebar: Participants & Chat */}
+        <div className="w-96 flex flex-col bg-black/40">
+          <div className="p-8 border-b border-white/5">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-6">Active Operatives</h4>
+            <div className="flex flex-wrap gap-2">
+              {room?.members?.map((m: any) => (
+                <div key={m._id} className="relative group">
+                  <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center border border-accent/30 text-xs font-bold transition-all group-hover:scale-110">
+                    {m.name?.[0] || "A"}
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-success border-2 border-black" />
+                  <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 glass px-2 py-1 rounded text-[8px] font-bold opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
+                    {m.name} (LVL {m.level})
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <div className="p-4 border-b border-white/5 grid grid-cols-2 gap-2">
-            <div className="aspect-square glass-light rounded-xl overflow-hidden relative">
-               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                 <span className="text-[10px] font-black text-accent mb-2">USER_881</span>
-                 <div className="w-full px-2">
-                   <div className="h-1 bg-white/10 rounded-full w-full"><div className="h-full bg-accent rounded-full" style={{ width: '45%' }}/></div>
+
+          <div className="p-8 border-b border-white/5 bg-accent/5">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-accent mb-4">Replay Protocol</h4>
+            <div className="space-y-3">
+               {[1, 2].map(i => (
+                 <div key={i} className="p-3 glass-light rounded-xl flex items-center justify-between group cursor-pointer hover:bg-white/10 transition-all">
+                    <div>
+                       <p className="text-[10px] font-bold">SESSION_REPLAY_0{i}</p>
+                       <p className="text-[8px] text-muted uppercase">Duration: 45m</p>
+                    </div>
+                    <Activity size={12} className="text-accent opacity-0 group-hover:opacity-100 transition-all" />
                  </div>
-               </div>
-            </div>
-            <div className="aspect-square glass-light rounded-xl overflow-hidden relative">
-               <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-muted italic">AWAITING...</div>
+               ))}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
-             {messages.map((m, i) => (
-               <div key={i} className="text-xs">
-                 <span className="text-accent font-bold uppercase tracking-wider">{m.user}: </span>
-                 <span className="opacity-80">{m.text}</span>
-               </div>
-             ))}
+          <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex flex-col ${m.user === "NEURAL_COACH" ? "items-center" : m.user === userId ? "items-end" : "items-start"}`}>
+                <p className="text-[8px] font-black uppercase tracking-widest text-muted mb-1">{m.user === userId ? "YOU" : m.user}</p>
+                <div className={`max-w-[90%] p-4 rounded-2xl text-xs font-medium ${
+                  m.user === "NEURAL_COACH" ? "bg-accent/10 border border-accent/20 text-accent text-center italic" : 
+                  m.user === "SYSTEM" ? "bg-white/5 border border-white/5 text-muted opacity-80" :
+                  m.user === userId ? "bg-accent/20 border border-accent/10 rounded-tr-none" : "bg-white/5 border border-white/10 rounded-tl-none"
+                }`}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
           </div>
 
-          <div className="p-4 border-t border-white/5 flex gap-2">
-            <input 
-              type="text" 
-              value={chatInput} 
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && sendChat()}
-              placeholder="Send hype..." 
-              className="flex-1 bg-white/5 rounded px-3 py-2 text-xs focus:outline-none focus:border-accent border border-transparent transition-colors"
-            />
-            <button onClick={sendChat} className="bg-white/10 hover:bg-accent hover:text-black transition-colors px-3 py-2 rounded text-xs font-bold uppercase">Send</button>
+          <div className="p-8 border-t border-white/5">
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={chatInput} 
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Type message or /coach..." 
+                className="flex-1 bg-white/5 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-accent/50 border border-transparent transition-all"
+              />
+              <button onClick={sendChat} className="bg-accent p-3 rounded-xl text-black transition-all hover:scale-105 active:scale-95"><Send size={16} /></button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Betting Modal */}
+      <AnimatePresence>
+        {isBettingOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl">
+             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="glass-card p-10 w-96 text-center">
+                <Zap size={32} className="text-accent mx-auto mb-6" />
+                <h3 className="display-sm mb-4">Neural Outcome Bet</h3>
+                <p className="text-xs text-muted mb-8 italic">Risk your XP on collective performance.</p>
+                
+                <div className="flex items-center justify-between mb-8 p-4 glass-light rounded-xl">
+                   <button onClick={() => setBetAmount(Math.max(10, betAmount - 50))} className="p-2 nav-btn"> - </button>
+                   <span className="text-lg font-black">{betAmount} XP</span>
+                   <button onClick={() => setBetAmount(betAmount + 50)} className="p-2 nav-btn"> + </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <button onClick={() => handleBet("success")} className="py-4 rounded-xl bg-success/20 text-success font-black text-[10px] uppercase tracking-widest hover:bg-success/30">GROUP SUCCESS</button>
+                   <button onClick={() => handleBet("failure")} className="py-4 rounded-xl bg-danger/20 text-danger font-black text-[10px] uppercase tracking-widest hover:bg-danger/30">GROUP FAILURE</button>
+                </div>
+                <button onClick={() => setIsBettingOpen(false)} className="mt-8 text-[10px] text-muted font-bold uppercase tracking-widest">Cancel</button>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

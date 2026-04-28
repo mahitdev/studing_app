@@ -322,3 +322,38 @@ export async function syncDuelProgress(duelId: string, userId: string, progress:
     body: JSON.stringify({ userId, progress })
   });
 }
+
+export async function updateRoomNotes(roomId: string, userId: string, notes: string): Promise<any> {
+  return request(`/rooms/${roomId}/notes`, {
+    method: "POST",
+    body: JSON.stringify({ userId, notes })
+  });
+}
+
+export async function voteAmbient(roomId: string, userId: string, trackId: string): Promise<any> {
+  return request(`/rooms/${roomId}/vote-ambient`, {
+    method: "POST",
+    body: JSON.stringify({ userId, trackId })
+  });
+}
+
+export async function broadcastEmergencyAlert(roomId: string, userId: string, type: string, message: string): Promise<any> {
+  return request(`/rooms/${roomId}/alert`, {
+    method: "POST",
+    body: JSON.stringify({ userId, type, message })
+  });
+}
+
+export async function submitGroupAIQuery(roomId: string, userId: string, message: string): Promise<any> {
+  return request(`/rooms/${roomId}/ai-qa`, {
+    method: "POST",
+    body: JSON.stringify({ userId, message })
+  });
+}
+
+export async function placeXPBet(roomId: string, userId: string, amount: number, outcome: string): Promise<any> {
+  return request(`/rooms/${roomId}/bet`, {
+    method: "POST",
+    body: JSON.stringify({ userId, amount, outcome })
+  });
+}

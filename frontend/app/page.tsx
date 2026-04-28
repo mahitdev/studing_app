@@ -1,11 +1,12 @@
 "use client";
 import React, { useRef, useState, useMemo } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Environment, MeshTransmissionMaterial, Text, Float, Stars, Icosahedron } from "@react-three/drei";
-import { motion as framerMotion } from "framer-motion";
+import { Environment, MeshTransmissionMaterial, Text, Float, Stars, Icosahedron, useScroll as useThreeScroll } from "@react-three/drei";
+import { motion as framerMotion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { motion } from "framer-motion-3d";
 import * as THREE from "three";
 import { useRouter } from "next/navigation";
+import { Zap, Users, Activity, Shield, ArrowRight, Globe, MapPin, Award } from "lucide-react";
 
 const MotionGroup = motion.group as any;
 
@@ -16,7 +17,7 @@ function Luxury3DButton({ position, label, onClick, width = 3 }: any) {
   return (
     <MotionGroup 
       position={position}
-      animate={{ z: clicked ? -0.4 : hovered ? 0.2 : 0 }}
+      animate={{ z: clicked ? -0.4 : hovered ? 0.2 : 0, scale: hovered ? 1.05 : 1 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
       <mesh 
@@ -51,10 +52,11 @@ function Luxury3DButton({ position, label, onClick, width = 3 }: any) {
   );
 }
 
-function DataOcean() {
+function DataOcean({ scrollYProgress }: { scrollYProgress: any }) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const yOffset = useTransform(scrollYProgress, [0, 1], [0, -10]);
+  
   const { geometry } = useMemo(() => {
-    // Highly optimized vertex count to brutally eliminate lag (was 100x100 -> dropped to 40x40)
     const geo = new THREE.PlaneGeometry(100, 100, 40, 40);
     geo.rotateX(-Math.PI / 2);
     return { geometry: geo };
@@ -71,20 +73,12 @@ function DataOcean() {
 
       for (let i = 0; i < positionAttribute.count; i++) {
         vertex.fromBufferAttribute(positionAttribute, i);
-        
-        // Base ripple
         const dist = Math.sqrt(vertex.x * vertex.x + vertex.z * vertex.z);
         let y = Math.sin(dist * 0.5 - time * 2) * 0.5;
-        
-        // Mouse ripple interaction
         const dx = vertex.x - mouseX;
-        const dz = vertex.z - mouseY; // using mouseY for Z axis translation
+        const dz = vertex.z - mouseY;
         const mouseDist = Math.sqrt(dx * dx + dz * dz);
-        
-        if (mouseDist < 10) {
-          y += Math.sin(mouseDist * 2 - time * 5) * (10 - mouseDist) * 0.1;
-        }
-
+        if (mouseDist < 10) y += Math.sin(mouseDist * 2 - time * 5) * (10 - mouseDist) * 0.1;
         positionAttribute.setY(i, y);
       }
       positionAttribute.needsUpdate = true;
@@ -101,14 +95,12 @@ function DataOcean() {
 
 function MasterAIAgent() {
   const ref = useRef<THREE.Group>(null);
-  
   useFrame((state) => {
     if (ref.current) {
       ref.current.rotation.y += 0.005;
       ref.current.rotation.x = Math.sin(state.clock.elapsedTime * 0.5) * 0.2;
     }
   });
-
   return (
     <Float speed={2} floatIntensity={1} floatingRange={[-0.3, 0.3]}>
       <group ref={ref} position={[0, 1.5, -2]}>
@@ -124,19 +116,57 @@ function MasterAIAgent() {
   );
 }
 
+function GlobalHeatmap() {
+  return (
+    <div className="w-full h-80 glass-card relative overflow-hidden rounded-3xl border border-white/5">
+      <div className="absolute inset-0 bg-[#050505]/80 flex items-center justify-center">
+        <Globe size={160} className="text-accent/10 animate-spin-slow" />
+        <div className="absolute inset-0 flex items-center justify-center">
+           {[...Array(12)].map((_, i) => (
+             <framerMotion.div 
+               key={i}
+               initial={{ opacity: 0 }}
+               animate={{ opacity: [0.2, 1, 0.2] }}
+               transition={{ duration: 2, repeat: Infinity, delay: i * 0.5 }}
+               className="absolute w-2 h-2 bg-accent rounded-full shadow-[0_0_10px_#00F0FF]"
+               style={{ 
+                 top: `${20 + Math.random() * 60}%`, 
+                 left: `${20 + Math.random() * 60}%` 
+               }}
+             />
+           ))}
+        </div>
+      </div>
+      <div className="absolute bottom-6 left-6 text-left">
+        <p className="text-[10px] font-black uppercase tracking-widest text-accent mb-1">Live Global Pulse</p>
+        <p className="text-xs font-bold text-white/60">12,408 Operatives Online</p>
+      </div>
+    </div>
+  );
+}
+
 export default function LuxuryLandingPage() {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(true);
+  const { scrollYProgress } = useScroll();
+  const yParallax = useTransform(scrollYProgress, [0, 1], [0, -300]);
+  const scaleParallax = useTransform(scrollYProgress, [0, 0.5], [1, 1.1]);
+  const opacityHero = useTransform(scrollYProgress, [0, 0.3], [1, 0]);
 
   return (
-    <div className={`w-full min-h-screen ${darkMode ? "bg-[#050505] text-white" : "bg-gray-100 text-[#050505]"} overflow-y-auto relative selection:bg-[#00F0FF] selection:text-[#050505] font-sans transition-colors duration-500`}>
+    <div className={`w-full min-h-screen ${darkMode ? "bg-[#050505] text-white" : "bg-gray-100 text-[#050505]"} overflow-x-hidden relative selection:bg-[#00F0FF] selection:text-[#050505] font-sans transition-colors duration-500`}>
       
-      <div className="w-full h-screen relative">
+      <div className="w-full h-screen relative sticky top-0 overflow-hidden">
+        {/* Background Visuals */}
+        <framerMotion.div style={{ scale: scaleParallax }} className="absolute inset-0">
+          <img src="/study_session_bg_1777405178295.png" className="w-full h-full object-cover opacity-30 grayscale contrast-125" alt="Neural Background" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-[#050505]/80" />
+        </framerMotion.div>
+
         {/* Dynamic HTML Hero Overlay */}
-        <div className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between">
-          
+        <framerMotion.div style={{ opacity: opacityHero, y: yParallax }} className="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between">
           {/* Navbar */}
-          <div className="w-full p-8 md:px-16 flex justify-between items-center animate-fade-in pointer-events-auto" style={{ animationDelay: '0.2s' }}>
+          <div className="w-full p-8 md:px-16 flex justify-between items-center animate-fade-in pointer-events-auto">
             <h1 className="text-2xl md:text-3xl font-black tracking-widest uppercase flex items-center gap-2">
               GrindLock<span className="text-[#00F0FF] animate-pulse shadow-[0_0_10px_#00F0FF]">.</span>
             </h1>
@@ -147,160 +177,134 @@ export default function LuxuryLandingPage() {
               >
                 {darkMode ? "LIGHT MODE" : "DARK MODE"}
               </button>
-              <span className="text-xs font-bold tracking-widest uppercase opacity-50">V 1.0.0</span>
-              <p className="text-[#1A1A1A] font-black uppercase tracking-[0.3em] bg-[#00F0FF] px-4 py-1.5 text-[10px] rounded-full shadow-[0_0_15px_rgba(0,240,255,0.4)]">System Active</p>
+              <button onClick={() => router.push("/signin")} className="text-xs font-black tracking-widest hover:text-accent transition-colors">LOGIN</button>
+              <button onClick={() => router.push("/signup")} className="bg-accent text-black px-6 py-2 rounded-full text-xs font-black tracking-widest hover:scale-105 transition-all">INITIALIZE</button>
             </div>
           </div>
 
           {/* Center Hero Text */}
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-4 -mt-24 pointer-events-none">
-            <framerMotion.div 
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.5 }}
-              className="space-y-6 max-w-4xl"
-            >
-              <div className="inline-block border border-current opacity-70 bg-white/5 backdrop-blur-md px-4 py-1.5 rounded-full mb-4">
-                <span className="text-[#00F0FF] text-[10px] font-bold tracking-[0.2em] uppercase">The Ultimate Productivity OS</span>
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-4 -mt-24">
+            <framerMotion.div className="space-y-6 max-w-4xl">
+              <div className="inline-block border border-accent/40 bg-accent/5 backdrop-blur-md px-6 py-2 rounded-full mb-4">
+                <span className="text-[#00F0FF] text-[10px] font-black tracking-[0.4em] uppercase">Neural Performance Infrastructure</span>
               </div>
-              <h2 className="text-5xl md:text-7xl font-black tracking-tighter uppercase leading-[0.9]">
+              <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase leading-[0.85] filter drop-shadow-2xl">
                 Master Your Focus.<br/>
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#888888] via-[#aaaaaa] to-[#00F0FF]">Hack Your Potential.</span>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-white/50 to-accent">Hack Your Potential.</span>
               </h2>
-              <p className="opacity-50 tracking-widest uppercase text-xs md:text-sm font-medium max-w-2xl mx-auto leading-relaxed">
-                A premium, neural-inspired operating system designed for extreme discipline. Enter the simulation and permanently rewire your work ethic.
+              <p className="text-white/40 tracking-[0.2em] uppercase text-xs md:text-sm font-bold max-w-2xl mx-auto leading-relaxed mt-8">
+                A high-fidelity productivity architecture designed for absolute discipline. Permanent neural rewiring via synchronized collaborative deep-work.
               </p>
             </framerMotion.div>
           </div>
 
-          {/* Bottom Feature Bar */}
-          <div className="w-full p-8 md:px-16 flex flex-col md:flex-row justify-between items-end gap-6 animate-fade-in pointer-events-auto" style={{ animationDelay: '1s' }}>
-            <div className="flex gap-4">
-              <div className="glass-light p-4 rounded-xl border-l-2 border-[#00F0FF] max-w-[200px]">
-                <h4 className="font-bold text-[10px] tracking-widest uppercase mb-1">Deep Work Mechanics</h4>
-                <p className="opacity-40 text-[10px] leading-relaxed">Mongoose-backed session tracking with anti-cheat protocols.</p>
-              </div>
-              <div className="glass-light p-4 rounded-xl border-l-2 border-white/20 max-w-[200px] hidden sm:block">
-                <h4 className="font-bold text-[10px] tracking-widest uppercase mb-1">Neural Analytics</h4>
-                <p className="opacity-40 text-[10px] leading-relaxed">Python-powered machine learning performance projections.</p>
-              </div>
-            </div>
-            <p className="opacity-30 text-[10px] tracking-[0.2em] uppercase font-bold text-right animate-bounce">
-              Scroll down to explore features ↓
-            </p>
+          {/* Bottom Indicators */}
+          <div className="w-full p-8 md:px-16 flex justify-center pb-12 animate-bounce">
+            <div className="w-1 h-12 rounded-full bg-gradient-to-b from-accent to-transparent opacity-50" />
           </div>
-        </div>
+        </framerMotion.div>
 
-        {/* 3D Scene */}
-        <div className="absolute inset-0">
-          <Canvas camera={{ position: [0, 1, 10], fov: 45 }}>
+        {/* 3D Core */}
+        <div className="absolute inset-0 pointer-events-none opacity-40">
+           <Canvas camera={{ position: [0, 1, 10], fov: 45 }}>
             <Environment preset="city" />
             <ambientLight intensity={0.5} />
             <directionalLight position={[10, 10, 5]} intensity={1.5} color="#00F0FF" />
-            <pointLight position={[-10, -10, -10]} intensity={1} color="#ffffff" />
-            
-            <DataOcean />
+            <DataOcean scrollYProgress={scrollYProgress} />
             <Stars radius={100} depth={50} count={2000} factor={4} saturation={0} fade speed={1} />
             <MasterAIAgent />
-
-            <MotionGroup 
-              initial={{ y: -10, opacity: 0, scale: 0.6 }}
-              animate={{ y: -3.2, opacity: 1, scale: 0.8 }}
-              transition={{ duration: 1.5, ease: "easeOut", type: "spring", stiffness: 50, damping: 20, delay: 1 }}
-              position={[0, -3.2, 0]}
-            >
-              <Luxury3DButton position={[-3.5, 0, 0]} label="SIGN IN" onClick={() => router.push("/signin")} width={2.8} />
-              <Luxury3DButton position={[0, 0, 0]} label="INITIALIZE" onClick={() => router.push("/signup")} width={4} />
-              <Luxury3DButton position={[3.5, 0, 0]} label="DATA CORE" onClick={() => router.push("/dashboard")} width={2.8} />
-            </MotionGroup>
           </Canvas>
         </div>
       </div>
 
-      {/* Scrolling Content Below Hero */}
-      <div className="relative z-20 container mx-auto px-8 py-20 space-y-32 pointer-events-auto">
+      {/* Main Content Sections */}
+      <div className="relative z-20 bg-[#050505] pt-32 pb-60 space-y-60">
         
-        {/* Animated Feature Highlights */}
-        <section>
-          <framerMotion.h3 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-3xl font-black uppercase tracking-widest text-center mb-16"
-          >
-            Live Environment Sync
-          </framerMotion.h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {['Global Duels', 'AI Neural Coach', 'Real-time Squads'].map((f, i) => (
+        {/* Collaborative Feature Grid */}
+        <section className="container mx-auto px-8">
+          <div className="text-center mb-32">
+             <h3 className="text-xs font-black tracking-[0.5em] text-accent uppercase mb-4">Core Protocols</h3>
+             <h4 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">Collaborative Infrastructure</h4>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            {[
+              { title: 'Apex Arena', icon: <Award className="text-accent" />, desc: 'One-on-one study duels with real-time XP stakes and leaderboard ascension.' },
+              { title: 'Neural Chambers', icon: <Users className="text-accent" />, desc: 'Synchronized study clusters with shared notes and group ambient syncing.' },
+              { title: 'AI Strategist', icon: <Activity className="text-accent" />, desc: 'Neural-linked coaching that detects cognitive fatigue and optimizes intervals.' },
+              { title: 'Global Sync', icon: <Globe className="text-accent" />, desc: 'Ultra-low latency progress broadcasting across the global neural grid.' },
+              { title: 'Anti-Cheat', icon: <Shield className="text-accent" />, desc: 'Advanced biometric-ready focus validation to ensure absolute integrity.' },
+              { title: 'XP Betting', icon: <Zap className="text-accent" />, desc: 'High-stakes gamification. Risk your reputation on collective victory.' },
+            ].map((f, i) => (
               <framerMotion.div 
                 key={i}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                whileHover={{ scale: 1.05 }}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="p-8 border border-current rounded-3xl bg-current/5 hover:border-[#00F0FF]/50 hover:bg-[#00F0FF]/5 transition-all shadow-[0_0_0_rgba(0,240,255,0)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)]"
+                className="group p-10 glass-card hover:bg-white/5 transition-all cursor-pointer border border-white/5 hover:border-accent/30"
               >
-                <div className="w-12 h-12 bg-[#00F0FF]/20 rounded-full mb-6 flex items-center justify-center text-[#00F0FF] font-black">{i + 1}</div>
-                <h4 className="text-xl font-bold uppercase mb-2">{f}</h4>
-                <p className="text-sm opacity-60">Synchronize your focus state with operatives worldwide using ultra-low latency websockets.</p>
+                <div className="w-14 h-14 rounded-2xl bg-accent/10 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:bg-accent/20 transition-all">
+                  {f.icon}
+                </div>
+                <h4 className="text-2xl font-black uppercase mb-4">{f.title}</h4>
+                <p className="text-sm text-white/50 leading-relaxed">{f.desc}</p>
+                <ArrowRight className="mt-8 text-accent opacity-0 group-hover:opacity-100 group-hover:translate-x-2 transition-all" size={20} />
               </framerMotion.div>
             ))}
           </div>
         </section>
 
-        {/* Social Proof Carousel */}
-        <section className="text-center">
-          <h3 className="text-xl font-black uppercase tracking-widest mb-8 opacity-50">Join <span className="text-[#00F0FF] animate-pulse">12,408</span> Active Grinders</h3>
-          <div className="flex gap-4 overflow-x-auto pb-8 snap-x scrollbar-hide">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="shrink-0 w-80 p-6 border border-current rounded-2xl bg-current/5 snap-center text-left">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-full bg-[#00F0FF]/20" />
-                  <div>
-                    <p className="font-bold text-sm">Operative_0{i}</p>
-                    <p className="text-[10px] text-[#00F0FF] uppercase tracking-widest">Level 42</p>
-                  </div>
-                </div>
-                <p className="text-sm opacity-80 italic">"The AI Neural Coach instantly detected my burnout and forced a pause. Unbelievable system."</p>
-              </div>
-            ))}
-          </div>
+        {/* Real-time Heatmap Section */}
+        <section className="container mx-auto px-8 text-center space-y-16">
+           <div className="max-w-4xl mx-auto space-y-8">
+              <h3 className="text-5xl md:text-7xl font-black uppercase tracking-tighter">The Neural Grid is Live</h3>
+              <p className="text-white/40 font-bold uppercase tracking-widest text-sm">Real-time operative density across 142 sectors.</p>
+           </div>
+           <GlobalHeatmap />
         </section>
 
-        {/* FAQ Accordion */}
-        <section className="max-w-3xl mx-auto">
-          <h3 className="text-3xl font-black uppercase tracking-widest text-center mb-12">Protocol FAQ</h3>
-          <div className="space-y-4">
-            {['Is the Neural Coach free?', 'How do Study Duels work?', 'Can I sync with wearable biometrics?'].map((q, i) => (
-              <details key={i} className="group border border-current/20 rounded-xl bg-current/5 open:bg-current/10 transition-all cursor-pointer">
-                <summary className="p-6 font-bold uppercase tracking-wider flex justify-between items-center list-none">
-                  {q}
-                  <span className="text-[#00F0FF] group-open:rotate-45 transition-transform">+</span>
-                </summary>
-                <div className="p-6 pt-0 opacity-70 text-sm">
-                  Our documentation indicates full functionality across the OS. The AI coach utilizes live session metrics to intervene before neural strain reaches critical levels.
-                </div>
-              </details>
-            ))}
-          </div>
+        {/* Final CTA */}
+        <section className="container mx-auto px-8 py-40 bg-accent/5 rounded-[4rem] border border-accent/10 relative overflow-hidden text-center">
+           <div className="absolute inset-0 opacity-10 pointer-events-none">
+              <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent/40 via-transparent to-transparent" />
+           </div>
+           <h3 className="text-6xl md:text-8xl font-black uppercase tracking-tighter mb-12">Rewrite Your Discipline.</h3>
+           <div className="flex flex-col md:flex-row gap-6 justify-center items-center">
+              <button onClick={() => router.push("/signup")} className="px-12 py-6 bg-accent text-black text-lg font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-105 transition-all shadow-[0_0_50px_rgba(0,240,255,0.3)]">INITIALIZE SESSION</button>
+              <button onClick={() => router.push("/signin")} className="px-12 py-6 glass text-lg font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-white/10 transition-all">ACCESS DATA CORE</button>
+           </div>
         </section>
 
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-current/10 py-12 text-center text-xs font-bold uppercase tracking-widest opacity-50 relative overflow-hidden">
-        <div className="flex justify-center items-center gap-12 mb-6">
-          <div className="flex flex-col items-center">
-            <span className="text-2xl text-[#00F0FF]">1.4M</span>
-            <span>Focus Hours</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-2xl text-[#00F0FF]">98%</span>
-            <span>Uptime</span>
-          </div>
+      <footer className="bg-[#050505] border-t border-white/5 py-24">
+        <div className="container mx-auto px-8 grid grid-cols-1 md:grid-cols-4 gap-16 mb-24">
+           <div className="col-span-2">
+              <h2 className="text-3xl font-black tracking-widest uppercase mb-8">GrindLock<span className="text-accent">.</span></h2>
+              <p className="text-sm text-white/40 max-w-sm leading-relaxed font-bold uppercase tracking-wider">The premier operating system for extreme focus. Built by operatives, for operatives. Absolute efficiency is the only standard.</p>
+           </div>
+           <div>
+              <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-6">Protocols</h5>
+              <ul className="space-y-4 text-xs font-bold uppercase tracking-widest text-white/60">
+                 <li className="hover:text-accent transition-colors cursor-pointer">Deep Work</li>
+                 <li className="hover:text-accent transition-colors cursor-pointer">Neural Link</li>
+                 <li className="hover:text-accent transition-colors cursor-pointer">Apex Arena</li>
+              </ul>
+           </div>
+           <div>
+              <h5 className="text-[10px] font-black uppercase tracking-[0.3em] text-accent mb-6">Liaison</h5>
+              <ul className="space-y-4 text-xs font-bold uppercase tracking-widest text-white/60">
+                 <li className="hover:text-accent transition-colors cursor-pointer">Support</li>
+                 <li className="hover:text-accent transition-colors cursor-pointer">Terms</li>
+                 <li className="hover:text-accent transition-colors cursor-pointer">Privacy</li>
+              </ul>
+           </div>
         </div>
-        <p>GrindLock OS © 2026</p>
+        <div className="container mx-auto px-8 flex flex-col md:flex-row justify-between items-center text-[10px] font-black uppercase tracking-[0.5em] text-white/20">
+           <p>© 2026 GRINDLOCK NEURAL INFRASTRUCTURE</p>
+           <p className="mt-4 md:mt-0">SECURE TRANSMISSION ENCRYPTED</p>
+        </div>
       </footer>
 
     </div>
