@@ -782,13 +782,11 @@ router.put("/rooms/:roomId/settings", async (req, res, next) => {
   }
 });
 
-// --- AI COACHING ---
 router.post("/users/:userId/ai-coach", async (req, res, next) => {
   try {
     const { userId } = req.params;
     const { message, context } = req.body;
     
-    // Simulate AI logic based on user data
     const user = await User.findById(userId);
     const recentSessions = await StudySession.find({ userId }).sort({ createdAt: -1 }).limit(3);
     const avgFocus = recentSessions.reduce((acc, s) => acc + (s.focusedMinutes || 0), 0) / (recentSessions.length || 1);
