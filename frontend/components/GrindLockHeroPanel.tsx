@@ -11,16 +11,17 @@ import {
 } from "@react-three/drei";
 import * as THREE from "three";
 
-function TimerDisplay() {
-  const [time, setTime] = useState("25:00");
+function TimerDisplay({ isPlaying, togglePlay }: { isPlaying: boolean, togglePlay: () => void }) {
+  const [timeLeft, setTimeLeft] = useState(1500); // 25 mins in seconds
   
-  // Simulation of a ticking timer
-  useFrame((state) => {
-    const s = Math.floor(state.clock.elapsedTime % 60);
-    const m = Math.floor(25 - (state.clock.elapsedTime / 60) % 25);
-    // setTime(`${m.toString().padStart(2, '0')}:${(59-s).toString().padStart(2, '0')}`);
-    // Simplified for performance in preview
+  useFrame((state, delta) => {
+    if (isPlaying && timeLeft > 0) {
+      setTimeLeft((prev) => Math.max(0, prev - delta * 50)); // Fast ticking for demo
+    }
   });
+
+  const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const s = Math.floor(timeLeft % 60).toString().padStart(2, '0');
 
   return (
     <group position={[-0.7, 0.4, 0.1]}>
@@ -41,9 +42,9 @@ function TimerDisplay() {
         fontWeight="bold"
         font="https://fonts.gstatic.com/s/outfit/v11/Q_k79pU63_fa7S1chDyk.woff"
       >
-        24:59
+        {m}:{s}
       </Text>
-      <mesh position={[0.4, -0.15, -0.05]}>
+      <mesh position={[0.4, -0.15, -0.05]} onClick={togglePlay} onPointerOver={(e) => (document.body.style.cursor = 'pointer')} onPointerOut={(e) => (document.body.style.cursor = 'auto')}>
         <planeGeometry args={[0.9, 0.25]} />
         <meshBasicMaterial color="#4f78ff" transparent opacity={0.1} />
       </mesh>
@@ -111,6 +112,7 @@ function ProgressRing() {
 function MainPanel() {
   const group = useRef<THREE.Group>(null);
   const { mouse } = useThree();
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useFrame(() => {
     if (group.current) {
@@ -141,7 +143,7 @@ function MainPanel() {
         <meshBasicMaterial color="#4f78ff" transparent opacity={0.2} />
       </mesh>
 
-      <TimerDisplay />
+      <TimerDisplay isPlaying={isPlaying} togglePlay={() => setIsPlaying(!isPlaying)} />
       <StreakIndicator />
       <ProgressRing />
       

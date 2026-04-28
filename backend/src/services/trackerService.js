@@ -280,6 +280,12 @@ const challengeProgress = (goals, sessions, streak) => {
   const weeklyGoals = goals.filter((g) => g.date >= fromKey && g.date <= todayKey());
   const weeklyMinutes = weeklyGoals.reduce((sum, g) => sum + (g.studiedMinutes || 0), 0);
   const noMissed = weeklyGoals.length === 7 && weeklyGoals.every((g) => g.completed);
+  
+  const yKey = yesterdayKey();
+  const yGoal = goals.find((g) => g.date === yKey);
+  const yMinutes = yGoal ? yGoal.studiedMinutes || 0 : 0;
+  const todayGoalObj = goals.find((g) => g.date === todayKey());
+  const tMinutes = todayGoalObj ? todayGoalObj.studiedMinutes || 0 : 0;
 
   return [
     {
@@ -299,6 +305,15 @@ const challengeProgress = (goals, sessions, streak) => {
       completed: noMissed,
       rewardXp: 200,
       rewardBadge: "Unbreakable Week"
+    },
+    {
+      id: "beat-yesterday",
+      title: "Beat Yesterday's Time",
+      target: yMinutes + 1,
+      value: tMinutes,
+      completed: yMinutes > 0 && tMinutes > yMinutes,
+      rewardXp: 50,
+      rewardBadge: "Relentless Improver"
     }
   ];
 };

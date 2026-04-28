@@ -18,14 +18,6 @@ export const socket = io(SOCKET_URL, {
   reconnection: true
 });
 
-function normalizeApiBase(raw?: string) {
-  const fallback = "http://localhost:5000/api";
-  const value = (raw || fallback).trim();
-  return value.replace(/\/+$/, "");
-}
-
-const API_BASE = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
-
 function getAuthToken() {
   if (typeof window === "undefined") return "";
   return localStorage.getItem(AUTH_TOKEN_KEY) || "";
@@ -141,11 +133,12 @@ export async function setModes(
   userId: string,
   roastMode: boolean,
   identityType?: "Casual" | "Serious" | "Hardcore",
-  motivationWhy?: string
+  motivationWhy?: string,
+  ethAddress?: string
 ): Promise<{ dashboard: Dashboard }> {
   return request(`/users/${userId}/modes`, {
     method: "PUT",
-    body: JSON.stringify({ roastMode, identityType, motivationWhy })
+    body: JSON.stringify({ roastMode, identityType, motivationWhy, ethAddress })
   });
 }
 

@@ -216,6 +216,43 @@ def analyze_sessions(payload: AnalyticsRequest):
         "graphs": graphs
     }
 
+class MatchmakingRequest(BaseModel):
+    userId: str
+    timezone: str
+    studyMode: str
+    targetMinutes: int
+
+# Temporary in-memory store for matchmaking pool
+active_pool = []
+
+@app.post("/matchmake")
+def matchmake_users(req: MatchmakingRequest):
+    # Simple algorithm: find someone in the pool with the same mode and similar target
+    best_match = None
+    for candidate in active_pool:
+        if candidate["userId"] != req.userId and candidate["studyMode"] == req.studyMode:
+            # Check target proximity (e.g., within 30 mins)
+            if abs(candidate["targetMinutes"] - req.targetMinutes) <= 30:
+                best_match = candidate
+                break
+    
+    if best_match:
+        # Match found! Remove candidate from pool
+        active_pool.remove(best_match)
+        return {"matchFound": True, "partnerId": best_match["userId"], "message": "Optimal partner located."}
+    
+    # Add to pool
+    # Clean up old entries from the same user to avoid duplicates
+    global active_pool
+    active_pool = [u for u in active_pool if u["userId"] != req.userId]
+    active_pool.append({
+        "userId": req.userId,
+        "timezone": req.timezone,
+        "studyMode": req.studyMode,
+        "targetMinutes": req.targetMinutes
+    })
+    return {"matchFound": False, "message": "Entering matchmaking pool. Awaiting optimal partner..."}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

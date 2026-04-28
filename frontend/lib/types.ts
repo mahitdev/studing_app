@@ -6,6 +6,7 @@ export type User = {
   xp?: number;
   level?: number;
   badges?: string[];
+  ethAddress?: string;
 };
 
 export type DailyGoal = {

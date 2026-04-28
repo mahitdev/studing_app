@@ -9,7 +9,16 @@ const studyRoomSchema = new mongoose.Schema(
     isPrivate: { type: Boolean, default: false },
     roomCode: { type: String, unique: true, sparse: true },
     activeSubject: { type: String, default: "General" },
-    memberLimit: { type: Number, default: 10 }
+    memberLimit: { type: Number, default: 10 },
+    sharedGoal: { 
+      title: { type: String, default: "Group Weekly Target" },
+      targetMinutes: { type: Number, default: 600 },
+      currentMinutes: { type: Number, default: 0 }
+    },
+    ambientSettings: {
+      noiseLevel: { type: String, default: "medium" },
+      theme: { type: String, default: "cyberpunk" }
+    }
   },
   { timestamps: true }
 );

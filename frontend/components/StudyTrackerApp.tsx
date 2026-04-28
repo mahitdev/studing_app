@@ -57,7 +57,6 @@ import {
   ChevronRight,
   ShieldCheck,
   AlertTriangle,
-  Swords,
   Camera,
   Play,
   Pause,
@@ -161,7 +160,7 @@ export default function StudyTrackerApp() {
     setTimeout(async () => {
       try {
         const mockAddress = "0x" + Math.random().toString(16).slice(2, 10) + "..." + Math.random().toString(16).slice(2, 6);
-        await setModes(user._id, settings.roastMode, identityType as any, motivationWhy, mockAddress);
+        if (user) await setModes(user._id, settings.roastMode, identityType as any, motivationWhy, mockAddress);
         setWalletConnected(true);
         setTimerAlert("Wallet synchronized. NFT badges unlocked.");
       } catch {
@@ -204,6 +203,15 @@ export default function StudyTrackerApp() {
   const [ambientPlaying, setAmbientPlaying] = useState(false);
   const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [currentRoom, setCurrentRoom] = useState<any>(null);
+  const [isCoachOpen, setIsCoachOpen] = useState(false);
+  const [duels, setDuels] = useState<any[]>([]);
+  const [activeDuel, setActiveDuel] = useState<any>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [progress, setProgress] = useState(0);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -339,9 +347,6 @@ export default function StudyTrackerApp() {
   }, []);
 
   // Real-Time Neural Link (Socket.io)
-  const [isCoachOpen, setIsCoachOpen] = useState(false);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [currentRoom, setCurrentRoom] = useState<any>(null);
 
   const loadRooms = async () => {
     try {
@@ -352,11 +357,22 @@ export default function StudyTrackerApp() {
     }
   };
 
-  useEffect(() => {
-    if (screen === "colosseum") loadRooms();
-  }, [screen]);
+  const handleCreateRoom = async () => {
+    if (!user) return;
+    try {
+      setIsActionLoading(true);
+      const room = await createRoom(user._id, { name: `${user.name}'s Focus Hub`, ambientSettings: "default" });
+      setRooms(prev => [...prev, room]);
+      handleJoinRoom(room._id);
+    } catch {
+      setError("Failed to initialize cluster.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   const handleJoinRoom = async (roomId: string) => {
+    if (!user) return;
     try {
       const room = await joinRoom(user._id, roomId);
       setCurrentRoom(room);
@@ -366,10 +382,10 @@ export default function StudyTrackerApp() {
     }
   };
 
-  const [duels, setDuels] = useState<any[]>([]);
-  const [activeDuel, setActiveDuel] = useState<any>(null);
+
 
   const loadDuels = async () => {
+    if (!user) return;
     try {
       const data = await fetchDuels(user._id);
       setDuels(data);
@@ -382,29 +398,50 @@ export default function StudyTrackerApp() {
     loadDuels();
     const interval = setInterval(loadDuels, 15000); // Poll for new challenges
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    if (activeSession && activeDuel) {
-      const progress = (elapsed / (activeDuel.durationMinutes * 60)) * 100;
-      syncDuelProgress(activeDuel._id, user._id, Math.min(100, progress));
-    }
-  }, [elapsed, activeSession, activeDuel]);
+  }, [])
 
   const handleChallenge = async (opponentId: string) => {
+    if (!user) return;
     try {
-      const duel = await challengeDuel(user._id, opponentId, 30);
-      setTimerAlert(`Challenge sent to agent. Awaiting synchronization.`);
+      setIsActionLoading(true);
+      await challengeDuel(user._id, opponentId, 25);
+      setTimerAlert("Duel challenge transmitted.");
       loadDuels();
     } catch {
       setError("Challenge transmission failed.");
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (!activeSession) {
+      setElapsed(0);
+      return;
+    }
+    const updateTime = () => setElapsed(elapsedForSession(activeSession));
+    updateTime();
+    if (activeSession.status !== "running") return;
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
+  }, [activeSession?._id, activeSession?.status]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (activeSession && activeDuel) {
+      const prog = (elapsed / (activeDuel.durationMinutes * 60)) * 100;
+      syncDuelProgress(activeDuel._id, user._id, Math.min(100, prog));
+    }
+  }, [elapsed, activeSession, activeDuel, user]);
+
+  useEffect(() => {
+    if (user) {
+      socket.connect();
+      socket.emit("authenticate", user._id);
+      
       socket.on("friend-update", (data: any) => {
         console.log("[GrindLock] Real-time pulse received:", data);
         if (data.userId !== user._id) {
-          // If a friend started studying, show a quick toast
           if (data.action === "started") {
             setTimerAlert(`${data.subject} session started by an operative.`);
             setTimeout(() => setTimerAlert(""), 5000);
@@ -486,6 +523,12 @@ export default function StudyTrackerApp() {
         .then((data) => {
           setPythonAnalytics(data);
           setAnalyticsLoaded(true);
+          if (data?.burnout?.risk === "CRITICAL") {
+            setTimerAlert("CRITICAL BURNOUT DETECTED. Emergency Pause Broadcasting to Squad!");
+            socket.emit("room-action", { action: "burnout-alert", roomId: currentRoom?._id, message: "Operative Burnout Detected. Requesting support." });
+          } else if (data?.burnout?.risk === "MODERATE") {
+            setTimerAlert("AI Coach: " + data.burnout.intervention);
+          }
         })
         .catch((err) => {
           console.error("Analytics fetch error:", err);
@@ -786,7 +829,7 @@ export default function StudyTrackerApp() {
     </div>
   );
 
-  const navItems: Array<{ id: Screen; label: string; icon: any }> = [
+  const navItems = [
     { id: "dashboard", label: "Overview", icon: LayoutDashboard },
     { id: "timer", label: "Focus Timer", icon: Timer },
     { id: "analytics", label: "Neural Engine", icon: BarChart3 },
@@ -810,7 +853,7 @@ export default function StudyTrackerApp() {
             <button 
               key={item.id} 
               className={`nav-btn w-full ${screen === item.id ? "active" : ""}`}
-              onClick={() => setScreen(item.id)}
+              onClick={() => setScreen(item.id as Screen)}
             >
               <item.icon size={18} />
               {item.label}
@@ -893,7 +936,6 @@ export default function StudyTrackerApp() {
         </header>
 
         <AnimatePresence>
-          {showChamber && <LiveStudyChamber onClose={() => setShowChamber(false)} />}
           <NeuralCoach userId={user._id} isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
           
           {pythonAnalytics?.burnout?.risk !== "Low" && (
@@ -1042,6 +1084,7 @@ export default function StudyTrackerApp() {
                     </button>
                   </div>
                 </div>
+              </div>
                 </>
               )}
             </motion.div>
@@ -1080,6 +1123,9 @@ export default function StudyTrackerApp() {
                 activeSession={activeSession}
                 studyMode={studyMode}
                 plannedDuration={plannedDuration}
+                elapsed={elapsed}
+                progress={progress}
+                setProgress={setProgress}
               />
               <div className="mt-16 glass-card p-10 w-full max-w-xl">
                 <div className="grid grid-cols-2 gap-8 mb-10">
@@ -1343,6 +1389,15 @@ export default function StudyTrackerApp() {
               </div>
             </motion.div>
           )}
+
+          {currentRoom && (
+            <LiveStudyChamber 
+              onClose={() => setCurrentRoom(null)} 
+              room={currentRoom}
+              socket={socket}
+              userId={user?._id}
+            />
+          )}
         </AnimatePresence>
 
         {error && (
@@ -1442,7 +1497,7 @@ function NeuralAnalytics({ data }: { data: any }) {
         <div className="glass-card p-8">
           <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted mb-8">Productivity Pulse (7D)</h4>
           <div className="h-64">
-            <Line data={chartData} options={options} />
+            <Line data={chartData} options={options as any} />
           </div>
         </div>
         <div className="glass-card p-8">
@@ -1543,9 +1598,12 @@ function NeuralCoach({ userId, isOpen, onClose }: { userId: string, isOpen: bool
   );
 }
 
-function LiveStudyChamber({ onClose }: { onClose: () => void }) {
+function LiveStudyChamber({ onClose, room, socket, userId }: { onClose: () => void, room: any, socket: any, userId: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [streamActive, setStreamActive] = useState(false);
+  const [messages, setMessages] = useState<{user: string, text: string}[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [ambientSetting, setAmbientSetting] = useState(room?.ambientSettings || "default");
 
   useEffect(() => {
     async function startVideo() {
@@ -1566,6 +1624,32 @@ function LiveStudyChamber({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!socket) return;
+    const handleRoomUpdate = (data: any) => {
+      if (data.action === "chat") {
+        setMessages((prev) => [...prev, { user: data.sender || "Unknown", text: data.message }]);
+      }
+      if (data.action === "ambient-vote") {
+        setAmbientSetting(data.setting);
+      }
+    };
+    socket.on("room-action", handleRoomUpdate);
+    return () => { socket.off("room-action", handleRoomUpdate); };
+  }, [socket]);
+
+  const sendChat = () => {
+    if (!chatInput.trim() || !socket) return;
+    socket.emit("room-action", { action: "chat", roomId: room?._id, message: chatInput, sender: userId });
+    setChatInput("");
+  };
+
+  const voteAmbient = (setting: string) => {
+    if (!socket) return;
+    socket.emit("room-action", { action: "ambient-vote", roomId: room?._id, setting });
+    setAmbientSetting(setting);
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
@@ -1573,33 +1657,80 @@ function LiveStudyChamber({ onClose }: { onClose: () => void }) {
       exit={{ opacity: 0, scale: 0.95 }}
       className="fixed inset-0 z-[100] flex items-center justify-center p-12 bg-black/80 backdrop-blur-xl"
     >
-      <div className="w-full max-w-5xl aspect-video glass-card overflow-hidden flex flex-col">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
-            <h3 className="display-sm text-xl uppercase tracking-tighter">Live Neural Chamber <span className="text-muted text-sm ml-2">#0432</span></h3>
-          </div>
-          <button onClick={onClose} className="nav-btn text-danger">DISCONNECT</button>
-        </div>
-        <div className="flex-1 relative bg-black/40">
-          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover grayscale opacity-60" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-          
-          {/* Simulated Peer Participants */}
-          <div className="absolute top-6 right-6 flex flex-col gap-4">
-            <div className="w-32 h-32 glass-card overflow-hidden border-accent/20">
-              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-accent">USER_881 (Muted)</div>
+      <div className="w-full max-w-6xl h-[80vh] glass-card overflow-hidden flex">
+        {/* Main Video Area */}
+        <div className="flex-1 flex flex-col relative border-r border-white/5 bg-black/40">
+          <div className="absolute top-0 w-full p-6 z-10 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+            <div className="flex items-center gap-4">
+              <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
+              <h3 className="display-sm text-xl uppercase tracking-tighter">Live Neural Chamber <span className="text-muted text-sm ml-2">{room?.name || "#0432"}</span></h3>
             </div>
-            <div className="w-32 h-32 glass-card overflow-hidden border-white/10">
-              <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-muted italic">AWAITING PEER...</div>
-            </div>
+            <button onClick={onClose} className="nav-btn text-danger">DISCONNECT</button>
           </div>
 
-          <div className="absolute bottom-10 left-10 flex items-center gap-6">
+          <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transition-all ${ambientSetting === "focus-deep" ? "grayscale contrast-150" : ambientSetting === "neon" ? "sepia hue-rotate-90 saturate-200" : ""}`} />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+
+          {/* Ambient Controls */}
+          <div className="absolute top-20 right-6 flex flex-col gap-2 z-10 bg-black/40 p-2 rounded-xl border border-white/10 backdrop-blur-md">
+            <p className="text-[10px] text-muted text-center font-bold tracking-widest mb-1">ENV</p>
+            {['default', 'focus-deep', 'neon'].map(s => (
+              <button 
+                key={s} 
+                onClick={() => voteAmbient(s)}
+                className={`text-[10px] px-2 py-1 rounded uppercase tracking-widest border ${ambientSetting === s ? 'border-accent text-accent' : 'border-transparent text-muted hover:text-white'}`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+          
+          <div className="absolute bottom-10 left-10 flex items-center gap-6 z-10">
             <div className="p-4 glass-light rounded-2xl flex items-center gap-3">
               <div className="w-2 h-2 rounded-full bg-accent animate-ping" />
               <p className="text-xs font-bold tracking-widest uppercase">Global Accountability Active</p>
             </div>
+          </div>
+        </div>
+
+        {/* Sidebar: Participants & Spectator Chat */}
+        <div className="w-80 flex flex-col bg-[#050505]">
+          <div className="p-6 border-b border-white/5">
+            <h4 className="text-xs font-black uppercase tracking-widest text-muted">Squad & Spectators</h4>
+          </div>
+          <div className="p-4 border-b border-white/5 grid grid-cols-2 gap-2">
+            <div className="aspect-square glass-light rounded-xl overflow-hidden relative">
+               <div className="absolute inset-0 flex flex-col items-center justify-center">
+                 <span className="text-[10px] font-black text-accent mb-2">USER_881</span>
+                 <div className="w-full px-2">
+                   <div className="h-1 bg-white/10 rounded-full w-full"><div className="h-full bg-accent rounded-full" style={{ width: '45%' }}/></div>
+                 </div>
+               </div>
+            </div>
+            <div className="aspect-square glass-light rounded-xl overflow-hidden relative">
+               <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-muted italic">AWAITING...</div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-hide">
+             {messages.map((m, i) => (
+               <div key={i} className="text-xs">
+                 <span className="text-accent font-bold uppercase tracking-wider">{m.user}: </span>
+                 <span className="opacity-80">{m.text}</span>
+               </div>
+             ))}
+          </div>
+
+          <div className="p-4 border-t border-white/5 flex gap-2">
+            <input 
+              type="text" 
+              value={chatInput} 
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && sendChat()}
+              placeholder="Send hype..." 
+              className="flex-1 bg-white/5 rounded px-3 py-2 text-xs focus:outline-none focus:border-accent border border-transparent transition-colors"
+            />
+            <button onClick={sendChat} className="bg-white/10 hover:bg-accent hover:text-black transition-colors px-3 py-2 rounded text-xs font-bold uppercase">Send</button>
           </div>
         </div>
       </div>
@@ -1607,31 +1738,16 @@ function LiveStudyChamber({ onClose }: { onClose: () => void }) {
   );
 }
 
-function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSession: StudySession | null, studyMode: string, plannedDuration: number }) {
-  const [elapsed, setElapsed] = useState(0);
-  const [progress, setProgress] = useState(0);
+function PremiumTimer({ activeSession, studyMode, plannedDuration, elapsed, progress, setProgress }: { activeSession: StudySession | null, studyMode: string, plannedDuration: number, elapsed: number, progress: number, setProgress: (p: number) => void }) {
   const notifiedRef = useRef(false);
 
   useEffect(() => {
     if (!activeSession) {
-      setElapsed(0);
       setProgress(0);
       notifiedRef.current = false;
       return;
     }
-
-    // Use wall-clock calculation instead of simple increment to prevent drift
-    const updateTime = () => {
-      setElapsed(elapsedForSession(activeSession));
-    };
-
-    updateTime();
-
-    if (activeSession.status !== "running") return;
-
-    const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval);
-  }, [activeSession?._id, activeSession?.status]);
+  }, [activeSession?._id]);
 
   useEffect(() => {
     const totalSecs = Math.max(1, (activeSession?.plannedDurationMinutes || (studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration)) * 60);
@@ -1646,7 +1762,7 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSes
       }
       notifiedRef.current = true;
     }
-  }, [elapsed, activeSession, studyMode, plannedDuration]);
+  }, [elapsed, activeSession, studyMode, plannedDuration, setProgress]);
 
   return (
     <div className="relative flex items-center justify-center">
@@ -1660,3 +1776,4 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration }: { activeSes
     </div>
   );
 }
+

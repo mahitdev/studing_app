@@ -763,6 +763,25 @@ router.post("/rooms/:roomId/join", async (req, res, next) => {
   }
 });
 
+router.put("/rooms/:roomId/settings", async (req, res, next) => {
+  try {
+    const { roomId } = req.params;
+    const { sharedGoal, ambientSettings } = req.body;
+    const room = await StudyRoom.findByIdAndUpdate(
+      roomId,
+      { sharedGoal, ambientSettings },
+      { new: true }
+    );
+    const io = req.app.get("io");
+    if (io) {
+      io.to(roomId).emit("room-settings-updated", { roomId, sharedGoal, ambientSettings });
+    }
+    res.json(room);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // --- AI COACHING ---
 router.post("/users/:userId/ai-coach", async (req, res, next) => {
   try {
