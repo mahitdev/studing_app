@@ -102,13 +102,22 @@ async function sendProgressEmail(user, email) {
     </div>
   `;
 
-  await mailer.sendMail({
-    from: fromEmail,
-    to: email,
-    subject,
-    text,
-    html
-  });
+  try {
+    await mailer.sendMail({
+      from: fromEmail,
+      to: email,
+      subject,
+      text,
+      html
+    });
+  } catch (err) {
+    console.error(`❌ Email transmission failed: ${err.message}`);
+    console.log("--- FALLING BACK TO SIMULATED LOG ---");
+    console.log(`To: ${email}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Body: ${JSON.stringify(summary)}`);
+    console.log("-------------------------------------");
+  }
 
   return summary;
 }

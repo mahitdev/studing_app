@@ -20,15 +20,27 @@ if (process.env.NODE_ENV === "production") {
   }
 }
 
-// Attach IO to app for access in routes
 app.set("io", io);
 
 io.on("connection", (socket) => {
   console.log(`[GrindLock] Neural link established: ${socket.id}`);
   
-  socket.on("join-room", (userId) => {
+  socket.on("authenticate", (userId) => {
     socket.join(userId);
-    console.log(`[GrindLock] User ${userId} synchronized with room.`);
+    console.log(`[GrindLock] User ${userId} authenticated and joined private channel.`);
+  });
+
+  socket.on("join-room", (data) => {
+    const roomId = typeof data === "string" ? data : data.roomId;
+    socket.join(roomId);
+    console.log(`[GrindLock] Socket joined synchronized target: ${roomId}`);
+  });
+
+  socket.on("room-action", (data) => {
+    const { roomId, action, ...rest } = data;
+    if (roomId) {
+      io.to(roomId).emit("room-action", { action, ...rest });
+    }
   });
 
   socket.on("disconnect", () => {

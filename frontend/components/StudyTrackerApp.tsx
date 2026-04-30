@@ -220,6 +220,7 @@ export default function StudyTrackerApp() {
   const [elapsed, setElapsed] = useState(0);
   const [progress, setProgress] = useState(0);
   
+  const userId = user?._id;
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -329,6 +330,15 @@ export default function StudyTrackerApp() {
         setIsInitializing(true);
         const userId = localStorage.getItem(userKey);
         const authToken = localStorage.getItem(authTokenKey);
+
+        // Protocol Migration: if backend is present but user is mock, clear storage
+        if (userId?.startsWith("mock-") && process.env.NEXT_PUBLIC_API_URL) {
+          console.warn("[GrindLock] Mock identity detected on real network. Purging stale neural link.");
+          localStorage.clear();
+          setIsInitializing(false);
+          return;
+        }
+
         if (!userId || !authToken) {
           setIsInitializing(false);
           return;
@@ -823,14 +833,21 @@ export default function StudyTrackerApp() {
   );
 
   if (!user) return (
-    <div className="auth-wrapper">
-      <div className="auth-form text-center">
-        <h1 className="display-lg mb-4">Authentication Required</h1>
+    <div className="auth-wrapper relative z-[200]">
+      <div className="auth-form text-center p-12 glass-card border-none shadow-2xl">
+        <Zap size={48} className="text-accent mx-auto mb-8 animate-pulse" />
+        <h1 className="display-lg mb-4">Neural Auth Required</h1>
         <p className="text-muted mb-8 italic">
-          {error || "Protocol identity not confirmed. Please sign in to proceed."}
+          {error || "Protocol identity not confirmed. Current link status: OFFLINE."}
         </p>
         <div className="flex flex-col gap-4">
-          <button className="btn-primary" onClick={() => window.location.href = '/signin'}>Go to Sign In</button>
+          <Link href="/signin" className="btn-primary py-4">INITIALIZE NEURAL LINK</Link>
+          <button 
+            className="text-[10px] font-black uppercase tracking-widest text-muted hover:text-white transition-colors"
+            onClick={() => { localStorage.clear(); window.location.reload(); }}
+          >
+            Purge Stale Local State
+          </button>
         </div>
       </div>
     </div>
@@ -850,12 +867,36 @@ export default function StudyTrackerApp() {
       <div className="cursor-glow" />
       
       <aside className="sidebar">
-        <div className="mb-12">
-          <h1 className="display-md text-2xl tracking-tighter">GRINDLOCK<span className="text-accent">.</span></h1>
-          <p className="text-[10px] font-black tracking-[0.2em] uppercase opacity-40">Discipline Hub</p>
+        <div className="p-8 border-b border-white/5">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent to-accent-dim flex items-center justify-center shadow-lg shadow-accent/20">
+              <Zap size={20} className="text-white" fill="white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-black tracking-widest text-white">GRINDLOCK</h1>
+              <p className="text-[8px] font-black tracking-[0.2em] text-accent uppercase">Neural OS v1.1.0</p>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-3 mb-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] font-black text-muted uppercase">Link Status</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
+                <span className="text-[9px] font-bold text-white">ONLINE</span>
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] font-black text-muted uppercase">Neural ID</span>
+              <span className={`text-[9px] font-bold ${userId?.startsWith('mock') ? 'text-warning' : 'text-accent'}`}>
+                {userId ? (userId.length > 10 ? userId.slice(0, 8) + '...' : userId) : 'NONE'}
+              </span>
+            </div>
+          </div>
         </div>
 
-        <nav className="flex-1">
+        <div className="flex-1 px-8 py-6">
+          <nav className="space-y-1">
           {navItems.map((item) => (
             <button 
               key={item.id} 
@@ -1930,6 +1971,384 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration, elapsed, prog
         {formatHMS(elapsed)}
       </div>
     </div>
+  );
+}
+
+function NeuralCoach({ userId, isOpen, onClose }: { userId: string, isOpen: boolean, onClose: () => void }) {
+  const [messages, setMessages] = useState<{ role: "user" | "assistant", content: string }[]>([
+    { role: "assistant", content: "Neural Coach active. Protocol: Maximum Discipline. How can I assist your grind?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+    const userMsg = input;
+    setInput("");
+    setMessages(prev => [...prev, { role: "user", content: userMsg }]);
+    setLoading(true);
+    try {
+      const reply = await getAICoachReply(userId, userMsg);
+      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "assistant", content: "Neural transmission failed. Focus on the core mission." }]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div initial={{ x: 400 }} animate={{ x: 0 }} exit={{ x: 400 }} className="fixed right-0 top-0 h-full w-96 glass-card rounded-none z-[150] flex flex-col shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
+          <div className="p-8 border-b border-white/5 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest">Neural Coach</h3>
+              <p className="text-[10px] text-accent font-bold mt-1 uppercase">AI-Driven Discipline</p>
+            </div>
+            <button onClick={onClose} className="p-2 nav-btn rounded-full"><Plus className="rotate-45" /></button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-8 space-y-6">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
+                <div className={`max-w-[90%] p-4 rounded-2xl text-xs font-medium ${m.role === "user" ? "bg-accent/20 border border-accent/20" : "bg-white/5 border border-white/5 text-white/80"}`}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {loading && <div className="text-[10px] font-black animate-pulse text-accent uppercase tracking-widest">Generating Insight...</div>}
+          </div>
+          <div className="p-8 border-t border-white/5">
+            <div className="flex gap-2">
+              <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Ask for advice or motivation..." className="flex-1 text-xs" />
+              <button onClick={sendMessage} className="bg-accent p-3 rounded-xl text-black"><Send size={16} /></button>
+            </div>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function NeuralAnalytics({ data }: { data: any }) {
+  if (!data || data.error) return (
+    <div className="p-20 text-center opacity-40">
+      <RefreshCw className="mx-auto mb-4 animate-spin" size={32} />
+      <p className="text-xs font-black uppercase tracking-widest">Neural Link Synchronizing...</p>
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-2 gap-10">
+      <div className="space-y-10">
+        <div className="grid grid-cols-2 gap-6">
+          <div className="glass-card p-6">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Efficiency Rating</p>
+            <p className="text-3xl font-black">{data.focus_score}%</p>
+          </div>
+          <div className="glass-card p-6">
+            <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Consistency Index</p>
+            <p className="text-3xl font-black">{data.consistency_score}%</p>
+          </div>
+        </div>
+        
+        <div className="glass-card p-8">
+          <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-6">ML Focus Trajectory</h3>
+          {data.graphs?.focus_trend ? (
+            <img src={`data:image/png;base64,${data.graphs.focus_trend}`} className="w-full rounded-xl border border-white/5" />
+          ) : (
+             <div className="h-48 bg-white/5 rounded-xl animate-pulse flex items-center justify-center text-[10px] font-black uppercase text-muted">Awaiting Neural Map...</div>
+          )}
+        </div>
+
+        <div className="glass-card p-8 border-l-4 border-l-warning">
+           <h3 className="text-xs font-black uppercase tracking-widest text-warning mb-4 flex items-center gap-2"><AlertTriangle size={14}/> Weak Pattern Detected</h3>
+           <p className="text-sm font-medium leading-relaxed">{data.weak_pattern}</p>
+        </div>
+      </div>
+
+      <div className="space-y-10">
+        <div className="glass-card p-8">
+          <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-6">Knowledge Cluster Distribution</h3>
+          {data.graphs?.subject_distribution ? (
+            <img src={`data:image/png;base64,${data.graphs.subject_distribution}`} className="w-full max-w-[300px] mx-auto" />
+          ) : (
+            <div className="h-48 bg-white/5 rounded-xl animate-pulse" />
+          )}
+        </div>
+
+        <div className="glass-card p-8 bg-gradient-to-br from-accent/20 to-transparent border-none">
+           <h3 className="text-xs font-black uppercase tracking-widest text-accent mb-4">Neural Insight</h3>
+           <p className="text-sm font-bold italic leading-relaxed text-white">"{data.message}"</p>
+           {data.ml_insights?.prediction_text && (
+             <div className="mt-6 p-4 glass rounded-xl border-l-2 border-accent">
+               <p className="text-[10px] font-black uppercase tracking-widest text-accent mb-2">AI PREDICTION</p>
+               <p className="text-xs font-medium">{data.ml_insights.prediction_text}</p>
+             </div>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClose: () => void }) {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [sharedNotes, setSharedNotes] = useState("");
+  const [members, setMembers] = useState<any[]>([]);
+  const [ambientSetting, setAmbientSetting] = useState("focus-deep");
+  const [alerts, setAlerts] = useState<any[]>([]);
+  const [isBettingOpen, setIsBettingOpen] = useState(false);
+  const [betAmount, setBetAmount] = useState(100);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (!socket || !room?._id) return;
+
+    socket.emit("join-room", { roomId: room._id, userId });
+
+    socket.on("room-update", (data: any) => {
+      setMembers(data.members || []);
+      setSharedNotes(data.notes || "");
+      setAmbientSetting(data.ambient || "focus-deep");
+    });
+
+    socket.on("notes-updated", (data: any) => {
+      if (data.userId !== userId) setSharedNotes(data.notes);
+    });
+
+    socket.on("ambient-changed", (data: any) => {
+      setAmbientSetting(data.track);
+      setMessages(prev => [...prev, { user: "SYSTEM", text: `Ambient environment switched to: ${data.track}` }]);
+    });
+
+    socket.on("emergency-alert", (data: any) => {
+      setAlerts(prev => [...prev, data]);
+      setTimeout(() => setAlerts(prev => prev.filter(a => a !== data)), 5000);
+    });
+
+    socket.on("ai-coach-broadcast", (data: any) => {
+      setMessages(prev => [...prev, { user: "NEURAL_COACH", text: data.message }]);
+    });
+
+    socket.on("bet-placed", (data: any) => {
+      setMessages(prev => [...prev, { user: "SYSTEM", text: `${data.userName} bet ${data.amount} XP on ${data.outcome}` }]);
+    });
+
+    socket.on("room-action", (data: any) => {
+      if (data.action === "chat") {
+        setMessages((prev) => [...prev, { user: data.userName || "Unknown", text: data.message }]);
+      }
+    });
+
+    return () => {
+      socket.off("notes-updated");
+      socket.off("ambient-changed");
+      socket.off("emergency-alert");
+      socket.off("ai-coach-broadcast");
+      socket.off("bet-placed");
+      socket.off("room-action");
+    };
+  }, [socket, room?._id, userId]);
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newNotes = e.target.value;
+    setSharedNotes(newNotes);
+    updateRoomNotes(room._id, userId, newNotes);
+  };
+
+  const sendChat = () => {
+    if (!chatInput.trim() || !socket) return;
+    if (chatInput.startsWith("/coach ")) {
+      submitGroupAIQuery(room._id, userId, chatInput.replace("/coach ", ""));
+    } else {
+      socket.emit("room-action", { action: "chat", roomId: room?._id, message: chatInput, userId });
+    }
+    setChatInput("");
+  };
+
+  const handleVoteAmbient = (trackId: string) => {
+    voteAmbient(room._id, userId, trackId);
+  };
+
+  const handleAlert = (type: string) => {
+    broadcastEmergencyAlert(room._id, userId, type, "Liaison requested. Focus burnout imminent.");
+  };
+
+  const handleBet = (outcome: string) => {
+    placeXPBet(room._id, userId, betAmount, outcome);
+    setIsBettingOpen(false);
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-3xl"
+    >
+      <div className="w-full max-w-7xl h-[90vh] glass-card overflow-hidden flex shadow-[0_0_100px_rgba(62,99,221,0.2)]">
+        {/* Main Workspace */}
+        <div className="flex-1 flex flex-col relative border-r border-white/5 bg-black/20">
+          <div className="absolute top-0 w-full p-6 z-20 flex justify-between items-center">
+            <div className="flex items-center gap-4">
+              <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_10px_#10b981]" />
+              <div>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em]">{room?.name || "Neural Hub"}</h3>
+                <p className="text-[10px] text-muted font-bold tracking-widest uppercase mt-1">Cluster Protocol: Active</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsNotesOpen(!isNotesOpen)} className={`nav-btn p-3 ${isNotesOpen ? "bg-accent text-black" : ""}`}>
+                <Activity size={18} />
+              </button>
+              <button onClick={() => handleAlert("burnout")} className="nav-btn p-3 bg-danger/10 text-danger border-danger/20 hover:bg-danger/20">
+                <AlertTriangle size={18} />
+              </button>
+              <button onClick={onClose} className="nav-btn px-6 py-3 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-widest">Disconnect</button>
+            </div>
+          </div>
+
+          <div className="flex-1 relative overflow-hidden">
+            <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transition-all duration-1000 ${ambientSetting === "focus-deep" ? "grayscale contrast-125" : ambientSetting === "lofi" ? "sepia opacity-80" : ""}`} />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 pointer-events-none" />
+            
+            {/* Alerts Overlay */}
+            <div className="absolute top-24 left-6 z-30 space-y-3">
+              {alerts.map((a, i) => (
+                <motion.div key={i} initial={{ x: -100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="p-4 glass border-l-4 border-l-danger bg-danger/5 shadow-2xl">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-danger">Distress Signal: {a.userName}</p>
+                  <p className="text-xs font-medium mt-1">{a.message}</p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Collaborative Notes Layer */}
+            <AnimatePresence>
+              {isNotesOpen && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  className="absolute inset-20 z-40 glass-card p-10 shadow-2xl flex flex-col"
+                >
+                  <h4 className="text-xs font-black uppercase tracking-[0.3em] text-accent mb-6 flex items-center justify-between">
+                    Shared Neural Pad
+                    <button onClick={() => setIsNotesOpen(false)}><Plus className="rotate-45" /></button>
+                  </h4>
+                  <textarea 
+                    value={sharedNotes} 
+                    onChange={handleNotesChange}
+                    className="flex-1 bg-transparent border-none focus:ring-0 text-lg leading-relaxed placeholder:opacity-20"
+                    placeholder="Lock in shared insights..."
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <div className="p-8 glass-light border-t border-white/5 flex items-center justify-between">
+             <div className="flex gap-4">
+                <button onClick={() => handleVoteAmbient("rain")} className="px-4 py-2 rounded-lg bg-white/5 text-[10px] font-bold hover:bg-white/10 transition-all">RAIN</button>
+                <button onClick={() => handleVoteAmbient("lofi")} className="px-4 py-2 rounded-lg bg-white/5 text-[10px] font-bold hover:bg-white/10 transition-all">LOFI</button>
+                <button onClick={() => handleVoteAmbient("focus-deep")} className="px-4 py-2 rounded-lg bg-white/5 text-[10px] font-bold hover:bg-white/10 transition-all">DEEP_CORE</button>
+             </div>
+             <button onClick={() => setIsBettingOpen(true)} className="btn-primary py-2 px-6 text-[10px] tracking-[0.2em]">PLACE XP BET</button>
+          </div>
+        </div>
+
+        {/* Sidebar Intelligence */}
+        <div className="w-80 flex flex-col bg-black/40 backdrop-blur-xl">
+          <div className="p-8 border-b border-white/5">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-6">Neural Cluster</h4>
+            <div className="flex flex-wrap gap-3">
+              {members.map((m: any) => (
+                <div key={m._id} className="relative group">
+                  <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center border border-accent/30 text-xs font-bold transition-all group-hover:scale-110">
+                    {m.name?.[0] || "A"}
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-success border-2 border-black" />
+                  <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 glass px-2 py-1 rounded text-[8px] font-bold opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
+                    {m.name} (LVL {m.level})
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="p-8 border-b border-white/5 bg-accent/5">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-accent mb-4">Replay Protocol</h4>
+            <div className="space-y-3">
+               {[1, 2].map(i => (
+                 <div key={i} className="p-3 glass-light rounded-xl flex items-center justify-between group cursor-pointer hover:bg-white/10 transition-all">
+                    <div>
+                       <p className="text-[10px] font-bold">SESSION_REPLAY_0{i}</p>
+                       <p className="text-[8px] text-muted uppercase">Duration: 45m</p>
+                    </div>
+                    <Activity size={12} className="text-accent opacity-0 group-hover:opacity-100 transition-all" />
+                 </div>
+               ))}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
+            {messages.map((m, i) => (
+              <div key={i} className={`flex flex-col ${m.user === "NEURAL_COACH" ? "items-center" : m.user === userId ? "items-end" : "items-start"}`}>
+                <p className="text-[8px] font-black uppercase tracking-widest text-muted mb-1">{m.user === userId ? "YOU" : m.user}</p>
+                <div className={`max-w-[90%] p-4 rounded-2xl text-xs font-medium ${
+                  m.user === "NEURAL_COACH" ? "bg-accent/10 border border-accent/20 text-accent text-center italic" : 
+                  m.user === "SYSTEM" ? "bg-white/5 border border-white/5 text-muted opacity-80" :
+                  m.user === userId ? "bg-accent/20 border border-accent/10 rounded-tr-none" : "bg-white/5 border border-white/10 rounded-tl-none"
+                }`}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="p-8 border-t border-white/5">
+            <div className="flex gap-2">
+              <input 
+                type="text" 
+                value={chatInput} 
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChat()}
+                placeholder="Type message or /coach..." 
+                className="flex-1 bg-white/5 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-accent/50 border border-transparent transition-all"
+              />
+              <button onClick={sendChat} className="bg-accent p-3 rounded-xl text-black transition-all hover:scale-105 active:scale-95"><Send size={16} /></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Betting Modal */}
+      <AnimatePresence>
+        {isBettingOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl">
+             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="glass-card p-10 w-96 text-center">
+                <Zap size={32} className="text-accent mx-auto mb-6" />
+                <h3 className="display-sm mb-4">Neural Outcome Bet</h3>
+                <p className="text-xs text-muted mb-8 italic">Risk your XP on collective performance.</p>
+                
+                <div className="flex items-center justify-between mb-8 p-4 glass-light rounded-xl">
+                   <button onClick={() => setBetAmount(Math.max(10, betAmount - 50))} className="p-2 nav-btn"> - </button>
+                   <span className="text-lg font-black">{betAmount} XP</span>
+                   <button onClick={() => setBetAmount(betAmount + 50)} className="p-2 nav-btn"> + </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                   <button onClick={() => handleBet("success")} className="py-4 rounded-xl bg-success/20 text-success font-black text-[10px] uppercase tracking-widest hover:bg-success/30">GROUP SUCCESS</button>
+                   <button onClick={() => handleBet("failure")} className="py-4 rounded-xl bg-danger/20 text-danger font-black text-[10px] uppercase tracking-widest hover:bg-danger/30">GROUP FAILURE</button>
+                </div>
+                <button onClick={() => setIsBettingOpen(false)} className="mt-8 text-[10px] text-muted font-bold uppercase tracking-widest">Cancel</button>
+             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 

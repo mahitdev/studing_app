@@ -200,6 +200,28 @@ def analyze_sessions(payload: AnalyticsRequest):
         burnout_risk = "MODERATE"
         intervention_message = "Neural strain detected. Consider a 15-minute bio-break."
 
+    # 7. Visualization Engine
+    graphs = {}
+    try:
+        # Focus Trend Graph
+        plt.figure(figsize=(10, 4))
+        sns.lineplot(data=df.sort_values('startedAt'), x='startedAt', y='focusedMinutes', marker='o', color='#00f2ff')
+        plt.title("Neural Focus Trajectory", color='white', pad=20)
+        plt.xlabel("Timeline", color='#888')
+        plt.ylabel("Focused Minutes", color='#888')
+        plt.grid(True, alpha=0.1)
+        graphs["focus_trend"] = create_base64_plot(plt.gcf())
+
+        # Subject Distribution
+        plt.figure(figsize=(6, 6))
+        subject_data = df.groupby('subject')['focusedMinutes'].sum()
+        plt.pie(subject_data, labels=subject_data.index, autopct='%1.1f%%', colors=sns.color_palette("husl", len(subject_data)))
+        plt.title("Knowledge Cluster Distribution", color='white')
+        graphs["subject_distribution"] = create_base64_plot(plt.gcf())
+    except Exception as e:
+        print(f"Graph generation failed: {e}")
+        graphs = {"error": "Visualization engine offline"}
+
     return {
         "average_study_time": average_study_time,
         "consistency_score": consistency_score,
@@ -227,6 +249,7 @@ active_pool = []
 
 @app.post("/matchmake")
 def matchmake_users(req: MatchmakingRequest):
+    global active_pool
     # Simple algorithm: find someone in the pool with the same mode and similar target
     best_match = None
     for candidate in active_pool:
@@ -243,7 +266,6 @@ def matchmake_users(req: MatchmakingRequest):
     
     # Add to pool
     # Clean up old entries from the same user to avoid duplicates
-    global active_pool
     active_pool = [u for u in active_pool if u["userId"] != req.userId]
     active_pool.append({
         "userId": req.userId,
