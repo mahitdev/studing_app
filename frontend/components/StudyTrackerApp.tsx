@@ -994,14 +994,16 @@ export default function StudyTrackerApp() {
         <AnimatePresence>
           <NeuralCoach userId={user._id} isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
           
-          {pythonAnalytics?.burnout?.risk !== "Low" && (
+          {pythonAnalytics?.burnout?.risk && pythonAnalytics.burnout.risk !== "Low" && (
             <motion.div 
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="px-6 py-3 bg-danger/10 border border-danger/20 rounded-2xl mb-6 flex items-center gap-4"
             >
               <AlertTriangle className="text-danger" size={16} />
-              <p className="text-xs font-bold text-danger uppercase tracking-widest">{pythonAnalytics.burnout.intervention}</p>
+              <p className="text-xs font-bold text-danger uppercase tracking-widest">
+                {pythonAnalytics?.burnout?.intervention || "Burnout protocol activated."}
+              </p>
             </motion.div>
           )}
 
@@ -1081,7 +1083,7 @@ export default function StudyTrackerApp() {
                     </div>
                   </div>
                   
-                  {dashboard.pressureNotifications?.length ? (
+                  {dashboard?.pressureNotifications?.length ? (
                     <div className="mt-6 flex flex-col gap-3">
                       {dashboard.pressureNotifications.map((item, i) => (
                         <div key={i} className="flex items-center gap-4 p-4 glass-light rounded-2xl border-l-2 border-danger">
