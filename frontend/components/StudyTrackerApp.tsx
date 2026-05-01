@@ -1113,7 +1113,7 @@ export default function StudyTrackerApp() {
                     {duels.map(duel => (
                       <div key={duel._id} className="p-4 bg-accent/5 rounded-2xl border border-accent/20 flex items-center justify-between group hover:bg-accent/10 transition-all">
                         <div>
-                          <p className="text-sm font-bold text-accent">{duel.challengerId._id === user._id ? duel.opponentId.name : duel.challengerId.name}</p>
+                          <p className="text-sm font-bold text-accent">{duel.challengerId?._id === user?._id ? duel.opponentId?.name : duel.challengerId?.name}</p>
                           <p className="text-[10px] text-muted uppercase tracking-widest">DUEL ACTIVE • {duel.xpPrize} XP</p>
                         </div>
                         <button 
@@ -1131,9 +1131,9 @@ export default function StudyTrackerApp() {
                         <div key={i} className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-xs font-bold">
-                              {f.name.charAt(0)}
+                              {f.name?.[0] || 'U'}
                             </div>
-                            <p className="text-sm font-bold">{f.name}</p>
+                            <p className="text-sm font-bold">{f.name || 'Unknown'}</p>
                           </div>
                           <button onClick={() => handleChallenge(f.userId)} title="Challenge to Duel">
                             <Swords size={14} className="text-muted hover:text-accent transition-colors" />
