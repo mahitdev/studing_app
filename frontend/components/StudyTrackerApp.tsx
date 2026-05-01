@@ -271,10 +271,10 @@ export default function StudyTrackerApp() {
           
           const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
           
-          if (activeSession && !running) {
-             // Wait for next sync
-          } else if (!activeSession || (running && (running._id !== activeSession._id || running.status !== activeSession.status))) {
-             setActiveSession(running);
+          if (running) {
+            setActiveSession(running);
+          } else if (!activeSession || activeSession.status === "completed") {
+            setActiveSession(null);
           }
 
           if (running) {
