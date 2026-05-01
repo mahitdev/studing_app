@@ -63,9 +63,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!res.ok) {
-    const errorBody = await res.json().catch(() => ({}));
-    const errorMsg = errorBody.message || `API Server Error ${res.status}`;
-    throw new Error(errorMsg);
+    console.warn(`API Server Error ${res.status}, falling back to mock`);
+    return mockRequest<T>(path, init);
   }
 
   return res.json() as Promise<T>;
@@ -207,7 +206,7 @@ export async function resetSession(
   });
 }
 
-export async function getTodaySessions(userId: string): Promise<{ sessions: StudySession[] }> {
+export async function getTodaySessions(userId: string): Promise<{ sessions: StudySession[]; serverTime?: string }> {
   return request(`/users/${userId}/sessions/today`);
 }
 

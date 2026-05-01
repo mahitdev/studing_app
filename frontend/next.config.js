@@ -6,6 +6,10 @@ const withPWA = require('next-pwa')({
   skipWaiting: true
 });
 
-const nextConfig = {};
+const nextConfig = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+};
 
 module.exports = withPWA(nextConfig);

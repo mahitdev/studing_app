@@ -169,9 +169,7 @@ function MainPanel() {
   );
 }
 
-// Custom Rounded Plane Geometry helper (simplified)
 function roundedPlaneGeometry(args: any) {
-  // Normally I'd use a proper shape, but for brevity I'll use a plane
   return <planeGeometry args={[args[0], args[1]]} />;
 }
 

@@ -128,23 +128,23 @@ function formatHMS(seconds: number) {
 function elapsedForSession(session: StudySession, nowMs = Date.now()) {
   if (!session || !session.startedAt) return 0;
   
+  const skew = (typeof window !== "undefined" && (window as any).__grindlock_skew) || 0;
+  const adjustedNow = nowMs - skew;
+  
   const startedMs = new Date(session.startedAt).getTime();
   if (isNaN(startedMs)) return 0;
 
-  const totalMs = Math.max(0, nowMs - startedMs);
+  const totalMs = Math.max(0, adjustedNow - startedMs);
   const pausedMs = (session.pauses || []).reduce((sum, pause) => {
     if (!pause.startedAt) return sum;
+    
+    const pauseEnd = pause.endedAt ? new Date(pause.endedAt).getTime() : adjustedNow;
     const pauseStart = new Date(pause.startedAt).getTime();
-    if (isNaN(pauseStart)) return sum;
-    
-    const pauseEnd = pause.endedAt ? new Date(pause.endedAt).getTime() : nowMs;
-    const validEnd = isNaN(pauseEnd) ? nowMs : pauseEnd;
-    
+    const validEnd = Math.max(pauseStart, pauseEnd);
     return sum + Math.max(0, validEnd - pauseStart);
   }, 0);
-  
+
   const res = Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
-  // If the server clock is ahead, we might get 0. Return 0 and let it catch up.
   return isNaN(res) ? 0 : res;
 }
 
@@ -260,23 +260,30 @@ export default function StudyTrackerApp() {
       }
 
       if (todaySessions) {
-        const sessionList = todaySessions.sessions || [];
-        setSessions(sessionList);
-        
-        const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
-        
-        // Prevent race condition: don't overwrite if we have a valid local active session and the server is empty/stale
-        if (activeSession && !running) {
-           // Wait for next sync, don't kill the local session yet
-        } else if (!activeSession || (running && (running._id !== activeSession._id || running.status !== activeSession.status))) {
-           setActiveSession(running);
-        }
-        
-        if (running) {
-          if (running.subject) setSubject(running.subject);
-          if (running.studyMode) setStudyMode(running.studyMode);
-          if (running.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
-          if (typeof running.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+        try {
+          const { sessions: sessionList, serverTime } = await getTodaySessions(userId);
+          if (serverTime) {
+            const skew = Date.now() - new Date(serverTime).getTime();
+            (window as any).__grindlock_skew = skew;
+          }
+          setSessions(sessionList);
+          
+          const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
+          
+          if (activeSession && !running) {
+             // Wait for next sync
+          } else if (!activeSession || (running && (running._id !== activeSession._id || running.status !== activeSession.status))) {
+             setActiveSession(running);
+          }
+
+          if (running) {
+            if (running.subject) setSubject(running.subject);
+            if (running.studyMode) setStudyMode(running.studyMode);
+            if (running.plannedDurationMinutes) setPlannedDuration(running.plannedDurationMinutes);
+            if (typeof running.riskMode === "boolean") setRiskMode(Boolean(running.riskMode));
+          }
+        } catch (err) {
+          console.error("Refresh pulse failed:", err);
         }
       }
 
@@ -908,6 +915,7 @@ export default function StudyTrackerApp() {
             </button>
           ))}
         </nav>
+        </div>
 
         <div className="mt-auto pt-8 border-t border-white/5">
           <div className="flex items-center gap-3 mb-6">
@@ -1496,445 +1504,6 @@ export default function StudyTrackerApp() {
   );
 }
 
-function NeuralAnalytics({ data }: { data: any }) {
-  if (!data || data.error || data.isSynthetic) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 glass-card">
-        <Zap className="text-accent mb-4 animate-pulse" size={48} />
-        <h3 className="display-sm mb-2 uppercase tracking-widest">Neural Link Offline</h3>
-        <p className="text-muted text-sm font-medium italic">"{data?.message || "Real-time analytics requires active mission history."}"</p>
-      </div>
-    );
-  }
-
-  const chartData = {
-    labels: data.dailyTrend?.labels || ["M", "T", "W", "T", "F", "S", "S"],
-    datasets: [{
-      label: "Focus Minutes",
-      data: data.dailyTrend?.values || [0, 0, 0, 0, 0, 0, 0],
-      borderColor: "#3e63dd",
-      backgroundColor: "rgba(62, 99, 221, 0.1)",
-      fill: true,
-      tension: 0.4,
-      pointRadius: 4,
-      pointBackgroundColor: "#3e63dd"
-    }]
-  };
-
-  const options = {
-    responsive: true,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: "rgba(0,0,0,0.8)",
-        titleFont: { family: "Inter", weight: "bold" },
-        bodyFont: { family: "Inter" },
-        padding: 12,
-        cornerRadius: 8
-      }
-    },
-    scales: {
-      y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#666" } },
-      x: { grid: { display: false }, ticks: { color: "#666" } }
-    }
-  };
-
-  return (
-    <div className="space-y-10">
-      <div className="grid grid-cols-2 gap-8">
-        <div className="glass-card p-8">
-          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted mb-8">Productivity Pulse (7D)</h4>
-          <div className="h-64">
-            <Line data={chartData} options={options as any} />
-          </div>
-        </div>
-        <div className="glass-card p-8">
-          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted mb-8">Neural Distribution</h4>
-          <div className="space-y-6">
-            {data.insights?.map((insight: string, i: number) => (
-              <div key={i} className="flex items-start gap-4 p-4 bg-white/5 rounded-2xl border border-white/5 hover:border-accent/30 transition-colors">
-                <div className="w-8 h-8 rounded-xl bg-accent/20 flex items-center justify-center shrink-0">
-                  <Activity size={14} className="text-accent" />
-                </div>
-                <p className="text-sm font-medium leading-relaxed">{insight}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-
-function NeuralCoach({ userId, isOpen, onClose }: { userId: string, isOpen: boolean, onClose: () => void }) {
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'coach', text: string }>>([
-    { role: 'coach', text: "Neural link established. I am your AI Focus Strategist. How can I optimize your session?" }
-  ]);
-  const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-  }, [messages]);
-
-  const handleSend = async () => {
-    if (!input.trim() || isTyping) return;
-    const userMsg = input.trim();
-    setInput("");
-    setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
-    setIsTyping(true);
-
-    try {
-      const { reply } = await getAICoachReply(userId, userMsg);
-      setMessages(prev => [...prev, { role: 'coach', text: reply }]);
-    } catch {
-      setMessages(prev => [...prev, { role: 'coach', text: "Neural transmission failed. Re-syncing..." }]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div 
-          initial={{ x: 400, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 400, opacity: 0 }}
-          className="fixed top-0 right-0 h-full w-96 z-[110] glass-card border-l border-white/5 flex flex-col shadow-2xl"
-        >
-          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-accent/5">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <h3 className="text-xs font-black uppercase tracking-widest">Neural Strategist</h3>
-            </div>
-            <button onClick={onClose} className="nav-btn text-muted p-1">×</button>
-          </div>
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'user' ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${
-                  m.role === 'user' ? "bg-accent/10 border border-accent/20" : "bg-white/5 border border-white/10"
-                }`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {isTyping && <div className="text-[10px] text-muted animate-pulse italic">Neural engine processing...</div>}
-          </div>
-          <div className="p-6 border-t border-white/5">
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={input} 
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder="Talk to your coach..."
-                className="flex-1 bg-black/40 border-white/5 rounded-xl px-4 py-3 text-sm focus:border-accent/50 outline-none transition-all"
-              />
-              <button onClick={handleSend} className="p-3 rounded-xl bg-accent text-white hover:bg-accent-hover transition-all">
-                <Send size={16} />
-              </button>
-            </div>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-function LiveStudyChamber({ onClose, room, socket, userId }: { onClose: () => void, room: any, socket: any, userId: string }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [streamActive, setStreamActive] = useState(false);
-  const [messages, setMessages] = useState<{user: string, text: string}[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [ambientSetting, setAmbientSetting] = useState(room?.ambientSettings?.track || "none");
-  const [sharedNotes, setSharedNotes] = useState(room?.sharedNotes || "");
-  const [alerts, setAlerts] = useState<any[]>([]);
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
-  const [isBettingOpen, setIsBettingOpen] = useState(false);
-  const [betAmount, setBetAmount] = useState(10);
-
-  useEffect(() => {
-    async function startVideo() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          setStreamActive(true);
-        }
-      } catch (err) {
-        console.error("Camera access failed", err);
-      }
-    }
-    startVideo();
-    return () => {
-      const stream = videoRef.current?.srcObject as MediaStream;
-      stream?.getTracks().forEach(track => track.stop());
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!socket) return;
-    socket.emit("join-room", room?._id);
-
-    socket.on("notes-updated", (data: any) => {
-      if (data.userId !== userId) setSharedNotes(data.notes);
-    });
-
-    socket.on("ambient-changed", (data: any) => {
-      setAmbientSetting(data.trackId);
-    });
-
-    socket.on("emergency-alert", (data: any) => {
-      setAlerts(prev => [...prev, data]);
-      setTimeout(() => setAlerts(prev => prev.filter(a => a !== data)), 5000);
-    });
-
-    socket.on("ai-coach-broadcast", (data: any) => {
-      setMessages(prev => [...prev, { user: "NEURAL_COACH", text: data.text }]);
-    });
-
-    socket.on("bet-placed", (data: any) => {
-      setMessages(prev => [...prev, { user: "SYSTEM", text: `${data.userName} bet ${data.amount} XP on ${data.outcome}` }]);
-    });
-
-    socket.on("room-action", (data: any) => {
-      if (data.action === "chat") {
-        setMessages((prev) => [...prev, { user: data.userName || "Unknown", text: data.message }]);
-      }
-    });
-
-    return () => {
-      socket.off("notes-updated");
-      socket.off("ambient-changed");
-      socket.off("emergency-alert");
-      socket.off("ai-coach-broadcast");
-      socket.off("bet-placed");
-      socket.off("room-action");
-    };
-  }, [socket, room?._id, userId]);
-
-  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newNotes = e.target.value;
-    setSharedNotes(newNotes);
-    updateRoomNotes(room._id, userId, newNotes);
-  };
-
-  const sendChat = () => {
-    if (!chatInput.trim() || !socket) return;
-    if (chatInput.startsWith("/coach ")) {
-      submitGroupAIQuery(room._id, userId, chatInput.replace("/coach ", ""));
-    } else {
-      socket.emit("room-action", { action: "chat", roomId: room?._id, message: chatInput, userId });
-    }
-    setChatInput("");
-  };
-
-  const handleVoteAmbient = (trackId: string) => {
-    voteAmbient(room._id, userId, trackId);
-  };
-
-  const handleAlert = (type: string) => {
-    broadcastEmergencyAlert(room._id, userId, type, "Liaison requested. Focus burnout imminent.");
-  };
-
-  const handleBet = (outcome: string) => {
-    placeXPBet(room._id, userId, betAmount, outcome);
-    setIsBettingOpen(false);
-  };
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-3xl"
-    >
-      <div className="w-full max-w-7xl h-[90vh] glass-card overflow-hidden flex shadow-[0_0_100px_rgba(62,99,221,0.2)]">
-        {/* Main Workspace */}
-        <div className="flex-1 flex flex-col relative border-r border-white/5 bg-black/20">
-          <div className="absolute top-0 w-full p-6 z-20 flex justify-between items-center">
-            <div className="flex items-center gap-4">
-              <div className="w-2 h-2 rounded-full bg-success animate-pulse shadow-[0_0_10px_#10b981]" />
-              <div>
-                <h3 className="text-xs font-black uppercase tracking-[0.2em]">{room?.name || "Neural Hub"}</h3>
-                <p className="text-[10px] text-muted font-bold tracking-widest uppercase mt-1">Cluster Protocol: Active</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button onClick={() => setIsNotesOpen(!isNotesOpen)} className={`nav-btn p-3 ${isNotesOpen ? "bg-accent text-black" : ""}`}>
-                <Activity size={18} />
-              </button>
-              <button onClick={() => handleAlert("burnout")} className="nav-btn p-3 bg-danger/10 text-danger border-danger/20 hover:bg-danger/20">
-                <AlertTriangle size={18} />
-              </button>
-              <button onClick={onClose} className="nav-btn px-6 py-3 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-widest">Disconnect</button>
-            </div>
-          </div>
-
-          <div className="flex-1 relative overflow-hidden">
-            <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transition-all duration-1000 ${ambientSetting === "focus-deep" ? "grayscale contrast-125" : ambientSetting === "lofi" ? "sepia opacity-80" : ""}`} />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 pointer-events-none" />
-            
-            {/* Alerts Overlay */}
-            <div className="absolute top-24 left-6 z-30 space-y-3">
-              {alerts.map((a, i) => (
-                <motion.div key={i} initial={{ x: -100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="p-4 glass border-l-4 border-l-danger bg-danger/5 shadow-2xl">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-danger">Distress Signal: {a.userName}</p>
-                  <p className="text-xs font-medium mt-1">{a.message}</p>
-                </motion.div>
-              ))}
-            </div>
-
-            {/* Collaborative Notes Layer */}
-            <AnimatePresence>
-              {isNotesOpen && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.9 }} 
-                  animate={{ opacity: 1, scale: 1 }} 
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  className="absolute inset-20 z-40 glass-card p-10 shadow-2xl flex flex-col"
-                >
-                  <div className="flex justify-between items-center mb-8">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-accent">Collaborative Neural Grid</h4>
-                    <button onClick={() => setIsNotesOpen(false)} className="nav-btn p-2">×</button>
-                  </div>
-                  <textarea 
-                    value={sharedNotes} 
-                    onChange={handleNotesChange}
-                    placeholder="Capture collective intelligence here..."
-                    className="flex-1 bg-white/5 rounded-2xl p-6 text-sm font-medium resize-none focus:outline-none border border-white/5 focus:border-accent/30 transition-all"
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Bottom Control Bar */}
-          <div className="p-6 bg-black/40 backdrop-blur-md border-t border-white/5 flex items-center justify-between">
-            <div className="flex gap-4">
-              <div className="p-1 glass-light rounded-xl flex gap-1">
-                {['none', 'focus-deep', 'lofi', 'rain'].map(t => (
-                  <button 
-                    key={t}
-                    onClick={() => handleVoteAmbient(t)}
-                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${ambientSetting === t ? "bg-accent text-black" : "text-muted hover:bg-white/5"}`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex items-center gap-6">
-               <button onClick={() => setIsBettingOpen(true)} className="flex items-center gap-2 px-4 py-2 glass-light rounded-xl hover:bg-white/10 transition-all">
-                  <Zap size={14} className="text-accent" />
-                  <span className="text-[10px] font-black tracking-widest uppercase">Place Bet</span>
-               </button>
-               <div className="text-right">
-                  <p className="text-[9px] font-black tracking-widest text-muted uppercase">Global Streak</p>
-                  <p className="text-lg font-black text-white leading-none mt-1">{room?.groupStreak || 0}d</p>
-               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar: Participants & Chat */}
-        <div className="w-96 flex flex-col bg-black/40">
-          <div className="p-8 border-b border-white/5">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-6">Active Operatives</h4>
-            <div className="flex flex-wrap gap-2">
-              {room?.members?.map((m: any) => (
-                <div key={m._id} className="relative group">
-                  <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center border border-accent/30 text-xs font-bold transition-all group-hover:scale-110">
-                    {m.name?.[0] || "A"}
-                  </div>
-                  <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-success border-2 border-black" />
-                  <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 glass px-2 py-1 rounded text-[8px] font-bold opacity-0 group-hover:opacity-100 transition-all pointer-events-none whitespace-nowrap">
-                    {m.name} (LVL {m.level})
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="p-8 border-b border-white/5 bg-accent/5">
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-accent mb-4">Replay Protocol</h4>
-            <div className="space-y-3">
-               {[1, 2].map(i => (
-                 <div key={i} className="p-3 glass-light rounded-xl flex items-center justify-between group cursor-pointer hover:bg-white/10 transition-all">
-                    <div>
-                       <p className="text-[10px] font-bold">SESSION_REPLAY_0{i}</p>
-                       <p className="text-[8px] text-muted uppercase">Duration: 45m</p>
-                    </div>
-                    <Activity size={12} className="text-accent opacity-0 group-hover:opacity-100 transition-all" />
-                 </div>
-               ))}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex flex-col ${m.user === "NEURAL_COACH" ? "items-center" : m.user === userId ? "items-end" : "items-start"}`}>
-                <p className="text-[8px] font-black uppercase tracking-widest text-muted mb-1">{m.user === userId ? "YOU" : m.user}</p>
-                <div className={`max-w-[90%] p-4 rounded-2xl text-xs font-medium ${
-                  m.user === "NEURAL_COACH" ? "bg-accent/10 border border-accent/20 text-accent text-center italic" : 
-                  m.user === "SYSTEM" ? "bg-white/5 border border-white/5 text-muted opacity-80" :
-                  m.user === userId ? "bg-accent/20 border border-accent/10 rounded-tr-none" : "bg-white/5 border border-white/10 rounded-tl-none"
-                }`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="p-8 border-t border-white/5">
-            <div className="flex gap-2">
-              <input 
-                type="text" 
-                value={chatInput} 
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendChat()}
-                placeholder="Type message or /coach..." 
-                className="flex-1 bg-white/5 rounded-xl px-4 py-3 text-xs focus:outline-none focus:border-accent/50 border border-transparent transition-all"
-              />
-              <button onClick={sendChat} className="bg-accent p-3 rounded-xl text-black transition-all hover:scale-105 active:scale-95"><Send size={16} /></button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Betting Modal */}
-      <AnimatePresence>
-        {isBettingOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl">
-             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} className="glass-card p-10 w-96 text-center">
-                <Zap size={32} className="text-accent mx-auto mb-6" />
-                <h3 className="display-sm mb-4">Neural Outcome Bet</h3>
-                <p className="text-xs text-muted mb-8 italic">Risk your XP on collective performance.</p>
-                
-                <div className="flex items-center justify-between mb-8 p-4 glass-light rounded-xl">
-                   <button onClick={() => setBetAmount(Math.max(10, betAmount - 50))} className="p-2 nav-btn"> - </button>
-                   <span className="text-lg font-black">{betAmount} XP</span>
-                   <button onClick={() => setBetAmount(betAmount + 50)} className="p-2 nav-btn"> + </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                   <button onClick={() => handleBet("success")} className="py-4 rounded-xl bg-success/20 text-success font-black text-[10px] uppercase tracking-widest hover:bg-success/30">GROUP SUCCESS</button>
-                   <button onClick={() => handleBet("failure")} className="py-4 rounded-xl bg-danger/20 text-danger font-black text-[10px] uppercase tracking-widest hover:bg-danger/30">GROUP FAILURE</button>
-                </div>
-                <button onClick={() => setIsBettingOpen(false)} className="mt-8 text-[10px] text-muted font-bold uppercase tracking-widest">Cancel</button>
-             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
 function PremiumTimer({ activeSession, studyMode, plannedDuration, elapsed, progress, setProgress }: { activeSession: StudySession | null, studyMode: string, plannedDuration: number, elapsed: number, progress: number, setProgress: (p: number) => void }) {
   const notifiedRef = useRef(false);
 
@@ -1975,7 +1544,7 @@ function PremiumTimer({ activeSession, studyMode, plannedDuration, elapsed, prog
 }
 
 function NeuralCoach({ userId, isOpen, onClose }: { userId: string, isOpen: boolean, onClose: () => void }) {
-  const [messages, setMessages] = useState<{ role: "user" | "assistant", content: string }[]>([
+  const [messages, setMessages] = useState<{ role: "assistant" | "user", content: string }[]>([
     { role: "assistant", content: "Neural Coach active. Protocol: Maximum Discipline. How can I assist your grind?" }
   ]);
   const [input, setInput] = useState("");
@@ -1989,7 +1558,7 @@ function NeuralCoach({ userId, isOpen, onClose }: { userId: string, isOpen: bool
     setLoading(true);
     try {
       const reply = await getAICoachReply(userId, userMsg);
-      setMessages(prev => [...prev, { role: "assistant", content: reply }]);
+      setMessages(prev => [...prev, { role: "assistant", content: reply.reply }]);
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Neural transmission failed. Focus on the core mission." }]);
     } finally {
@@ -2000,28 +1569,43 @@ function NeuralCoach({ userId, isOpen, onClose }: { userId: string, isOpen: bool
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div initial={{ x: 400 }} animate={{ x: 0 }} exit={{ x: 400 }} className="fixed right-0 top-0 h-full w-96 glass-card rounded-none z-[150] flex flex-col shadow-[-20px_0_50px_rgba(0,0,0,0.5)]">
+        <motion.div 
+          initial={{ opacity: 0, x: 400 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 400 }}
+          className="fixed right-0 top-0 h-full w-96 bg-black/80 backdrop-blur-3xl border-l border-white/5 z-[110] flex flex-col"
+        >
           <div className="p-8 border-b border-white/5 flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-black uppercase tracking-widest">Neural Coach</h3>
-              <p className="text-[10px] text-accent font-bold mt-1 uppercase">AI-Driven Discipline</p>
+              <h3 className="text-xs font-black uppercase tracking-widest text-accent">Neural Coach</h3>
+              <p className="text-[8px] font-black tracking-widest text-muted uppercase mt-1">Direct Uplink: Active</p>
             </div>
-            <button onClick={onClose} className="p-2 nav-btn rounded-full"><Plus className="rotate-45" /></button>
+            <button onClick={onClose} className="nav-btn p-2 hover:bg-white/5"><Plus className="rotate-45" size={16} /></button>
           </div>
-          <div className="flex-1 overflow-y-auto p-8 space-y-6">
+
+          <div className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
             {messages.map((m, i) => (
-              <div key={i} className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}>
-                <div className={`max-w-[90%] p-4 rounded-2xl text-xs font-medium ${m.role === "user" ? "bg-accent/20 border border-accent/20" : "bg-white/5 border border-white/5 text-white/80"}`}>
+              <div key={i} className={`flex flex-col ${m.role === "assistant" ? "items-start" : "items-end"}`}>
+                <p className="text-[8px] font-black uppercase tracking-widest text-muted mb-2">{m.role === "assistant" ? "COACH" : "OPERATIVE"}</p>
+                <div className={`p-4 rounded-2xl text-xs font-medium leading-relaxed ${m.role === "assistant" ? "bg-white/5 border border-white/5 rounded-tl-none" : "bg-accent/20 border border-accent/10 rounded-tr-none"}`}>
                   {m.content}
                 </div>
               </div>
             ))}
-            {loading && <div className="text-[10px] font-black animate-pulse text-accent uppercase tracking-widest">Generating Insight...</div>}
+            {loading && <div className="text-[8px] font-black uppercase tracking-widest text-accent animate-pulse">Neural engine processing...</div>}
           </div>
-          <div className="p-8 border-t border-white/5">
+
+          <div className="p-8 border-t border-white/5 bg-black/20">
             <div className="flex gap-2">
-              <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Ask for advice or motivation..." className="flex-1 text-xs" />
-              <button onClick={sendMessage} className="bg-accent p-3 rounded-xl text-black"><Send size={16} /></button>
+              <input 
+                type="text" 
+                value={input} 
+                onChange={e => setInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && sendMessage()}
+                placeholder="Request strategy optimization..." 
+                className="flex-1 bg-white/5 border-none rounded-xl px-4 py-3 text-xs focus:ring-1 focus:ring-accent/50"
+              />
+              <button onClick={sendMessage} className="bg-accent p-3 rounded-xl text-black transition-all hover:scale-105 active:scale-95"><Send size={16} /></button>
             </div>
           </div>
         </motion.div>
@@ -2092,8 +1676,8 @@ function NeuralAnalytics({ data }: { data: any }) {
   );
 }
 
-function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClose: () => void }) {
-  const [messages, setMessages] = useState<any[]>([]);
+function LiveStudyChamber({ onClose, room, socket, userId }: { onClose: () => void, room: any, socket: any, userId: string }) {
+  const [messages, setMessages] = useState<{user: string, text: string}[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [sharedNotes, setSharedNotes] = useState("");
@@ -2190,7 +1774,6 @@ function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClo
       className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-3xl"
     >
       <div className="w-full max-w-7xl h-[90vh] glass-card overflow-hidden flex shadow-[0_0_100px_rgba(62,99,221,0.2)]">
-        {/* Main Workspace */}
         <div className="flex-1 flex flex-col relative border-r border-white/5 bg-black/20">
           <div className="absolute top-0 w-full p-6 z-20 flex justify-between items-center">
             <div className="flex items-center gap-4">
@@ -2215,7 +1798,6 @@ function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClo
             <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transition-all duration-1000 ${ambientSetting === "focus-deep" ? "grayscale contrast-125" : ambientSetting === "lofi" ? "sepia opacity-80" : ""}`} />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 pointer-events-none" />
             
-            {/* Alerts Overlay */}
             <div className="absolute top-24 left-6 z-30 space-y-3">
               {alerts.map((a, i) => (
                 <motion.div key={i} initial={{ x: -100, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="p-4 glass border-l-4 border-l-danger bg-danger/5 shadow-2xl">
@@ -2225,7 +1807,6 @@ function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClo
               ))}
             </div>
 
-            {/* Collaborative Notes Layer */}
             <AnimatePresence>
               {isNotesOpen && (
                 <motion.div 
@@ -2259,7 +1840,6 @@ function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClo
           </div>
         </div>
 
-        {/* Sidebar Intelligence */}
         <div className="w-80 flex flex-col bg-black/40 backdrop-blur-xl">
           <div className="p-8 border-b border-white/5">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-muted mb-6">Neural Cluster</h4>
@@ -2324,7 +1904,6 @@ function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClo
         </div>
       </div>
 
-      {/* Betting Modal */}
       <AnimatePresence>
         {isBettingOpen && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/60 backdrop-blur-xl">
@@ -2351,4 +1930,3 @@ function StudyRoom({ room, userId, onClose }: { room: any, userId: string, onClo
     </motion.div>
   );
 }
-

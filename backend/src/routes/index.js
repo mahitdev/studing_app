@@ -297,7 +297,7 @@ router.get("/users/:userId/sessions/today", async (req, res, next) => {
     const { userId } = req.params;
     const date = todayKey();
     const sessions = await StudySession.find({ userId, date }).sort({ createdAt: -1 });
-    res.json({ sessions });
+    res.json({ sessions, serverTime: new Date() });
   } catch (err) {
     next(err);
   }
@@ -382,7 +382,7 @@ router.post("/users/:userId/sessions/start", async (req, res, next) => {
     });
 
     if (existing) {
-      return res.status(409).json({ message: "A session is already active", session: existing });
+      return res.status(200).json({ session: existing });
     }
 
     const session = await StudySession.create({
