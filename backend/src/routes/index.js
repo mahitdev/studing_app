@@ -852,9 +852,10 @@ router.post("/rooms/:roomId/ai-qa", async (req, res, next) => {
     const { roomId } = req.params;
     const { message, userId } = req.body;
     const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
     
     // Simulate AI group coaching response
-    const reply = `Operative ${user.name}, the group query has been analyzed. Protocol suggests synchronized deep-work intervals. Any further outliers?`;
+    const reply = `Operative ${user.name || 'Unknown'}, the group query has been analyzed. Protocol suggests synchronized deep-work intervals. Any further outliers?`;
     
     const io = req.app.get("io");
     if (io) {
@@ -877,12 +878,13 @@ router.post("/users/:userId/ai-coach", async (req, res, next) => {
     const { message, context } = req.body;
     
     const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
     const recentSessions = await StudySession.find({ userId }).sort({ createdAt: -1 }).limit(3);
     const avgFocus = recentSessions.reduce((acc, s) => acc + (s.focusedMinutes || 0), 0) / (recentSessions.length || 1);
     
     let reply = "";
     if (message.toLowerCase().includes("distracted")) {
-      reply = `Agent ${user.name}, your focus efficiency is at ${Math.round(avgFocus)}%. I recommend a 5-minute deep-breathing protocol. Your neural grid is currently overloaded.`;
+      reply = `Agent ${user.name || 'Operative'}, your focus efficiency is at ${Math.round(avgFocus)}%. I recommend a 5-minute deep-breathing protocol. Your neural grid is currently overloaded.`;
     } else if (message.toLowerCase().includes("tired")) {
       reply = "Neural fatigue detected. Switch to a low-intensity task or activate the Bio-Break protocol immediately.";
     } else {
@@ -941,8 +943,10 @@ router.post("/duels/:duelId/sync", async (req, res, next) => {
       duel.winnerId = userId;
       // Award XP
       const winner = await User.findById(userId);
-      winner.xp += duel.xpPrize;
-      await winner.save();
+      if (winner) {
+        winner.xp = (winner.xp || 0) + (duel.xpPrize || 0);
+        await winner.save();
+      }
     }
     
     await duel.save();
@@ -963,9 +967,10 @@ router.post("/rooms/:roomId/bet", async (req, res, next) => {
     const { roomId } = req.params;
     const { userId, amount, outcome } = req.body;
     const user = await User.findById(userId);
-    if (user.xp < amount) return res.status(400).json({ message: "Insufficient XP" });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    if ((user.xp || 0) < amount) return res.status(400).json({ message: "Insufficient XP" });
     
-    user.xp -= amount;
+    user.xp = (user.xp || 0) - amount;
     await user.save();
     
     const io = req.app.get("io");
