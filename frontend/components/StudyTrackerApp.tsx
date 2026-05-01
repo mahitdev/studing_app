@@ -270,12 +270,14 @@ export default function StudyTrackerApp() {
           setSessions(sessionList);
           
           const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
-          
-          if (running) {
-            setActiveSession(running);
-          } else if (!activeSession || activeSession.status === "completed") {
-            setActiveSession(null);
-          }
+          setActiveSession((currentActive) => {
+            if (running) return running;
+            // If we have a local running session, don't let a stale background sync clear it.
+            if (currentActive && (currentActive.status === "running" || currentActive.status === "paused")) {
+              return currentActive;
+            }
+            return null;
+          });
 
           if (running) {
             if (running.subject) setSubject(running.subject);
