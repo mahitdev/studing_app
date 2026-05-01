@@ -7,6 +7,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   socket,
+  HAS_BACKEND,
   addFriend,
   endSession,
   fetchDashboard,
@@ -459,7 +460,7 @@ export default function StudyTrackerApp() {
   }, [elapsed, activeSession, activeDuel, user]);
 
   useEffect(() => {
-    if (user) {
+    if (user && HAS_BACKEND) {
       socket.connect();
       socket.emit("authenticate", user._id);
       
