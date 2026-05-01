@@ -704,11 +704,12 @@ export default function StudyTrackerApp() {
       setIsOfflineSession(false);
       setTimerAlert("");
       
-      await refreshAll(user._id);
+      refreshAll(user._id).catch(e => console.warn("Background refresh failed after start:", e));
     } catch (err) {
       console.error("[GrindLock] Session start failure:", err);
       setTimerAlert("System Fault: Protocol Rejection.");
-      setScreen("dashboard");
+      // Don't kick back to dashboard if we somehow have a session anyway
+      if (!activeSession) setScreen("dashboard");
     } finally {
       setIsActionLoading(false);
     }
@@ -1264,7 +1265,13 @@ export default function StudyTrackerApp() {
 
                 <div className="flex items-center gap-4">
                   {!activeSession ? (
-                    <button className="btn-primary flex-1 py-4 text-sm tracking-widest" onClick={handleStart}>INITIALIZE</button>
+                    <button 
+                      className="btn-primary flex-1 py-4 text-sm tracking-widest disabled:opacity-50" 
+                      onClick={handleStart}
+                      disabled={isActionLoading}
+                    >
+                      {isActionLoading ? "SYNCING..." : "INITIALIZE"}
+                    </button>
                   ) : (
                     <>
                       <button className="flex-1 py-4 glass text-sm font-bold tracking-widest hover:bg-white/5 transition-colors" onClick={handlePauseResume}>
