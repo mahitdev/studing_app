@@ -67,7 +67,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     return mockRequest<T>(path, init);
   }
 
-  return res.json() as Promise<T>;
+  try {
+    const data = await res.json();
+    return data as T;
+  } catch (err) {
+    console.warn(`Failed to parse response from ${path}, falling back to mock:`, err);
+    return mockRequest<T>(path, init);
+  }
 }
 
 export async function bootstrapUser(

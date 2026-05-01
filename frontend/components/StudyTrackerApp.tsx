@@ -919,8 +919,8 @@ export default function StudyTrackerApp() {
 
         <div className="mt-auto pt-8 border-t border-white/5">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-gradient-accent flex items-center justify-center font-bold text-white">
-              {user.name.charAt(0)}
+            <div className="w-10 h-10 rounded-full bg-gradient-accent flex items-center justify-center font-bold text-white uppercase">
+              {user?.name ? user.name.charAt(0) : 'G'}
             </div>
             <div className="overflow-hidden">
               <p className="text-sm font-bold truncate">{user?.name}</p>

@@ -16,15 +16,15 @@ export default function ErrorBoundary({
   }, [error]);
 
   return (
-    <main className="auth-page">
-      <div className="auth-container opacity-40 grayscale">
+    <main className="auth-wrapper">
+      <div className="absolute inset-0 opacity-40 grayscale">
         <FloatingScene />
       </div>
 
       <motion.section 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="auth-card max-w-[500px]"
+        className="auth-form max-w-[500px]"
       >
         <div className="flex flex-col items-center gap-6">
           <div className="w-16 h-16 rounded-full bg-danger/10 flex items-center justify-center border border-danger/20">
