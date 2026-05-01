@@ -464,6 +464,11 @@ export default function StudyTrackerApp() {
       socket.connect();
       socket.emit("authenticate", user._id);
       
+      socket.on("connect_error", (err) => {
+        console.warn("[GrindLock] Real-time engine offline:", err.message);
+        if (socket.active) socket.disconnect();
+      });
+
       socket.on("friend-update", (data: any) => {
         console.log("[GrindLock] Real-time pulse received:", data);
         if (data.userId !== user._id) {

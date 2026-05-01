@@ -15,7 +15,10 @@ const SOCKET_URL = API_BASE.replace(/\/api$/, "");
 
 export const socket = io(SOCKET_URL, {
   autoConnect: false,
-  reconnection: true
+  reconnection: true,
+  reconnectionAttempts: 3,
+  timeout: 5000,
+  transports: ["websocket", "polling"]
 });
 
 function getAuthToken() {
