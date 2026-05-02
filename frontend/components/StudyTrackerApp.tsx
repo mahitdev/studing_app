@@ -271,12 +271,10 @@ export default function StudyTrackerApp() {
           
           const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
           setActiveSession((currentActive) => {
-            if (running) return running;
-            // If we have a local running session, don't let a stale background sync clear it.
-            if (currentActive && (currentActive.status === "running" || currentActive.status === "paused")) {
-              return currentActive;
-            }
-            return null;
+            const next = running || (currentActive?.status === "running" ? currentActive : null);
+            if (next) localStorage.setItem("gl-active-session", JSON.stringify(next));
+            else localStorage.removeItem("gl-active-session");
+            return next;
           });
 
           if (running) {
@@ -352,6 +350,14 @@ export default function StudyTrackerApp() {
         if (!userId || !authToken) {
           setIsInitializing(false);
           return;
+        }
+
+        const localSess = localStorage.getItem("gl-active-session");
+        if (localSess) {
+          try {
+            setActiveSession(JSON.parse(localSess));
+            setScreen("timer");
+          } catch (e) { console.error("Local session recovery failed", e); }
         }
 
         await refreshAll(userId);
@@ -446,12 +452,14 @@ export default function StudyTrackerApp() {
       setElapsed(0);
       return;
     }
-    const updateTime = () => setElapsed(elapsedForSession(activeSession));
+    const updateTime = () => {
+      setElapsed(elapsedForSession(activeSession));
+    };
     updateTime();
     if (activeSession.status !== "running") return;
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
-  }, [activeSession?._id, activeSession?.status]);
+  }, [activeSession]); // Depend on the whole object to ensure closure is always fresh
 
   useEffect(() => {
     if (!user) return;
@@ -708,6 +716,7 @@ export default function StudyTrackerApp() {
       
       console.log("[GrindLock] Session started/resumed:", session._id);
       setActiveSession(session);
+      localStorage.setItem("gl-active-session", JSON.stringify(session));
       setInactiveSeconds(0);
       setIsOfflineSession(false);
       setTimerAlert("");
@@ -762,7 +771,8 @@ export default function StudyTrackerApp() {
       );
       setDashboard(updated);
       setActiveSession(null);
-      setInactiveSeconds(0);
+      localStorage.removeItem("gl-active-session");
+      setIsActionLoading(false);
       setAntiCheatFlags(0);
       setNotes("");
       setStopReason("");
