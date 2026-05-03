@@ -273,8 +273,13 @@ export default function StudyTrackerApp() {
           const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
           setActiveSession((currentActive) => {
             const next = running || (currentActive?.status === "running" ? currentActive : null);
+            if (next && next._id !== currentActive?._id) {
+               console.log("[GrindLock] Syncing active session from mission data:", next._id);
+            }
             if (next) localStorage.setItem("gl-active-session", JSON.stringify(next));
-            else localStorage.removeItem("gl-active-session");
+            else if (!currentActive || currentActive.status === "completed") {
+               localStorage.removeItem("gl-active-session");
+            }
             return next;
           });
 
@@ -722,7 +727,7 @@ export default function StudyTrackerApp() {
       setIsOfflineSession(false);
       setTimerAlert("");
       
-      refreshAll(user._id).catch(e => console.warn("Background refresh failed after start:", e));
+      // Removed redundant refreshAll(user._id) call to prevent race condition with mock state
     } catch (err) {
       console.error("[GrindLock] Session start failure:", err);
       setTimerAlert("System Fault: Protocol Rejection.");
