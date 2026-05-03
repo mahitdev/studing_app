@@ -315,8 +315,18 @@ export async function mockRequest<T>(path: string, init?: RequestInit): Promise<
 
   const start = path.match(/^\/users\/([^/]+)\/sessions\/start$/);
   if (start && method === "POST") {
-    const existing = store.sessions.find((s) => s.status === "running" || s.status === "paused");
+    const today = todayKey();
+    // Auto-terminate stale sessions from previous days
+    store.sessions.forEach(s => {
+      if (s.date !== today && (s.status === "running" || s.status === "paused")) {
+        s.status = "completed";
+        s.endedAt = new Date().toISOString();
+      }
+    });
+    
+    const existing = store.sessions.find((s) => (s.status === "running" || s.status === "paused") && s.date === today);
     if (existing) return { session: existing } as T;
+    
     const session = newSession(store, body.subject || "General");
     session.studyMode = body.studyMode || "custom";
     session.plannedDurationMinutes = Number(body.plannedDurationMinutes || 0);
