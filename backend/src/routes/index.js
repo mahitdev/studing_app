@@ -308,26 +308,30 @@ router.get("/users/:userId/analytics", async (req, res, next) => {
     const { userId } = req.params;
     const sessions = await StudySession.find({ userId }).sort({ startedAt: 1 });
     
-    // Fetch from python microservice with timeout
+    // Fetch from python microservice with retries
     const analyticsUrl = process.env.ANALYTICS_SERVICE_URL || "http://localhost:8000";
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-    const response = await fetch(`${analyticsUrl}/analyze`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ sessions }),
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-        throw new Error(`Analytics service responded with status ${response.status}`);
+    let analyticsData = null;
+    for (let i = 0; i < 3; i++) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
+        const response = await fetch(`${analyticsUrl}/analyze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessions }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          analyticsData = await response.json();
+          break;
+        }
+      } catch (e) {
+        if (i === 2) throw e;
+        await new Promise(r => setTimeout(r, 1000));
+      }
     }
-
-    const analyticsData = await response.json();
+    if (!analyticsData) throw new Error("Analytics failed after 3 attempts");
     res.json(analyticsData);
   } catch (err) {
     console.warn("Using synthetic analytics fallback due to:", err.message);

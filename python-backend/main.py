@@ -244,12 +244,27 @@ class MatchmakingRequest(BaseModel):
     studyMode: str
     targetMinutes: int
 
-# Temporary in-memory store for matchmaking pool
-active_pool = []
+import json
+import os
+
+POOL_FILE = "matchmaking_pool.json"
+
+def load_pool():
+    if os.path.exists(POOL_FILE):
+        try:
+            with open(POOL_FILE, "r") as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_pool(pool):
+    with open(POOL_FILE, "w") as f:
+        json.dump(pool, f)
 
 @app.post("/matchmake")
 def matchmake_users(req: MatchmakingRequest):
-    global active_pool
+    active_pool = load_pool()
     # Simple algorithm: find someone in the pool with the same mode and similar target
     best_match = None
     for candidate in active_pool:
@@ -262,6 +277,7 @@ def matchmake_users(req: MatchmakingRequest):
     if best_match:
         # Match found! Remove candidate from pool
         active_pool.remove(best_match)
+        save_pool(active_pool)
         return {"matchFound": True, "partnerId": best_match["userId"], "message": "Optimal partner located."}
     
     # Add to pool
@@ -273,6 +289,7 @@ def matchmake_users(req: MatchmakingRequest):
         "studyMode": req.studyMode,
         "targetMinutes": req.targetMinutes
     })
+    save_pool(active_pool)
     return {"matchFound": False, "message": "Entering matchmaking pool. Awaiting optimal partner..."}
 
 if __name__ == "__main__":

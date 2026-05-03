@@ -1,0 +1,13 @@
+{
+  "name": "study-tracker-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:health": "node scratch/test_health.js",
+    "test:register": "node scratch/test_register.js",
+    "test:mock": "node scratch/testmock.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  }
+}

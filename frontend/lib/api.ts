@@ -7,7 +7,10 @@ const USER_ID_KEY = "study-tracker-user-id";
 
 // Use mock API whenever no explicit backend URL is configured.
 // This makes the app work standalone (both locally and on Vercel) without a backend.
-export const HAS_BACKEND = Boolean(process.env.NEXT_PUBLIC_API_URL) && typeof window !== "undefined" && localStorage.getItem("study-tracker-pref-mock") !== "true";
+export const HAS_BACKEND = 
+  typeof window !== "undefined" && 
+  localStorage.getItem("study-tracker-pref-mock") !== "true" && 
+  (Boolean(process.env.NEXT_PUBLIC_API_URL) || window.location.hostname === "localhost");
 
 const API_BASE_RAW = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 const API_BASE = API_BASE_RAW.replace(/\/+$/, "");

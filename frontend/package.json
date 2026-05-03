@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "jest"
   },
   "dependencies": {
     "@react-three/drei": "^9.122.0",
@@ -26,11 +27,17 @@
     "three": "^0.166.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "20.14.12",
     "@types/react": "18.3.3",
     "@types/react-dom": "18.3.0",
     "@types/three": "^0.166.0",
     "autoprefixer": "^10.4.27",
+    "eslint": "^10.3.0",
+    "eslint-config-next": "^16.2.4",
+    "jest": "^30.3.0",
+    "jest-environment-jsdom": "^30.3.0",
     "postcss": "^8.5.9",
     "tailwindcss": "^3.4.19",
     "typescript": "5.5.4"
