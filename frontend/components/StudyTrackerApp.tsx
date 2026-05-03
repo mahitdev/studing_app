@@ -453,6 +453,12 @@ export default function StudyTrackerApp() {
     }
   };
 
+  const handleLogout = () => {
+    clearAuthSession();
+    setUser(null);
+    window.location.reload(); // Hard reset to clear all states and re-init
+  };
+
   useEffect(() => {
     if (!activeSession) {
       setElapsed(0);
@@ -958,10 +964,10 @@ export default function StudyTrackerApp() {
               <p className="text-[10px] text-muted uppercase tracking-widest">Lvl {dashboard?.gamification?.level || 1}</p>
             </div>
           </div>
-          <Link href="/signout" className="nav-btn opacity-50 hover:opacity-100">
+          <button onClick={handleLogout} className="nav-btn w-full opacity-50 hover:opacity-100 flex items-center gap-3">
             <LogOut size={16} />
             Eject
-          </Link>
+          </button>
         </div>
       </aside>
 
