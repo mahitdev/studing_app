@@ -44,10 +44,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   let res: Response | null = null;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
     const fullUrl = `${API_BASE}${path}`.replace(/([^:]\/)\/+/g, "$1");
     res = await fetch(fullUrl, {
       ...init,
+      signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
         ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
@@ -55,9 +59,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       },
       cache: "no-store"
     });
+    clearTimeout(timeoutId);
   } catch (err) {
+    clearTimeout(timeoutId);
     const errorMsg = err instanceof Error ? err.message : String(err);
-    console.warn(`Connection to ${path} failed, attempting mock fallback:`, errorMsg);
+    console.warn(`Connection to ${path} failed (or timed out), attempting mock fallback:`, errorMsg);
     return mockRequest<T>(path, init);
   }
 

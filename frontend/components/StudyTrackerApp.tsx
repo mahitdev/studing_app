@@ -146,7 +146,8 @@ function elapsedForSession(session: StudySession, nowMs = Date.now()) {
   }, 0);
 
   const res = Math.max(0, Math.floor((totalMs - pausedMs) / 1000));
-  return isNaN(res) ? 0 : res;
+  if (isNaN(res) || res < 0) return 0;
+  return res;
 }
 
 export default function StudyTrackerApp() {
@@ -854,6 +855,12 @@ export default function StudyTrackerApp() {
       <div className="flex flex-col items-center gap-6">
         <div className="w-12 h-12 rounded-full border-2 border-accent border-t-transparent animate-spin" />
         <p className="text-xs font-black tracking-widest text-accent animate-pulse uppercase">Synchronizing OS...</p>
+        <button 
+          onClick={handleManualOffline}
+          className="mt-8 text-[10px] font-black tracking-widest text-muted hover:text-white transition-colors border border-white/5 px-4 py-2 rounded-full"
+        >
+          FORCED OFFLINE OVERRIDE
+        </button>
       </div>
     </div>
   );
