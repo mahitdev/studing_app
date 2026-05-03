@@ -11,8 +11,15 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // Adjust in production
+    origin: "*", 
     methods: ["GET", "POST"]
+  }
+});
+
+server.on("error", (err) => {
+  console.error(`[GrindLock] Server critical error: ${err.message}`);
+  if (err.code === "EADDRINUSE") {
+    console.error(`[GrindLock] Port ${PORT} is already occupied. Neural grid collision.`);
   }
 });
 

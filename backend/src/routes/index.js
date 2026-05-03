@@ -81,6 +81,7 @@ const requireSelf = (req, res, next) => {
 };
 
 router.get("/health", (_req, res) => {
+  console.log("[GrindLock] Neural health probe received.");
   res.json({ ok: true, service: "study-tracker-backend" });
 });
 
