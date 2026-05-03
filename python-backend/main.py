@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import pandas as pd
 import numpy as np
@@ -31,8 +31,7 @@ class StudySession(BaseModel):
     studyMode: str = "custom"
     plannedDurationMinutes: float = 0
 
-    class Config:
-        populate_by_name = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 class AnalyticsRequest(BaseModel):
     sessions: List[StudySession]
@@ -60,7 +59,7 @@ def analyze_sessions(payload: AnalyticsRequest):
         }
 
     # Convert to pandas DataFrame
-    df = pd.DataFrame([s.dict() for s in sessions])
+    df = pd.DataFrame([s.model_dump() for s in sessions])
     
     # Filter only completed sessions for reliable stats
     df = df[df['status'] == 'completed']
