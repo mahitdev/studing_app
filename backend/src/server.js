@@ -4,6 +4,9 @@ const { Server } = require("socket.io");
 const app = require("./app");
 const connectDB = require("./config/db");
 
+// Simple home route for connection testing
+app.get("/", (req, res) => res.send("GrindLock API Grid Online."));
+
 const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -50,8 +53,8 @@ io.on("connection", (socket) => {
 
 const start = async () => {
   await connectDB();
-  server.listen(PORT, () => {
-    console.log(`[GrindLock] Real-Time Engine active on port ${PORT}`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`[GrindLock] Real-Time Engine active on port ${PORT} (Neural Interface: 0.0.0.0)`);
   });
 };
 

@@ -35,6 +35,7 @@ class StudySession(BaseModel):
 
 class AnalyticsRequest(BaseModel):
     sessions: List[StudySession]
+    model_config = ConfigDict(from_attributes=True)
 
 def create_base64_plot(fig):
     buf = io.BytesIO()
@@ -242,6 +243,7 @@ class MatchmakingRequest(BaseModel):
     timezone: str
     studyMode: str
     targetMinutes: int
+    model_config = ConfigDict(from_attributes=True)
 
 import json
 import os
