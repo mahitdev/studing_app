@@ -310,7 +310,7 @@ router.get("/users/:userId/analytics", async (req, res, next) => {
     const sessions = await StudySession.find({ userId }).sort({ startedAt: 1 });
     
     // Fetch from python microservice with retries
-    const analyticsUrl = process.env.ANALYTICS_SERVICE_URL || "http://localhost:8000";
+    const analyticsUrl = process.env.ANALYTICS_SERVICE_URL || (process.env.NODE_ENV === "development" ? "http://localhost:8000" : "");
     let analyticsData = null;
     for (let i = 0; i < 3; i++) {
       try {

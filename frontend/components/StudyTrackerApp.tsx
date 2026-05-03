@@ -3,6 +3,7 @@
 
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -34,7 +35,9 @@ import {
   voteAmbient,
   broadcastEmergencyAlert,
   submitGroupAIQuery,
-  placeXPBet
+  placeXPBet,
+  bootstrapUser,
+  saveAuthSession
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 import { 
@@ -151,6 +154,7 @@ function elapsedForSession(session: StudySession, nowMs = Date.now()) {
 }
 
 export default function StudyTrackerApp() {
+  const router = useRouter();
   const [screen, setScreen] = useState<Screen>("dashboard");
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [user, setUser] = useState<User | null>(null);
@@ -457,6 +461,21 @@ export default function StudyTrackerApp() {
     clearAuthSession();
     setUser(null);
     window.location.reload(); // Hard reset to clear all states and re-init
+  };
+
+  const handleGuestLogin = async () => {
+    try {
+      setIsActionLoading(true);
+      setError("");
+      const response = await bootstrapUser("Focused Student", "General", "Serious", "Skill");
+      saveAuthSession(response.user._id, response.token);
+      setUser(response.user);
+      refreshAll(response.user._id);
+    } catch (err) {
+      setError("Guest protocol failed. Check network link.");
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -885,13 +904,35 @@ export default function StudyTrackerApp() {
           {error || "Protocol identity not confirmed. Current link status: OFFLINE."}
         </p>
         <div className="flex flex-col gap-4">
-          <Link href="/signin" className="btn-primary py-4">INITIALIZE NEURAL LINK</Link>
           <button 
-            className="text-[10px] font-black uppercase tracking-widest text-muted hover:text-white transition-colors"
-            onClick={() => { localStorage.clear(); window.location.reload(); }}
+            onClick={() => router.push("/signin")}
+            className="btn-primary py-4 font-bold tracking-widest"
           >
-            Purge Stale Local State
+            INITIALIZE NEURAL LINK
           </button>
+          
+          <button 
+            onClick={handleGuestLogin}
+            disabled={isActionLoading}
+            className="w-full py-3 text-xs font-black uppercase tracking-widest border border-white/10 rounded-xl hover:bg-white/5 transition-all"
+          >
+            {isActionLoading ? "TRANSMITTING..." : "ENTER AS GUEST"}
+          </button>
+
+          <div className="pt-4 flex flex-col gap-2">
+            <button 
+              className="text-[10px] font-black uppercase tracking-widest text-muted hover:text-white transition-colors"
+              onClick={() => { localStorage.clear(); window.location.reload(); }}
+            >
+              Purge Stale Local State
+            </button>
+            <button 
+              className="text-[10px] font-black uppercase tracking-widest text-accent/50 hover:text-accent transition-colors"
+              onClick={handleManualOffline}
+            >
+              Enter Isolated Mode (Mock)
+            </button>
+          </div>
         </div>
       </div>
     </div>
