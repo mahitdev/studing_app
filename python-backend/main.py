@@ -8,7 +8,18 @@ import seaborn as sns
 import io
 import base64
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="GrindLock Neural Analytics Engine")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Adjust to process.env.APP_URL equivalent if needed
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Pydantic models for incoming data
 class PauseItem(BaseModel):

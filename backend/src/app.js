@@ -5,7 +5,13 @@ const rateLimit = require("express-rate-limit");
 
 const app = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const authLimiter = rateLimit({
