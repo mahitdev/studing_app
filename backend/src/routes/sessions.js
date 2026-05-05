@@ -71,7 +71,19 @@ router.post("/:sessionId/resume", requireAuth, async (req, res, next) => {
 
 router.post("/:sessionId/end", requireAuth, async (req, res, next) => {
   try {
-    const { focusedMinutes, inactiveSeconds } = req.body;
+    const { 
+      focusedMinutes, 
+      inactiveSeconds, 
+      notes, 
+      subject, 
+      stopReason, 
+      antiCheatFlags, 
+      sessionQualityTag,
+      studyMode,
+      plannedDurationMinutes,
+      riskMode
+    } = req.body;
+    
     const session = await StudySession.findById(req.params.sessionId);
     if (!session) return res.status(404).json({ message: "Session not found" });
     if (String(session.userId) !== String(req.auth.sub)) return res.status(403).json({ message: "Forbidden" });
@@ -80,6 +92,15 @@ router.post("/:sessionId/end", requireAuth, async (req, res, next) => {
     session.endedAt = new Date().toISOString();
     session.focusedMinutes = focusedMinutes || 0;
     session.inactiveSeconds = inactiveSeconds || 0;
+    session.notes = notes || session.notes;
+    session.subject = subject || session.subject;
+    session.stopReason = stopReason || "";
+    session.antiCheatFlags = antiCheatFlags || 0;
+    session.sessionQualityTag = sessionQualityTag || "";
+    if (studyMode) session.studyMode = studyMode;
+    if (plannedDurationMinutes) session.plannedDurationMinutes = plannedDurationMinutes;
+    if (typeof riskMode === "boolean") session.riskMode = riskMode;
+
     await session.save();
 
     await ensureDailyGoal(session.userId);

@@ -43,6 +43,9 @@ import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
 import Sidebar from "./ui/Sidebar";
 import DashboardView from "./views/DashboardView";
 import TimerView from "./views/TimerView";
+import ColosseumView from "./views/ColosseumView";
+import SettingsView from "./views/SettingsView";
+import StreakView from "./views/StreakView";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -1307,174 +1310,61 @@ export default function StudyTrackerApp() {
             </motion.div>
           )}
 
-          {screen === "analytics" && (
-            <motion.div 
-              key="analytics"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-10"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="display-lg">Neural Analytics</h2>
-                  <p className="text-muted font-medium mt-1">Advanced cognitive performance intelligence.</p>
-                </div>
-                <div className="p-4 glass-light rounded-2xl border-none">
-                  <p className="text-[10px] font-black tracking-widest text-muted uppercase mb-1">Status</p>
-                  <p className="text-xs font-bold text-accent">Active Protocol</p>
-                </div>
-              </div>
-              <NeuralAnalytics data={pythonAnalytics} />
-            </motion.div>
-          )}
-
-          {screen === "settings" && (
-            <motion.div 
-              key="settings"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="max-w-2xl space-y-12"
-            >
-              <section className="space-y-6">
-                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted">Mission Config</h3>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold">Daily Target (Min)</label>
-                    <input type="number" value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} />
+            {screen === "analytics" && (
+              <motion.div 
+                key="analytics"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-10"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="display-lg text-4xl">Neural Analytics</h2>
+                    <p className="text-muted font-medium mt-1 uppercase tracking-widest text-[10px]">Advanced cognitive performance intelligence.</p>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold">Weekly Quota (Min)</label>
-                    <input type="number" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} />
+                  <div className="p-4 glass-light rounded-2xl border border-white/5">
+                    <p className="text-[10px] font-black tracking-widest text-muted uppercase mb-1">Status</p>
+                    <p className="text-xs font-bold text-accent animate-pulse">Active Protocol</p>
                   </div>
                 </div>
-                <button className="btn-primary" onClick={handleGoalUpdate}>Sync Config</button>
-              </section>
+                <NeuralAnalytics data={pythonAnalytics} />
+              </motion.div>
+            )}
 
-              <section className="space-y-6">
-                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted">Identity Profile</h3>
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold">Commitment Level</label>
-                    <select value={identityType} onChange={(e) => setIdentityType(e.target.value as any)}>
-                      <option value="Casual">Casual</option>
-                      <option value="Serious">Serious</option>
-                      <option value="Hardcore">Hardcore</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold">Motivation Core (The "Why")</label>
-                    <textarea value={motivationWhy} onChange={(e) => setMotivationWhy(e.target.value)} rows={3} />
-                  </div>
-                  <button className="btn-primary" onClick={handleIdentityUpdate}>Update Identity</button>
-                </div>
-              </section>
+            {screen === "streak" && (
+              <StreakView dashboard={dashboard} />
+            )}
 
-              <section className="space-y-6">
-                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-muted">Transmission Protocol</h3>
-                <div className="glass-card p-6 border-l-4 border-l-accent space-y-4">
-                  <p className="text-xs font-medium text-white/70 italic">Transmit your current progress summary to your command center (email).</p>
-                  <div className="flex gap-3">
-                    <input 
-                      type="email" 
-                      placeholder="commander@example.com" 
-                      value={summaryEmail} 
-                      onChange={(e) => setSummaryEmail(e.target.value)}
-                      className="flex-1"
-                    />
-                    <button 
-                      className={`px-6 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all ${
-                        emailStatus === "delivered" ? "bg-success text-white" : 
-                        emailStatus === "failed" ? "bg-danger text-white" : 
-                        "bg-white/10 hover:bg-white/20 text-white"
-                      }`}
-                      onClick={handleSendEmail}
-                      disabled={emailStatus === "transmitting"}
-                    >
-                      {emailStatus === "transmitting" ? "SENDING..." : 
-                       emailStatus === "delivered" ? "SENT" : 
-                       emailStatus === "failed" ? "RETRY" : "TRANSMIT"}
-                    </button>
-                  </div>
-                </div>
-              </section>
-            </motion.div>
-          )}
+            {screen === "colosseum" && (
+              <ColosseumView 
+                rooms={rooms} 
+                currentRoom={currentRoom} 
+                onJoinRoom={handleJoinRoom} 
+                onCreateRoom={handleCreateRoom} 
+              />
+            )}
 
-          {screen === "streak" && (
-             <motion.div 
-             key="streak"
-             initial={{ opacity: 0, scale: 0.9 }}
-             animate={{ opacity: 1, scale: 1 }}
-             className="flex flex-col items-center justify-center p-20 text-center"
-           >
-             <div className="text-8xl mb-8 filter drop-shadow-[0_0_30px_rgba(255,80,0,0.4)]">🔥</div>
-             <h2 className="display-lg text-7xl mb-4">{dashboard?.streak?.current || 0}</h2>
-             <p className="text-xs font-black tracking-[0.5em] uppercase text-accent mb-12">Consecutive Cycles</p>
-             
-             <div className="flex gap-12">
-               <div className="text-center">
-                 <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Longest Link</p>
-                 <p className="text-3xl font-black">{dashboard?.streak?.longest || 0}d</p>
-               </div>
-               <div className="text-center">
-                 <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Consistency</p>
-                 <p className="text-3xl font-black">{dashboard?.consistencyScore7d || 0}%</p>
-               </div>
-             </div>
-           </motion.div>
-          )}
-
-          {screen === "colosseum" && (
-            <motion.div 
-              key="colosseum"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-10"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="display-lg">The Colosseum</h2>
-                  <p className="text-muted font-medium mt-1">Live Study Clusters • Synchronized Discipline</p>
-                </div>
-                <button className="btn-primary flex items-center gap-2 px-6" onClick={handleCreateRoom}>
-                  <Plus size={16} /> Create Cluster
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {rooms.map((room) => (
-                  <div key={room._id} className="glass-card p-8 group hover:border-accent/40 transition-all">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="px-3 py-1 rounded-full bg-accent/10 text-accent text-[10px] font-black uppercase tracking-widest">
-                        {room.activeSubject}
-                      </div>
-                      <div className="flex items-center gap-2 text-muted">
-                        <Users size={12} />
-                        <span className="text-xs font-bold">{room.members?.length || 0}</span>
-                      </div>
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">{room.name}</h3>
-                    <p className="text-xs text-muted mb-8 line-clamp-2 italic">Commanded by {room.ownerId?.name || "Unknown Agent"}</p>
-                    <button 
-                      className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                        currentRoom?._id === room._id ? "bg-success/20 text-success border border-success/40" : "bg-white/5 hover:bg-white/10 text-white"
-                      }`}
-                      onClick={() => handleJoinRoom(room._id)}
-                    >
-                      {currentRoom?._id === room._id ? "SYNCHRONIZED" : "JOIN CLUSTER"}
-                    </button>
-                  </div>
-                ))}
-                {rooms.length === 0 && (
-                  <div className="col-span-full glass-light p-20 text-center rounded-3xl opacity-50">
-                    <Swords className="mx-auto mb-6 text-muted" size={48} />
-                    <p className="text-sm font-black tracking-[0.3em] uppercase">No active clusters found</p>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
+            {screen === "settings" && (
+              <SettingsView 
+                user={user}
+                dashboard={dashboard}
+                goalDaily={goalDaily}
+                goalWeekly={goalWeekly}
+                identityType={identityType}
+                motivationWhy={motivationWhy}
+                summaryEmail={summaryEmail}
+                emailStatus={emailStatus}
+                setGoalDaily={setGoalDaily}
+                setGoalWeekly={setGoalWeekly}
+                setIdentityType={setIdentityType}
+                setMotivationWhy={setMotivationWhy}
+                setSummaryEmail={setSummaryEmail}
+                onGoalUpdate={handleGoalUpdate}
+                onIdentityUpdate={handleIdentityUpdate}
+                onSendEmail={handleSendEmail}
+              />
+            )}
 
           {currentRoom && (
             <LiveStudyChamber 

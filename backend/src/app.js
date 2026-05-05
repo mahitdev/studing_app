@@ -4,6 +4,7 @@ const routes = require("./routes");
 const rateLimit = require("express-rate-limit");
 
 const app = express();
+app.set("trust proxy", 1);
 
 const corsOptions = {
   origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : "*",
@@ -16,8 +17,8 @@ app.use(express.json());
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30, // Increased to allow more attempts during setup
-  message: { message: "Too many attempts. Please try again in 15 minutes." },
+  max: 5, 
+  message: { message: "Too many authentication attempts. Neural link locked for 15 minutes." },
   standardHeaders: true,
   legacyHeaders: false
 });
