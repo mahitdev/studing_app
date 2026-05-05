@@ -50,21 +50,37 @@ const TimerView: React.FC<TimerViewProps> = ({
 
       <div className="flex justify-center gap-6">
         {status === "idle" ? (
-          <button onClick={onStart} className="btn-primary px-12 py-4 rounded-2xl flex items-center gap-3">
+          <button 
+            onClick={onStart} 
+            aria-label="Start study session"
+            className="btn-primary px-12 py-4 rounded-2xl flex items-center gap-3"
+          >
             <Play size={20} fill="currentColor" /> INITIALIZE MISSION
           </button>
         ) : (
           <>
             {status === "running" ? (
-              <button onClick={onPause} className="nav-btn p-6 rounded-2xl bg-white/5">
+              <button 
+                onClick={onPause} 
+                aria-label="Pause session"
+                className="nav-btn p-6 rounded-2xl bg-white/5"
+              >
                 <Pause size={24} fill="currentColor" />
               </button>
             ) : (
-              <button onClick={onResume} className="nav-btn p-6 rounded-2xl bg-accent text-black">
+              <button 
+                onClick={onResume} 
+                aria-label="Resume session"
+                className="nav-btn p-6 rounded-2xl bg-accent text-black"
+              >
                 <Play size={24} fill="currentColor" />
               </button>
             )}
-            <button onClick={onEnd} className="btn-danger px-12 py-4 rounded-2xl flex items-center gap-3">
+            <button 
+              onClick={onEnd} 
+              aria-label="End session"
+              className="btn-danger px-12 py-4 rounded-2xl flex items-center gap-3"
+            >
               <RefreshCw size={20} /> TERMINATE MISSION
             </button>
           </>

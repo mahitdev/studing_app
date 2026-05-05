@@ -34,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScre
           <button
             key={item.id}
             onClick={() => onScreenChange(item.id)}
+            aria-label={`Navigate to ${item.label}`}
             className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all duration-300 ${
               activeScreen === item.id 
                 ? "bg-accent/10 text-accent font-bold" 
@@ -56,7 +57,11 @@ const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScre
             <p className="text-[10px] text-muted uppercase tracking-widest">Lvl {dashboard?.gamification?.level || 1}</p>
           </div>
         </div>
-        <button onClick={onLogout} className="nav-btn w-full opacity-50 hover:opacity-100 flex items-center gap-3">
+        <button 
+          onClick={onLogout} 
+          aria-label="Logout and eject system"
+          className="nav-btn w-full opacity-50 hover:opacity-100 flex items-center gap-3"
+        >
           <LogOut size={16} />
           <span className="text-[10px] uppercase tracking-widest">Eject</span>
         </button>
