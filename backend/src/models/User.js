@@ -25,4 +25,14 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+const bcrypt = require("bcryptjs");
+
+userSchema.pre("save", async function(next) {
+  if (!this.isModified("passwordHash")) return next();
+  if (this.passwordHash && !this.passwordHash.startsWith("$2")) {
+    this.passwordHash = await bcrypt.hash(this.passwordHash, 10);
+  }
+  next();
+});
+
 module.exports = mongoose.model("User", userSchema);

@@ -40,6 +40,9 @@ import {
   saveAuthSession
 } from "../lib/api";
 import { Dashboard, LiveFriend, StudySession, User } from "../lib/types";
+import Sidebar from "./ui/Sidebar";
+import DashboardView from "./views/DashboardView";
+import TimerView from "./views/TimerView";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -948,76 +951,21 @@ export default function StudyTrackerApp() {
   ];
 
   return (
-    <div className="app-container">
-      <div className="cursor-glow" />
-      
-      <aside className="sidebar">
-        <div className="p-8 border-b border-white/5">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-accent to-accent-dim flex items-center justify-center shadow-lg shadow-accent/20">
-              <Zap size={20} className="text-white" fill="white" />
-            </div>
-            <div>
-              <h1 className="text-sm font-black tracking-widest text-white">GRINDLOCK</h1>
-              <p className="text-[8px] font-black tracking-[0.2em] text-accent uppercase">Neural OS v1.1.0</p>
-            </div>
-          </div>
+    <div className="flex bg-[#050505] min-h-screen text-white selection:bg-accent selection:text-black font-sans">
+      <Sidebar 
+        user={user} 
+        dashboard={dashboard} 
+        activeScreen={screen} 
+        onScreenChange={setScreen} 
+        onLogout={handleLogout} 
+      />
 
-          <div className="p-4 rounded-xl bg-black/40 border border-white/5 space-y-3 mb-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[8px] font-black text-muted uppercase">Link Status</span>
-              <div className="flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 rounded-full bg-success animate-pulse"></div>
-                <span className="text-[9px] font-bold text-white">ONLINE</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[8px] font-black text-muted uppercase">Neural ID</span>
-              <span className={`text-[9px] font-bold ${userId?.startsWith('mock') ? 'text-warning' : 'text-accent'}`}>
-                {userId ? (userId.length > 10 ? userId.slice(0, 8) + '...' : userId) : 'NONE'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 px-8 py-6">
-          <nav className="space-y-1">
-          {navItems.map((item) => (
-            <button 
-              key={item.id} 
-              className={`nav-btn w-full ${screen === item.id ? "active" : ""}`}
-              onClick={() => setScreen(item.id as Screen)}
-            >
-              <item.icon size={18} />
-              {item.label}
-            </button>
-          ))}
-        </nav>
-        </div>
-
-        <div className="mt-auto pt-8 border-t border-white/5">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-full bg-gradient-accent flex items-center justify-center font-bold text-white uppercase">
-              {user?.name ? user.name.charAt(0) : 'G'}
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-bold truncate">{user?.name}</p>
-              <p className="text-[10px] text-muted uppercase tracking-widest">Lvl {dashboard?.gamification?.level || 1}</p>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="nav-btn w-full opacity-50 hover:opacity-100 flex items-center gap-3">
-            <LogOut size={16} />
-            Eject
-          </button>
-        </div>
-      </aside>
-
-      <main className="main-view">
-        <header className="flex items-center justify-between mb-12">
+      <main className="flex-1 ml-80 p-12">
+        <header className="flex items-center justify-between mb-16">
           <div>
-            <h2 className="display-md text-3xl">{navItems.find(n => n.id === screen)?.label}</h2>
-            <p className="text-xs text-muted font-medium mt-1">
-              System Health: <span className="text-success blink">Optimal</span> • Last Sync: {new Date(lastSyncAt).toLocaleTimeString()}
+            <h2 className="display-md text-4xl uppercase tracking-tighter">{navItems.find(n => n.id === screen)?.label}</h2>
+            <p className="text-[10px] text-muted font-black uppercase tracking-widest mt-2">
+              System Health: <span className="text-success animate-pulse">Optimal</span> • Last Sync: {new Date(lastSyncAt).toLocaleTimeString()}
             </p>
           </div>
           <div className="flex items-center gap-6">
@@ -1026,29 +974,16 @@ export default function StudyTrackerApp() {
               onClick={() => setIsCoachOpen(true)}
               title="Neural Coach"
             >
-              <MessageSquare size={16} />
+              <MessageSquare size={20} />
             </button>
-            <button 
-              className={`p-2 rounded-lg transition-all ${showChamber ? "bg-accent text-white" : "nav-btn hover:bg-white/5"}`}
-              onClick={() => setShowChamber(true)}
-              title="Live Study Chamber"
-            >
-              <Video size={16} />
+            <button className="nav-btn p-2 hover:bg-white/5 rounded-lg" title="Neural Notifications">
+              <div className="relative">
+                <Settings size={20} />
+                <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full border-2 border-black" />
+              </div>
             </button>
-            <button 
-              className={`p-2 rounded-lg transition-all ${isListening ? "bg-accent/20 text-accent animate-pulse" : "nav-btn hover:bg-white/5"}`}
-              onClick={toggleVoice}
-              title="Neural Voice Link"
-            >
-              {isListening ? <Mic size={16} /> : <MicOff size={16} />}
-            </button>
-            <button 
-              className="nav-btn p-2 hover:bg-white/5 rounded-lg transition-colors"
-              onClick={() => user && refreshAll(user._id)}
-              title="Force System Sync"
-            >
-              <RefreshCw size={16} className={isActionLoading ? "animate-spin" : ""} />
-            </button>
+          </div>
+        </header>
             <div className="text-right">
               <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">XP Points</p>
               <p className="text-xl font-black">{dashboard?.gamification?.xp || 0}</p>
@@ -1069,30 +1004,39 @@ export default function StudyTrackerApp() {
           </div>
         </header>
 
-        <AnimatePresence>
-          <NeuralCoach userId={user._id} isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
-          
-          {pythonAnalytics?.burnout?.risk && pythonAnalytics.burnout.risk !== "Low" && (
-            <motion.div 
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="px-6 py-3 bg-danger/10 border border-danger/20 rounded-2xl mb-6 flex items-center gap-4"
-            >
-              <AlertTriangle className="text-danger" size={16} />
-              <p className="text-xs font-bold text-danger uppercase tracking-widest">
-                {pythonAnalytics?.burnout?.intervention || "Burnout protocol activated."}
-              </p>
-            </motion.div>
-          )}
-
-          {screen === "dashboard" && (
-            <motion.div 
-              key="dashboard"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-10"
-            >
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={screen}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          >
+            {screen === "dashboard" && (
+              <DashboardView 
+                user={user!} 
+                dashboard={dashboard} 
+                goalDaily={goalDaily} 
+              />
+            )}
+            
+            {screen === "timer" && (
+              <TimerView 
+                activeSession={activeSession}
+                elapsed={elapsed}
+                plannedDuration={plannedDuration}
+                status={activeSession ? (activeSession.status === "paused" ? "paused" : "running") : "idle"}
+                onStart={handleStart}
+                onPause={handlePause}
+                onResume={handleResume}
+                onEnd={handleEnd}
+                formatHMS={formatHMS}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
+    </div>
               {!dashboard ? (
                 <div className="flex flex-col items-center justify-center py-20 opacity-50">
                   <RefreshCw className="animate-spin mb-4" size={32} />
