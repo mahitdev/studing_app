@@ -1,5 +1,9 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "focusflow-dev-secret-change-in-production";
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? undefined : "dev-local-secret-only");
+
+if (!JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("CRITICAL CONFIG ERROR: JWT_SECRET must be defined in production.");
+}
 
 const requireAuth = (req, res, next) => {
   const header = req.headers.authorization || "";

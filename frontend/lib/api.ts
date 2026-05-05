@@ -10,8 +10,7 @@ const USER_ID_KEY = "study-tracker-user-id";
 export const HAS_BACKEND = 
   typeof window !== "undefined" && 
   localStorage.getItem("study-tracker-pref-mock") !== "true" && 
-  (Boolean(process.env.NEXT_PUBLIC_API_URL) || 
-   (process.env.NODE_ENV === "development" && window.location.hostname === "localhost"));
+  (process.env.NEXT_PUBLIC_DEMO_MODE !== "true");
 
 const API_BASE_RAW = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:5000/api" : "");
 const API_BASE = API_BASE_RAW.replace(/\/+$/, "");
@@ -57,6 +56,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     res = await fetch(fullUrl, {
       ...init,
       signal: controller.signal,
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
@@ -67,27 +67,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     clearTimeout(timeoutId);
   } catch (err) {
     clearTimeout(timeoutId);
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    console.warn(`Connection to ${path} failed (or timed out), attempting mock fallback:`, errorMsg);
-    return mockRequest<T>(path, init);
-  }
-
-  if (!res) {
-    return mockRequest<T>(path, init);
+    throw err;
   }
 
   if (!res.ok) {
-    console.warn(`API Server Error ${res.status}, falling back to mock`);
-    return mockRequest<T>(path, init);
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.message || `API Error ${res.status}`);
   }
 
-  try {
-    const data = await res.json();
-    return data as T;
-  } catch (err) {
-    console.warn(`Failed to parse response from ${path}, falling back to mock:`, err);
-    return mockRequest<T>(path, init);
-  }
+  return res.json();
 }
 
 export async function bootstrapUser(

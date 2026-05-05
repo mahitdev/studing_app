@@ -46,6 +46,7 @@ import TimerView from "./views/TimerView";
 import ColosseumView from "./views/ColosseumView";
 import SettingsView from "./views/SettingsView";
 import StreakView from "./views/StreakView";
+import { useStore } from "../lib/store";
 import { 
   Chart as ChartJS, 
   CategoryScale, 
@@ -161,40 +162,33 @@ function elapsedForSession(session: StudySession, nowMs = Date.now()) {
 
 export default function StudyTrackerApp() {
   const router = useRouter();
-  const [screen, setScreen] = useState<Screen>("dashboard");
+  const {
+    screen, setScreen,
+    user, setUser,
+    dashboard, setDashboard,
+    sessions, setSessions,
+    activeSession, setActiveSession,
+    isInitializing, setIsInitializing,
+    isActionLoading, setIsActionLoading,
+    error, setError,
+    subject, setSubject,
+    studyMode, setStudyMode,
+    plannedDuration, setPlannedDuration,
+    riskMode, setRiskMode,
+    rooms, setRooms,
+    currentRoom, setCurrentRoom,
+    duels, setDuels,
+    activeDuel, setActiveDuel,
+    liveFriends, setLiveFriends,
+    liveMessage, setLiveMessage,
+    lastSyncAt, setLastSyncAt
+  } = useStore();
+
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
-  const [user, setUser] = useState<User | null>(null);
-  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
-  const [sessions, setSessions] = useState<StudySession[]>([]);
-  const [liveFriends, setLiveFriends] = useState<LiveFriend[]>([]);
-  const [liveMessage, setLiveMessage] = useState("");
   const [friendEmail, setFriendEmail] = useState("");
   const [showChamber, setShowChamber] = useState(false);
   const [walletConnected, setWalletConnected] = useState(!!user?.ethAddress);
-
-  const handleConnectWallet = async () => {
-    setIsActionLoading(true);
-    setTimerAlert("Initializing neural wallet handshake...");
-    // Simulate Web3 Connection
-    setTimeout(async () => {
-      try {
-        const mockAddress = "0x" + Math.random().toString(16).slice(2, 10) + "..." + Math.random().toString(16).slice(2, 6);
-        if (user) await setModes(user._id, settings.roastMode, identityType as any, motivationWhy, mockAddress);
-        setWalletConnected(true);
-        setTimerAlert("Wallet synchronized. NFT badges unlocked.");
-      } catch {
-        setError("Neural handshake failed.");
-      } finally {
-        setIsActionLoading(false);
-      }
-    }, 2000);
-  };
-  const [activeSession, setActiveSession] = useState<StudySession | null>(null);
   const [inactiveSeconds, setInactiveSeconds] = useState(0);
-  const [subject, setSubject] = useState("General");
-  const [studyMode, setStudyMode] = useState<"pomodoro" | "deep" | "custom">("custom");
-  const [plannedDuration, setPlannedDuration] = useState(45);
-  const [riskMode, setRiskMode] = useState(false);
   const [notes, setNotes] = useState("");
   const [timerAlert, setTimerAlert] = useState("");
   const [goalDaily, setGoalDaily] = useState(180);
@@ -208,27 +202,17 @@ export default function StudyTrackerApp() {
   const [antiCheatFlags, setAntiCheatFlags] = useState(0);
   const [stopReason, setStopReason] = useState("");
   const [sessionQualityTag, setSessionQualityTag] = useState<"deep" | "average" | "distracted" | "">("");
-  const [error, setError] = useState("");
   const [isOfflineSession, setIsOfflineSession] = useState(false);
   const [pythonAnalytics, setPythonAnalytics] = useState<any>(null);
   const [loadingAnalytics, setLoadingAnalytics] = useState(false);
   const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
-  const [lastSyncAt, setLastSyncAt] = useState<number>(Date.now());
-  
-  // New "Premium" Features States
   const [microTasks, setMicroTasks] = useState<{ id: string; label: string; done: boolean }[]>([]);
   const [newMicroTask, setNewMicroTask] = useState("");
   const [ambientTrack, setAmbientTrack] = useState<string>("none");
   const [ambientPlaying, setAmbientPlaying] = useState(false);
   const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [isActionLoading, setIsActionLoading] = useState(false);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [currentRoom, setCurrentRoom] = useState<any>(null);
   const [isCoachOpen, setIsCoachOpen] = useState(false);
-  const [duels, setDuels] = useState<any[]>([]);
-  const [activeDuel, setActiveDuel] = useState<any>(null);
   const [elapsed, setElapsed] = useState(0);
   const [progress, setProgress] = useState(0);
   
@@ -445,9 +429,7 @@ export default function StudyTrackerApp() {
 
   useEffect(() => {
     loadDuels();
-    const interval = setInterval(loadDuels, 15000); // Poll for new challenges
-    return () => clearInterval(interval);
-  }, [])
+  }, [user]);
 
   const handleChallenge = async (opponentId: string) => {
     if (!user) return;
@@ -517,7 +499,6 @@ export default function StudyTrackerApp() {
       });
 
       socket.on("friend-update", (data: any) => {
-        console.log("[GrindLock] Real-time pulse received:", data);
         if (data.userId !== user._id) {
           if (data.action === "started") {
             setTimerAlert(`${data.subject} session started by an operative.`);
@@ -527,8 +508,11 @@ export default function StudyTrackerApp() {
         }
       });
 
+      socket.on("duel-update", () => loadDuels());
+
       return () => {
         socket.off("friend-update");
+        socket.off("duel-update");
         socket.disconnect();
       };
     }

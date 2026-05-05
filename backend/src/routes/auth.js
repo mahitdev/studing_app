@@ -26,7 +26,10 @@ const signToken = (user) =>
 
 router.post("/register", [
   body("email").isEmail().withMessage("Invalid neural ID format").normalizeEmail(),
-  body("password").isLength({ min: 8 }).withMessage("Protocol key must be at least 8 characters"),
+  body("password")
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
+    .withMessage("Protocol key must be 8+ chars with uppercase, number, and symbol"),
   body("name").trim().notEmpty().withMessage("Identity name required")
 ], async (req, res, next) => {
   try {
@@ -47,6 +50,12 @@ router.post("/register", [
     });
 
     const token = signToken(user);
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
     res.status(201).json({ user: sanitizeUser(user), token });
   } catch (err) {
     next(err);
@@ -63,6 +72,12 @@ router.post("/login", async (req, res, next) => {
     if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
 
     const token = signToken(user);
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
     res.json({ user: sanitizeUser(user), token });
   } catch (err) {
     next(err);
