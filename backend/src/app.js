@@ -8,9 +8,10 @@ const app = express();
 app.set("trust proxy", 1);
 
 const corsOptions = {
-  origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : "*",
+  origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : true,
+  credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
+  allowedHeaders: ["Content-Type", "Authorization", "Cookie"]
 };
 
 app.use(cors(corsOptions));

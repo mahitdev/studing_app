@@ -11,8 +11,9 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : "*",
-    methods: ["GET", "POST"]
+    origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : true,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
@@ -24,8 +25,8 @@ server.on("error", (err) => {
 });
 
 if (process.env.NODE_ENV === "production") {
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === "focusflow-dev-secret-change-in-production") {
-    console.error("FATAL ERROR: Insecure or missing JWT_SECRET in production.");
+  if (!process.env.JWT_SECRET) {
+    console.error("FATAL ERROR: JWT_SECRET must be defined in production. Shutdown initiated.");
     process.exit(1);
   }
 }

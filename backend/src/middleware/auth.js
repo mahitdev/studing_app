@@ -7,7 +7,13 @@ if (!JWT_SECRET && process.env.NODE_ENV === "production") {
 
 const requireAuth = (req, res, next) => {
   const header = req.headers.authorization || "";
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  let token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  
+  // Fallback to cookie if header is missing
+  if (!token && req.cookies) {
+    token = req.cookies.authToken;
+  }
+
   if (!token) {
     return res.status(401).json({ message: "Authentication required" });
   }
