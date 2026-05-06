@@ -93,7 +93,6 @@ async function updateStreak(userId) {
 
   user.streak.lastActivityDate = today;
   
-  // Pet happiness increases with study
   user.pet.happiness = Math.min(100, user.pet.happiness + 10);
   
   await user.save();
