@@ -2,9 +2,20 @@ const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { body, validationResult } = require("express-validator");
+const rateLimit = require("express-rate-limit");
+const zxcvbn = require("zxcvbn");
 const User = require("../models/User");
 const { JWT_SECRET } = require("../middleware/auth");
 const router = express.Router();
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 requests per IP
+  message: { message: "Too many authentication attempts. Please try again in 15 minutes." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 
 const sanitizeUser = (userDoc) => {
   const user = typeof userDoc.toObject === "function" ? userDoc.toObject() : { ...userDoc };
@@ -24,12 +35,18 @@ const signToken = (user) =>
     { expiresIn: "7d" }
   );
 
-router.post("/register", [
+router.post("/register", authLimiter, [
   body("email").isEmail().withMessage("Invalid neural ID format").normalizeEmail(),
   body("password")
     .isLength({ min: 8 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/)
-    .withMessage("Protocol key must be 8+ chars with uppercase, number, and symbol"),
+    .withMessage("Protocol key must be 8+ characters")
+    .custom((value) => {
+      const result = zxcvbn(value);
+      if (result.score < 3) {
+        throw new Error(`Password is too weak. ${result.feedback.suggestions.join(' ')}`);
+      }
+      return true;
+    }),
   body("name").trim().notEmpty().withMessage("Identity name required")
 ], async (req, res, next) => {
   try {
@@ -62,7 +79,7 @@ router.post("/register", [
   }
 });
 
-router.post("/login", async (req, res, next) => {
+router.post("/login", authLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const user = await User.findOne({ email: email?.toLowerCase() });

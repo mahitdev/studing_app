@@ -7,6 +7,17 @@ export type User = {
   level?: number;
   badges?: string[];
   ethAddress?: string;
+  streak?: {
+    current: number;
+    longest: number;
+    lastActivityDate?: string;
+  };
+  pet?: {
+    name: string;
+    type: string;
+    level: number;
+    happiness: number;
+  };
 };
 
 export type DailyGoal = {

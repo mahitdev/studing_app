@@ -12,12 +12,12 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScreenChange, onLogout }) => {
   const navItems = [
-    { id: "dashboard", label: "Overview", icon: LayoutDashboard },
-    { id: "timer", label: "Focus Timer", icon: Timer },
-    { id: "analytics", label: "Neural Engine", icon: BarChart3 },
-    { id: "streak", label: "Momentum", icon: Flame },
-    { id: "colosseum", label: "Colosseum", icon: Swords },
-    { id: "settings", label: "System Config", icon: Settings },
+    { id: "dashboard", label: "Overview", icon: LayoutDashboard, hotkey: "Alt+D" },
+    { id: "timer", label: "Focus Timer", icon: Timer, hotkey: "Alt+T" },
+    { id: "analytics", label: "Neural Engine", icon: BarChart3, hotkey: "Alt+A" },
+    { id: "streak", label: "Momentum", icon: Flame, hotkey: "Alt+M" },
+    { id: "colosseum", label: "Colosseum", icon: Swords, hotkey: "Alt+C" },
+    { id: "settings", label: "System Config", icon: Settings, hotkey: "Alt+S" },
   ];
 
   return (
@@ -34,15 +34,19 @@ const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScre
           <button
             key={item.id}
             onClick={() => onScreenChange(item.id)}
-            aria-label={`Navigate to ${item.label}`}
-            className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl transition-all duration-300 ${
+            aria-label={`${item.label} (${item.hotkey})`}
+            title={`${item.label} (${item.hotkey})`}
+            className={`w-full flex items-center justify-between px-6 py-4 rounded-xl transition-all duration-300 ${
               activeScreen === item.id 
                 ? "bg-accent/10 text-accent font-bold" 
                 : "text-muted hover:bg-white/5 hover:text-white"
             }`}
           >
-            <item.icon size={18} strokeWidth={activeScreen === item.id ? 2.5 : 2} />
-            <span className="text-[10px] uppercase tracking-[0.2em]">{item.label}</span>
+            <div className="flex items-center gap-4">
+              <item.icon size={18} strokeWidth={activeScreen === item.id ? 2.5 : 2} />
+              <span className="text-[10px] uppercase tracking-[0.2em]">{item.label}</span>
+            </div>
+            <span className="text-[8px] opacity-20 font-black tracking-widest group-hover:opacity-100">{item.hotkey.split('+')[1]}</span>
           </button>
         ))}
       </nav>

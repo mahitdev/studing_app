@@ -3,6 +3,7 @@ const http = require("http");
 const { Server } = require("socket.io");
 const app = require("./app");
 const connectDB = require("./config/db");
+const logger = require("./utils/logger");
 
 // Simple home route for connection testing
 app.get("/", (req, res) => res.send("GrindLock API Grid Online."));
@@ -18,15 +19,15 @@ const io = new Server(server, {
 });
 
 server.on("error", (err) => {
-  console.error(`[GrindLock] Server critical error: ${err.message}`);
+  logger.error(`[GrindLock] Server critical error: ${err.message}`);
   if (err.code === "EADDRINUSE") {
-    console.error(`[GrindLock] Port ${PORT} is already occupied. Neural grid collision.`);
+    logger.error(`[GrindLock] Port ${PORT} is already occupied. Neural grid collision.`);
   }
 });
 
 if (process.env.NODE_ENV === "production") {
   if (!process.env.JWT_SECRET) {
-    console.error("FATAL ERROR: JWT_SECRET must be defined in production. Shutdown initiated.");
+    logger.error("FATAL ERROR: JWT_SECRET must be defined in production. Shutdown initiated.");
     process.exit(1);
   }
 }
@@ -34,39 +35,67 @@ if (process.env.NODE_ENV === "production") {
 app.set("io", io);
 
 io.on("connection", (socket) => {
-  console.log(`[GrindLock] Neural link established: ${socket.id}`);
+  logger.info(`[GrindLock] Neural link established: ${socket.id}`);
   
   socket.on("authenticate", (userId) => {
-    socket.join(userId);
-    console.log(`[GrindLock] User ${userId} authenticated and joined private channel.`);
+    try {
+      if (!userId || typeof userId !== "string") return;
+      socket.join(userId);
+      logger.info(`[GrindLock] User ${userId} joined private channel.`);
+    } catch (err) {
+      logger.error(`[GrindLock] Socket Auth Error: ${err.message}`);
+    }
   });
 
-  socket.on("join-room", (data) => {
-    const roomId = typeof data === "string" ? data : data.roomId;
-    socket.join(roomId);
-    console.log(`[GrindLock] Socket joined synchronized target: ${roomId}`);
+  socket.on("join-room", async (data) => {
+    try {
+      const roomId = typeof data === "string" ? data : data?.roomId;
+      if (!roomId || typeof roomId !== "string") {
+        return socket.emit("error", { message: "Invalid Room ID" });
+      }
+
+      // Basic validation: ensure roomId looks like a valid ID (e.g. hex or uuid)
+      if (!/^[a-f\d]{24}$/i.test(roomId) && roomId.length < 10) {
+        return socket.emit("error", { message: "Malformed Room ID" });
+      }
+
+      socket.join(roomId);
+      logger.info(`[GrindLock] Socket ${socket.id} joined synchronized target: ${roomId}`);
+    } catch (err) {
+      logger.error(`[GrindLock] Socket Join Error: ${err.message}`);
+      socket.emit("error", { message: "Failed to join room" });
+    }
   });
 
   socket.on("room-action", (data) => {
-    const { roomId, action, ...rest } = data;
-    if (roomId) {
-      io.to(roomId).emit("room-action", { action, ...rest });
+    try {
+      const { roomId, action, ...rest } = data || {};
+      if (!roomId || !action || typeof roomId !== "string" || typeof action !== "string") {
+        return;
+      }
+
+      // Sanitization: Only broadcast to recognized room formats
+      if (!/^[a-f\d]{24}$/i.test(roomId) && roomId.length < 10) return;
+
+      io.to(roomId).emit("room-action", { action, ...rest, timestamp: Date.now() });
+    } catch (err) {
+      logger.error(`[GrindLock] Socket Action Error: ${err.message}`);
     }
   });
 
   socket.on("disconnect", () => {
-    console.log(`[GrindLock] Neural link severed: ${socket.id}`);
+    logger.info(`[GrindLock] Neural link severed: ${socket.id}`);
   });
 });
 
 const start = async () => {
   await connectDB();
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`[GrindLock] Real-Time Engine active on port ${PORT} (Neural Interface: 0.0.0.0)`);
+    logger.info(`[GrindLock] Real-Time Engine active on port ${PORT} (Neural Interface: 0.0.0.0)`);
   });
 };
 
 start().catch((err) => {
-  console.error("Failed to start server", err);
+  logger.error("Failed to start server", err);
   process.exit(1);
 });

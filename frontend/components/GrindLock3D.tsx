@@ -116,32 +116,47 @@ function Rig() {
   return null;
 }
 
+function useIsLowEnd() {
+  return useMemo(() => {
+    if (typeof window === "undefined") return false;
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isSlowConnection = (navigator as any).connection && ((navigator as any).connection.saveData || (navigator as any).connection.effectiveType === '2g');
+    return isMobile || isSlowConnection;
+  }, []);
+}
+
 function Scene() {
+  const isLowEnd = useIsLowEnd();
+  
   return (
     <>
       <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={50} />
       <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={25} color="#7B61FF" />
-      <pointLight position={[-10, -10, -10]} intensity={15} color="#00D4FF" />
+      <pointLight position={[10, 10, 10]} intensity={isLowEnd ? 15 : 25} color="#7B61FF" />
+      <pointLight position={[-10, -10, -10]} intensity={isLowEnd ? 10 : 15} color="#00D4FF" />
       
-      <StarField count={400} />
+      <StarField count={isLowEnd ? 150 : 400} />
       
       {/* Background Layer */}
-      <AnimatedBlob position={[-6, 4, -10]} speed={0.5} color="#150a33" distort={0.2} radius={3} factor={0.5} />
-      <AnimatedBlob position={[8, -6, -12]} speed={0.4} color="#051020" distort={0.1} radius={4} factor={0.3} />
+      {!isLowEnd && (
+        <>
+          <AnimatedBlob position={[-6, 4, -10]} speed={0.5} color="#150a33" distort={0.2} radius={3} factor={0.5} />
+          <AnimatedBlob position={[8, -6, -12]} speed={0.4} color="#051020" distort={0.1} radius={4} factor={0.3} />
+        </>
+      )}
       
       {/* Midground Layer - Optimized */}
-      <AnimatedBlob position={[4, 2, -5]} speed={1} color="#3e63dd" distort={0.3} radius={1.2} factor={1} />
-      <AnimatedBlob position={[-5, -3, -5]} speed={0.8} color="#8e4ec6" distort={0.2} radius={1.5} factor={1.2} />
+      <AnimatedBlob position={[4, 2, -5]} speed={1} color="#3e63dd" distort={isLowEnd ? 0.1 : 0.3} radius={1.2} factor={1} />
+      <AnimatedBlob position={[-5, -3, -5]} speed={0.8} color="#8e4ec6" distort={isLowEnd ? 0.1 : 0.2} radius={1.5} factor={1.2} />
       
       {/* Futuristic Grid - Refined */}
       <Grid
         infiniteGrid
-        fadeDistance={40}
-        fadeStrength={8}
+        fadeDistance={isLowEnd ? 20 : 40}
+        fadeStrength={isLowEnd ? 4 : 8}
         cellSize={1}
         sectionSize={5}
-        sectionThickness={1.5}
+        sectionThickness={isLowEnd ? 1 : 1.5}
         sectionColor="#3e63dd"
         cellColor="#3e63dd"
         cellThickness={0.3}
@@ -149,16 +164,16 @@ function Scene() {
         rotation={[Math.PI / 2.2, 0, 0]}
       />
       
-      <Rig />
+      {!isLowEnd && <Rig />}
     </>
   );
 }
 
 export default function GrindLock3D() {
   return (
-    <div className="fixed inset-0 -z-10 bg-[#000000]">
+    <div className="fixed inset-0 -z-10 bg-[#000000]" role="img" aria-label="Futuristic neural study environment background">
       <div className="absolute inset-0 bg-mesh opacity-50" />
-      <Canvas dpr={[1, 1.5]} gl={{ antialias: false, alpha: true }}>
+      <Canvas dpr={[1, 1.2]} gl={{ antialias: false, alpha: true, powerPreference: "high-performance" }}>
         <Scene />
       </Canvas>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(123,97,255,0.1),transparent_80%)]" />

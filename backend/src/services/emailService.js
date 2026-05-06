@@ -1,5 +1,6 @@
 const nodemailer = require("nodemailer");
 const DailyGoal = require("../models/DailyGoal");
+const logger = require("../utils/logger");
 
 let transporter = null;
 
@@ -66,11 +67,11 @@ async function sendProgressEmail(user, email) {
   const appUrl = String(process.env.APP_URL || "https://grindlock.vercel.app").trim();
 
   if (!mailer) {
-    console.log("--- SIMULATED EMAIL ---");
-    console.log(`To: ${email}`);
-    console.log(`Subject: Your GrindLock Progress Summary`);
-    console.log(`Body: ${JSON.stringify(summary)}`);
-    console.log("------------------------");
+    logger.info("--- SIMULATED EMAIL ---");
+    logger.info(`To: ${email}`);
+    logger.info(`Subject: Your GrindLock Progress Summary`);
+    logger.info(`Body: ${JSON.stringify(summary)}`);
+    logger.info("------------------------");
     return summary;
   }
 
@@ -111,12 +112,12 @@ async function sendProgressEmail(user, email) {
       html
     });
   } catch (err) {
-    console.error(`❌ Email transmission failed: ${err.message}`);
-    console.log("--- FALLING BACK TO SIMULATED LOG ---");
-    console.log(`To: ${email}`);
-    console.log(`Subject: ${subject}`);
-    console.log(`Body: ${JSON.stringify(summary)}`);
-    console.log("-------------------------------------");
+    logger.error(`❌ Email transmission failed: ${err.message}`);
+    logger.info("--- FALLING BACK TO SIMULATED LOG ---");
+    logger.info(`To: ${email}`);
+    logger.info(`Subject: ${subject}`);
+    logger.info(`Body: ${JSON.stringify(summary)}`);
+    logger.info("-------------------------------------");
   }
 
   return summary;

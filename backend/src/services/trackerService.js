@@ -1,6 +1,8 @@
 const DailyGoal = require("../models/DailyGoal");
 const StudySession = require("../models/StudySession");
 const User = require("../models/User");
+const Challenge = require("../models/Challenge");
+const gamificationService = require("./gamificationService");
 
 const todayKey = () => {
   const d = new Date();
@@ -11,20 +13,21 @@ const todayKey = () => {
 
 const levelFromXp = (xp) => Math.min(50, Math.floor((xp || 0) / 600) + 1);
 
-const ensureDailyGoal = async (userId, date = todayKey()) => {
-  let goal = await DailyGoal.findOne({ userId, date });
+const ensureDailyGoal = async (userId, date = todayKey(), dbSession = null) => {
+  let goal = await DailyGoal.findOne({ userId, date }).session(dbSession);
   if (!goal) {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).session(dbSession);
     const dailyMinutes = user?.goalConfig?.dailyMinutes || 180;
-    goal = await DailyGoal.create({ userId, date, targetMinutes: dailyMinutes });
+    goal = await DailyGoal.create([{ userId, date, targetMinutes: dailyMinutes }], { session: dbSession });
+    goal = goal[0];
   }
   return goal;
 };
 
-const recalculateDailyTotals = async (userId, date = todayKey()) => {
-  const goal = await ensureDailyGoal(userId, date);
+const recalculateDailyTotals = async (userId, date = todayKey(), dbSession = null) => {
+  const goal = await ensureDailyGoal(userId, date, dbSession);
 
-  const sessions = await StudySession.find({ userId, date, status: "completed" });
+  const sessions = await StudySession.find({ userId, date, status: "completed" }).session(dbSession);
   const studiedMinutes = sessions.reduce((sum, s) => sum + (s.focusedMinutes || 0), 0);
 
   goal.studiedMinutes = studiedMinutes;
@@ -32,7 +35,7 @@ const recalculateDailyTotals = async (userId, date = todayKey()) => {
     ? Math.min(100, Math.round((studiedMinutes / goal.targetMinutes) * 100))
     : 0;
   goal.completed = goal.targetMinutes > 0 && studiedMinutes >= goal.targetMinutes;
-  await goal.save();
+  await goal.save({ session: dbSession });
 
   return { goal, sessions };
 };
@@ -318,21 +321,35 @@ const challengeProgress = (goals, sessions, streak) => {
   ];
 };
 
-const coachSuggestions = (sessions, deep, weakAlerts) => {
+const coachSuggestions = (sessions, deep, weakAlerts, streak, energy) => {
   const suggestions = [];
 
+  // Burnout detection
+  const recentTotalMinutes = sessions.slice(0, 7).reduce((sum, s) => sum + (s.focusedMinutes || 0), 0);
+  if (recentTotalMinutes > 2400) { // > 40 hours in recent sessions
+    suggestions.push("High risk of neural fatigue detected. Schedule a mandatory 24h detox.");
+  }
+
   suggestions.push(deep.weekendConsistency);
-  suggestions.push(`Try studying at ${deep.bestStudyTime} (your best time).`);
+  if (energy?.strongestWindow && energy.strongestWindow !== "00:00") {
+    suggestions.push(`Optimal performance window: ${energy.strongestWindow}. Align deep work here.`);
+  } else {
+    suggestions.push(`Try studying at ${deep.bestStudyTime} (your historically best time).`);
+  }
 
   const avgInactive = sessions.length
     ? Math.round(sessions.reduce((sum, s) => sum + ((s.inactiveSeconds || 0) / 60), 0) / sessions.length)
     : 0;
   if (avgInactive > 8) {
-    suggestions.push("Your distraction load is high. Lock distractions for 45 minutes blocks.");
+    suggestions.push("Your distraction load is high. Protocol: 'Digital Silence' for next session.");
   }
 
   if (weakAlerts.length) {
-    suggestions.push(`Weak zone: ${weakAlerts[0]}`);
+    suggestions.push(`Vulnerability detected in ${weakAlerts[0]}. Deploy more focus blocks.`);
+  }
+
+  if (streak.current > 5) {
+    suggestions.push(`Momentum status: Elite. You're outperforming 95% of users.`);
   }
 
   return suggestions.slice(0, 4);
@@ -696,6 +713,7 @@ const applyXpAndBadges = async (userId) => {
 
 const dashboardForUser = async (userId) => {
   await ensureDailyGoal(userId);
+  await gamificationService.ensureDailyChallenges(userId);
   const { goal: todayGoal, sessions: todaySessions } = await recalculateDailyTotals(userId);
   const user = await applyXpAndBadges(userId);
 
@@ -716,8 +734,21 @@ const dashboardForUser = async (userId) => {
   const subjectStats = subjectBreakdown(sessions);
   const deep = deepAnalytics(sessions);
   const focusToday = focusScoreForToday(todaySessions);
-  const challenges = challengeProgress(goals, sessions, streak);
-  const aiCoach = coachSuggestions(sessions, deep, subjectStats.weakAlerts);
+  
+  // Real Challenges from DB
+  const dbChallenges = await Challenge.find({ userId, isCompleted: false });
+  const challenges = dbChallenges.map(c => ({
+    id: c._id,
+    title: c.title,
+    description: c.description,
+    target: c.targetValue,
+    value: c.currentValue,
+    completed: c.isCompleted,
+    rewardXp: c.rewardXp,
+    rewardBadge: c.rewardBadge
+  }));
+
+  const aiCoach = coachSuggestions(sessions, deep, subjectStats.weakAlerts, streak, energyPatternTracking);
   const consistencyScore7d = weekly.weeklyCompletionPercent;
   const remainingMinutes = Math.max(0, (todayGoal?.targetMinutes || 0) - (todayGoal?.studiedMinutes || 0));
   const hoursRemaining = Math.ceil(remainingMinutes / 60);
@@ -762,7 +793,9 @@ const dashboardForUser = async (userId) => {
       name: user.name,
       college: user.college,
       level: user.level,
-      xp: user.xp
+      xp: user.xp,
+      pet: user.pet,
+      streak: user.streak
     },
     todayGoal,
     identity: {

@@ -13,6 +13,7 @@
     "@react-three/drei": "^9.122.0",
     "@react-three/fiber": "^8.18.0",
     "@types/lodash.debounce": "^4.0.9",
+    "@types/zxcvbn": "^4.4.5",
     "chart.js": "^4.5.1",
     "clsx": "^2.1.1",
     "framer-motion": "^10.18.0",
@@ -30,7 +31,9 @@
     "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
     "three": "^0.166.1",
-    "zustand": "^5.0.13"
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13",
+    "zxcvbn": "^4.4.2"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",

@@ -2,11 +2,10 @@ import { Dashboard, LeaderboardEntry, LiveFriend, StudySession, User } from "./t
 import { mockRequest } from "./mockApi";
 import { io } from "socket.io-client";
 
-const AUTH_TOKEN_KEY = "study-tracker-auth-token";
 const USER_ID_KEY = "study-tracker-user-id";
+let isSyncing = false;
 
 // Use mock API whenever no explicit backend URL is configured.
-// This makes the app work standalone (both locally and on Vercel) without a backend.
 export const HAS_BACKEND = 
   typeof window !== "undefined" && 
   localStorage.getItem("study-tracker-pref-mock") !== "true" && 
@@ -14,68 +13,71 @@ export const HAS_BACKEND =
 
 const API_BASE_RAW = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === "development" ? "http://localhost:5000/api" : "");
 const API_BASE = API_BASE_RAW.replace(/\/+$/, "");
-// If API_BASE is /api, SOCKET_URL is the root. If it's a subdomain, we need to be careful.
 const SOCKET_URL = API_BASE ? API_BASE.replace(/\/api$/, "") : "";
 
 export const socket = io(SOCKET_URL, {
   autoConnect: false,
   reconnection: true,
-  reconnectionAttempts: 3,
-  timeout: 5000,
-  transports: ["websocket", "polling"]
+  reconnectionAttempts: 10,
+  reconnectionDelay: 2000,
+  timeout: 10000,
+  transports: ["websocket", "polling"],
+  withCredentials: true
 });
 
-function getAuthToken() {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem(AUTH_TOKEN_KEY) || "";
-}
-
-export function saveAuthSession(userId: string, token: string) {
+export function saveAuthSession(userId: string, token?: string) {
   if (typeof window === "undefined") return;
   localStorage.setItem(USER_ID_KEY, userId);
-  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  // Token is now handled via HttpOnly cookies by the backend
 }
 
 export function clearAuthSession() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(USER_ID_KEY);
-  localStorage.removeItem(AUTH_TOKEN_KEY);
+  // Optional: call a logout endpoint to clear cookies if needed
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(path: string, init?: RequestInit, retries = 3): Promise<T> {
   if (!HAS_BACKEND) {
     return mockRequest<T>(path, init);
   }
 
-  let res: Response | null = null;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const executeRequest = async (attempt: number): Promise<T> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-  try {
-    const fullUrl = `${API_BASE}${path}`.replace(/([^:]\/)\/+/g, "$1");
-    res = await fetch(fullUrl, {
-      ...init,
-      signal: controller.signal,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...(getAuthToken() ? { Authorization: `Bearer ${getAuthToken()}` } : {}),
-        ...(init?.headers || {})
-      },
-      cache: "no-store"
-    });
-    clearTimeout(timeoutId);
-  } catch (err) {
-    clearTimeout(timeoutId);
-    throw err;
-  }
+    try {
+      const fullUrl = `${API_BASE}${path}`.replace(/([^:]\/)\/+/g, "$1");
+      const res = await fetch(fullUrl, {
+        ...init,
+        signal: controller.signal,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(init?.headers || {})
+        },
+        cache: "no-store"
+      });
+      clearTimeout(timeoutId);
 
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `API Error ${res.status}`);
-  }
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `API Error ${res.status}`);
+      }
 
-  return res.json();
+      return res.json();
+    } catch (err: any) {
+      clearTimeout(timeoutId);
+      if (attempt < retries && (err.name === 'AbortError' || !err.message.includes('401'))) {
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return executeRequest(attempt + 1);
+      }
+      throw err;
+    }
+  };
+
+  return executeRequest(0);
 }
 
 export async function bootstrapUser(
@@ -256,10 +258,20 @@ export async function syncOfflineSessions(
     date?: string;
   }>
 ): Promise<{ synced: number; dashboard: Dashboard }> {
-  return request(`/users/${userId}/sessions/offline-sync`, {
-    method: "POST",
-    body: JSON.stringify({ sessions })
-  });
+  if (isSyncing || sessions.length === 0) {
+    return { synced: 0, dashboard: {} as Dashboard };
+  }
+  
+  try {
+    isSyncing = true;
+    const res = await request<{ synced: number; dashboard: Dashboard }>(`/users/${userId}/sessions/offline-sync`, {
+      method: "POST",
+      body: JSON.stringify({ sessions })
+    });
+    return res;
+  } finally {
+    isSyncing = false;
+  }
 }
 
 export async function subscribeWaitlist(

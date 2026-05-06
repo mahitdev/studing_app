@@ -58,13 +58,17 @@ export default function LandingWaitlistForm() {
   return (
     <div className="relative w-full max-w-md">
       {showConfetti && <Confetti />}
-      <div className="flex flex-col sm:flex-row gap-3 items-center relative z-10">
+      <form 
+        onSubmit={(e) => { e.preventDefault(); onSubmit(); }}
+        className="flex flex-col sm:flex-row gap-3 items-center relative z-10"
+      >
         <div className="flex-1 w-full relative">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Priority access email"
+            aria-label="Email for priority access"
             className="w-full px-6 py-4 rounded-full glass-light border border-white/10 text-white placeholder-white/50 focus:outline-none focus:border-[#00F0FF]/50 transition-all duration-300 font-medium"
           />
           <div className="absolute bottom-0 left-0 h-0.5 bg-white/10 w-full rounded-full overflow-hidden">
@@ -76,18 +80,21 @@ export default function LandingWaitlistForm() {
           </div>
         </div>
         <motion.button
+          type="submit"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={onSubmit}
           disabled={loading || (email.length > 0 && !isValid)}
+          aria-label="Join the elite waitlist"
           className="w-full sm:w-auto px-8 py-4 rounded-full bg-white text-black font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl shadow-white/5 whitespace-nowrap overflow-hidden relative"
         >
           {loading ? "Synchronizing..." : "Join the Elite"}
         </motion.button>
-      </div>
+      </form>
       <AnimatePresence>
         {status && (
           <motion.p
+            role="status"
+            aria-live="polite"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}

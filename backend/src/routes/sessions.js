@@ -1,7 +1,9 @@
 const express = require("express");
+const mongoose = require("mongoose");
 const StudySession = require("../models/StudySession");
 const { requireAuth, requireSelf } = require("../middleware/auth");
-const { recalculateDailyTotals, ensureDailyGoal } = require("../services/trackerService");
+const { recalculateDailyTotals, ensureDailyGoal, dashboardForUser } = require("../services/trackerService");
+const { updateStreak, updateChallengeProgress } = require("../services/gamificationService");
 const router = express.Router();
 
 router.get("/:userId", requireAuth, requireSelf, async (req, res, next) => {
@@ -70,6 +72,9 @@ router.post("/:sessionId/resume", requireAuth, async (req, res, next) => {
 });
 
 router.post("/:sessionId/end", requireAuth, async (req, res, next) => {
+  const dbSession = await mongoose.startSession();
+  dbSession.startTransaction();
+  
   try {
     const { 
       focusedMinutes, 
@@ -84,9 +89,15 @@ router.post("/:sessionId/end", requireAuth, async (req, res, next) => {
       riskMode
     } = req.body;
     
-    const session = await StudySession.findById(req.params.sessionId);
-    if (!session) return res.status(404).json({ message: "Session not found" });
-    if (String(session.userId) !== String(req.auth.sub)) return res.status(403).json({ message: "Forbidden" });
+    const session = await StudySession.findById(req.params.sessionId).session(dbSession);
+    if (!session) {
+      await dbSession.abortTransaction();
+      return res.status(404).json({ message: "Session not found" });
+    }
+    if (String(session.userId) !== String(req.auth.sub)) {
+      await dbSession.abortTransaction();
+      return res.status(403).json({ message: "Forbidden" });
+    }
 
     session.status = "completed";
     session.endedAt = new Date().toISOString();
@@ -101,14 +112,29 @@ router.post("/:sessionId/end", requireAuth, async (req, res, next) => {
     if (plannedDurationMinutes) session.plannedDurationMinutes = plannedDurationMinutes;
     if (typeof riskMode === "boolean") session.riskMode = riskMode;
 
-    await session.save();
+    await session.save({ session: dbSession });
 
-    await ensureDailyGoal(session.userId);
-    await recalculateDailyTotals(session.userId);
+    // Multi-step updates that must be atomic
+    await ensureDailyGoal(session.userId, undefined, dbSession);
+    await recalculateDailyTotals(session.userId, undefined, dbSession);
+    
+    // Gamification updates
+    await updateStreak(session.userId);
+    await updateChallengeProgress(session.userId, "daily", session.focusedMinutes);
+    if (session.studyMode === "deep" && session.focusedMinutes >= 50) {
+      await updateChallengeProgress(session.userId, "daily", 1); // For "Complete 1 deep focus" challenge
+    }
 
-    res.json(session);
+    await dbSession.commitTransaction();
+    
+    // Fetch fresh dashboard data outside transaction or as final step
+    const dashboard = await dashboardForUser(session.userId);
+    res.json({ session, dashboard });
   } catch (err) {
+    await dbSession.abortTransaction();
     next(err);
+  } finally {
+    dbSession.endSession();
   }
 });
 

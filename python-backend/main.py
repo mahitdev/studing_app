@@ -13,11 +13,18 @@ from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="GrindLock Neural Analytics Engine")
 
 # Add CORS middleware
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5000",
+    "https://grindlock.vercel.app", # Placeholder for production frontend
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Adjust to process.env.APP_URL equivalent if needed
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -230,8 +237,10 @@ def analyze_sessions(payload: AnalyticsRequest):
         plt.title("Knowledge Cluster Distribution", color='white')
         graphs["subject_distribution"] = create_base64_plot(plt.gcf())
     except Exception as e:
-        print(f"Graph generation failed: {e}")
-        graphs = {"error": "Visualization engine offline"}
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Graph generation failed: {error_details}")
+        graphs = {"error": f"Visualization engine offline: {str(e)}"}
 
     return {
         "average_study_time": average_study_time,
