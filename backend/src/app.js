@@ -7,8 +7,19 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 app.set("trust proxy", 1);
 
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  console.error("FATAL: JWT_SECRET is missing in production environment variables.");
+}
+
 const corsOptions = {
-  origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : true,
+  origin: (origin, callback) => {
+    const allowed = [process.env.APP_URL, "https://grindlock.vercel.app"].filter(Boolean);
+    if (!origin || allowed.includes(origin) || process.env.NODE_ENV !== "production") {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "Cookie"]

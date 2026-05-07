@@ -12,6 +12,19 @@ const dailyRotateFileTransport = new winston.transports.DailyRotateFile({
   maxFiles: '14d',
 });
 
+const transports = [
+  new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
+    ),
+  }),
+];
+
+if (!process.env.VERCEL) {
+  transports.push(dailyRotateFileTransport);
+}
+
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
   format: winston.format.combine(
@@ -20,15 +33,7 @@ const logger = winston.createLogger({
     }),
     winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
   ),
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.printf((info) => `${info.timestamp} ${info.level}: ${info.message}`)
-      ),
-    }),
-    dailyRotateFileTransport,
-  ],
+  transports,
 });
 
 module.exports = logger;
