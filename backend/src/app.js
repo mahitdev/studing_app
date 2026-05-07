@@ -13,8 +13,9 @@ if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
 
 const corsOptions = {
   origin: (origin, callback) => {
+    const isVercel = origin && origin.endsWith(".vercel.app");
     const allowed = [process.env.APP_URL, "https://grindlock.vercel.app"].filter(Boolean);
-    if (!origin || allowed.includes(origin) || process.env.NODE_ENV !== "production") {
+    if (!origin || allowed.includes(origin) || isVercel || process.env.NODE_ENV !== "production") {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));

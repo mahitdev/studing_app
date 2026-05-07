@@ -2,17 +2,7 @@ const winston = require('winston');
 require('winston-daily-rotate-file');
 const path = require('path');
 
-const logDir = 'logs';
-
-const dailyRotateFileTransport = new winston.transports.DailyRotateFile({
-  filename: path.join(logDir, '%DATE%-results.log'),
-  datePattern: 'YYYY-MM-DD',
-  zippedArchive: true,
-  maxSize: '20m',
-  maxFiles: '14d',
-});
-
-const transports = [
+let transports = [
   new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),
@@ -22,6 +12,14 @@ const transports = [
 ];
 
 if (!process.env.VERCEL) {
+  const logDir = 'logs';
+  const dailyRotateFileTransport = new winston.transports.DailyRotateFile({
+    filename: path.join(logDir, '%DATE%-results.log'),
+    datePattern: 'YYYY-MM-DD',
+    zippedArchive: true,
+    maxSize: '20m',
+    maxFiles: '14d',
+  });
   transports.push(dailyRotateFileTransport);
 }
 
