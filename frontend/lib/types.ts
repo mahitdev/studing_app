@@ -242,7 +242,9 @@ export type StudySession = {
   _id: string;
   status: "running" | "paused" | "completed";
   startedAt: string;
+  lastStartedAt?: string;
   endedAt?: string;
+  elapsedSeconds: number;
   pauses?: Array<{
     startedAt: string;
     endedAt?: string;

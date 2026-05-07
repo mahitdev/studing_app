@@ -21,6 +21,8 @@ const studySessionSchema = new mongoose.Schema(
     ],
     focusedMinutes: { type: Number, min: 0, default: 0 },
     inactiveSeconds: { type: Number, min: 0, default: 0 },
+    elapsedSeconds: { type: Number, default: 0 },
+    lastStartedAt: { type: Date },
     subject: { type: String, default: "General" },
     studyMode: { type: String, enum: ["pomodoro", "deep", "custom"], default: "custom" },
     plannedDurationMinutes: { type: Number, min: 0, default: 0 },

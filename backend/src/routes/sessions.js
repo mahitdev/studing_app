@@ -20,13 +20,15 @@ router.post("/start", requireAuth, async (req, res, next) => {
     const { userId, subject, studyMode, plannedDurationMinutes, riskMode } = req.body;
     if (String(req.auth.sub) !== String(userId)) return res.status(403).json({ message: "Identity mismatch" });
 
+    const now = new Date().toISOString();
     const session = await StudySession.create({
       userId,
       subject,
       studyMode,
       plannedDurationMinutes,
       riskMode,
-      startedAt: new Date().toISOString(),
+      startedAt: now,
+      lastStartedAt: now,
       status: "running"
     });
 
@@ -42,8 +44,15 @@ router.post("/:sessionId/pause", requireAuth, async (req, res, next) => {
     if (!session) return res.status(404).json({ message: "Session not found" });
     if (String(session.userId) !== String(req.auth.sub)) return res.status(403).json({ message: "Forbidden" });
 
+    const now = new Date();
+    if (session.status === "running" && session.lastStartedAt) {
+      const delta = Math.floor((now.getTime() - new Date(session.lastStartedAt).getTime()) / 1000);
+      session.elapsedSeconds += Math.max(0, delta);
+    }
+    
     session.status = "paused";
-    session.pauses.push({ startedAt: new Date().toISOString() });
+    session.lastStartedAt = null;
+    session.pauses.push({ startedAt: now.toISOString() });
     await session.save();
     res.json(session);
   } catch (err) {
@@ -57,11 +66,14 @@ router.post("/:sessionId/resume", requireAuth, async (req, res, next) => {
     if (!session) return res.status(404).json({ message: "Session not found" });
     if (String(session.userId) !== String(req.auth.sub)) return res.status(403).json({ message: "Forbidden" });
 
+    const now = new Date();
     session.status = "running";
+    session.lastStartedAt = now.toISOString();
+    
     if (session.pauses.length > 0) {
       const lastPause = session.pauses[session.pauses.length - 1];
       if (!lastPause.endedAt) {
-        lastPause.endedAt = new Date().toISOString();
+        lastPause.endedAt = now.toISOString();
       }
     }
     await session.save();
@@ -99,8 +111,15 @@ router.post("/:sessionId/end", requireAuth, async (req, res, next) => {
       return res.status(403).json({ message: "Forbidden" });
     }
 
+    const now = new Date();
+    if (session.status === "running" && session.lastStartedAt) {
+      const delta = Math.floor((now.getTime() - new Date(session.lastStartedAt).getTime()) / 1000);
+      session.elapsedSeconds += Math.max(0, delta);
+    }
+
     session.status = "completed";
-    session.endedAt = new Date().toISOString();
+    session.lastStartedAt = null;
+    session.endedAt = now.toISOString();
     session.focusedMinutes = focusedMinutes || 0;
     session.inactiveSeconds = inactiveSeconds || 0;
     session.notes = notes || session.notes;

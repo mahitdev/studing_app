@@ -369,7 +369,6 @@ export default function StudyTrackerApp() {
   }, [settings]);
 
   useEffect(() => {
-    const onVisibility = async () => {
     const onInactive = () => {
       if (activeSession?.status === "running" && !hiddenAt.current) {
         hiddenAt.current = Date.now();
