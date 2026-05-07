@@ -1,5 +1,4 @@
 const winston = require('winston');
-require('winston-daily-rotate-file');
 const path = require('path');
 
 let transports = [
@@ -12,6 +11,7 @@ let transports = [
 ];
 
 if (!process.env.VERCEL) {
+  require('winston-daily-rotate-file');
   const logDir = 'logs';
   const dailyRotateFileTransport = new winston.transports.DailyRotateFile({
     filename: path.join(logDir, '%DATE%-results.log'),
