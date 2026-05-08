@@ -414,6 +414,51 @@ export default function StudyTrackerApp() {
     return () => window.removeEventListener("keydown", handleKeys);
   }, [setScreen]);
 
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = "en-US";
+
+      recognitionRef.current.onresult = (event: any) => {
+        const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
+        console.log("Neural Voice Intel:", transcript);
+
+        if (transcript.includes("start timer") || transcript.includes("begin focus")) {
+          handleStart();
+        } else if (transcript.includes("pause session") || transcript.includes("hold focus")) {
+          handlePauseResume();
+        } else if (transcript.includes("stop focus") || transcript.includes("finish session")) {
+          handleEnd();
+        } else if (transcript.includes("go to dashboard")) {
+          setScreen("dashboard");
+        } else if (transcript.includes("open analytics")) {
+          setScreen("analytics");
+        }
+      };
+
+      recognitionRef.current.onerror = () => setIsListening(false);
+      recognitionRef.current.onend = () => {
+        if (isListening) recognitionRef.current.start();
+      };
+    }
+  }, [handleStart, handlePauseResume, handleEnd, setScreen, isListening]);
+
+  const toggleVoiceControl = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    } else {
+      recognitionRef.current?.start();
+      setIsListening(true);
+    }
+  };
+
   const navItems = [
     { id: "dashboard", label: "Overview", icon: LayoutDashboard, aria: "Navigate to Dashboard (Alt+D)" },
     { id: "timer", label: "Focus Timer", icon: Timer, aria: "Navigate to Focus Timer (Alt+T)" },
@@ -467,6 +512,13 @@ export default function StudyTrackerApp() {
               <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">XP Points</p>
               <p className="text-xl font-black">{dashboard?.gamification?.xp || 0}</p>
             </div>
+            <button 
+              onClick={toggleVoiceControl}
+              className={`p-2 rounded-lg transition-all ${isListening ? 'bg-danger/20 border-danger text-danger animate-pulse' : 'nav-btn hover:bg-white/5 text-white/50'}`}
+              title={isListening ? "Voice Protocol Active" : "Initialize Voice Protocol"}
+            >
+              {isListening ? <Mic size={20} /> : <MicOff size={20} />}
+            </button>
             <button 
               className={`p-2 rounded-lg transition-all ${isCoachOpen ? "bg-accent/20 text-accent" : "nav-btn hover:bg-white/5"}`}
               onClick={() => setIsCoachOpen(true)}

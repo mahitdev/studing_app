@@ -18,6 +18,17 @@ export type User = {
     level: number;
     happiness: number;
   };
+  achievements?: Array<{
+    achievementId: {
+      _id: string;
+      title: string;
+      description: string;
+      icon: string;
+      category: string;
+    };
+    earnedAt: string;
+  }>;
+  studyGroups?: string[];
 };
 
 export type DailyGoal = {
@@ -225,6 +236,9 @@ export type Dashboard = {
   aiCoach: string[];
   roastMessage: string;
   aiSuggestions: string[];
+  groups?: any[];
+  mentors?: any[];
+  breakSuggestions?: string;
   antiCheat: {
     tabSwitchDetected: boolean;
     idleDetected: boolean;

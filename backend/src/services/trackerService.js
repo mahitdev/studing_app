@@ -887,10 +887,63 @@ const dashboardForUser = async (userId) => {
   };
 };
 
+const getLeaderboard = async (userId, filter = "global") => {
+  const users = await User.find({}).sort({ xp: -1 }).limit(100);
+  
+  if (filter === "friends") {
+    const user = await User.findById(userId);
+    if (!user) return [];
+    const friendIds = user.friends.map(id => id.toString());
+    friendIds.push(userId.toString());
+    return users.filter(u => friendIds.includes(u._id.toString()));
+  }
+  
+  return users.map(u => ({
+    _id: u._id,
+    name: u.name,
+    xp: u.xp,
+    level: u.level,
+    streak: u.streak?.current || 0,
+    college: u.college
+  }));
+};
+
+const findMentors = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) return [];
+
+  const mentors = await User.find({
+    _id: { $ne: userId },
+    $or: [
+      { college: user.college },
+      { identityType: "Hardcore" }
+    ],
+    level: { $gt: user.level }
+  }).sort({ level: -1 }).limit(5);
+
+  return mentors.map(m => ({
+    _id: m._id,
+    name: m.name,
+    level: m.level,
+    college: m.college,
+    identityType: m.identityType
+  }));
+};
+
+const getBreakSuggestions = (sessionMinutes) => {
+  if (sessionMinutes < 25) return "Stay focused. Minimum viable block not yet reached.";
+  if (sessionMinutes < 50) return "5-minute micro-break recommended. Hydrate and stretch.";
+  if (sessionMinutes < 90) return "15-minute neural reset recommended. Step away from screens.";
+  return "Protocol 90: Mandatory 30-minute recovery required for neural preservation.";
+};
+
 module.exports = {
   todayKey,
   ensureDailyGoal,
   recalculateDailyTotals,
   dashboardForUser,
-  applyXpAndBadges
+  applyXpAndBadges,
+  getLeaderboard,
+  findMentors,
+  getBreakSuggestions
 };

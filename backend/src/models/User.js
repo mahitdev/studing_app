@@ -10,7 +10,12 @@ const userSchema = new mongoose.Schema(
     xp: { type: Number, default: 0, min: 0 },
     level: { type: Number, default: 1, min: 1 },
     badges: [{ type: String }],
+    achievements: [{
+      achievementId: { type: mongoose.Schema.Types.ObjectId, ref: "Achievement" },
+      earnedAt: { type: Date, default: Date.now }
+    }],
     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    studyGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "StudyGroup" }],
     preferredStudyTime: { type: String, default: "20:00" },
     goalConfig: {
       dailyMinutes: { type: Number, default: 180 },

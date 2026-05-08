@@ -4,6 +4,9 @@ import { TrendingUp, Target, Activity, Flame, MessageSquare, Brain } from "lucid
 import { Dashboard, User } from "../../lib/types";
 import PetPanel from "../ui/PetPanel";
 import ChallengeList from "../ui/ChallengeList";
+import { BadgeGallery } from "../ui/BadgeGallery";
+import { StudyGroupPanel } from "../ui/StudyGroupPanel";
+import { Shield, Users, Award, Coffee } from "lucide-react";
 
 interface DashboardViewProps {
   user: User;
@@ -46,10 +49,43 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-12">
         {/* Left/Center Column: Challenges & Analytics */}
         <div className="xl:col-span-2 space-y-12">
+          {/* Micro-Challenges (Goal Decomposition) */}
+          <section className="glass-card p-8 border-white/5">
+            <div className="flex items-center gap-3 mb-8">
+              <Shield className="text-accent" size={20} />
+              <h2 className="text-xs font-black uppercase tracking-widest text-white/50">Mission Decomposition</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { label: "Neural Setup", target: 30, current: dashboard?.todayGoal?.studiedMinutes || 0 },
+                { label: "Core Execution", target: 90, current: dashboard?.todayGoal?.studiedMinutes || 0 },
+                { label: "Final Validation", target: goalDaily, current: dashboard?.todayGoal?.studiedMinutes || 0 },
+              ].map((m, idx) => (
+                <div key={idx} className={`p-4 rounded-xl border transition-all ${m.current >= m.target ? 'bg-success/10 border-success/30' : 'bg-white/5 border-white/10'}`}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest">{m.label}</span>
+                    <span className={`text-[10px] font-black ${m.current >= m.target ? 'text-success' : 'text-white/40'}`}>{m.target}M</span>
+                  </div>
+                  <div className="h-1.5 bg-black/40 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${m.current >= m.target ? 'bg-success shadow-[0_0_10px_rgba(var(--success-rgb),0.5)]' : 'bg-white/20'}`}
+                      style={{ width: `${Math.min(100, (m.current / m.target) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section aria-labelledby="challenges-heading">
             <h2 id="challenges-heading" className="sr-only">Active Challenges</h2>
             <ChallengeList challenges={(dashboard as any)?.challenges || []} />
           </section>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+             <BadgeGallery achievements={user.achievements || []} />
+             <StudyGroupPanel groups={dashboard?.groups || []} />
+          </div>
 
           {/* AI Coach Suggestion Card */}
           <div className="glass-card p-8 bg-gradient-to-r from-accent/10 via-transparent to-transparent border-accent/20">
@@ -58,7 +94,15 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
                 <Brain size={32} className="text-accent" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xs font-black uppercase tracking-widest text-accent mb-4">Neural Advisor Feedback</h3>
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-accent">Neural Advisor Feedback</h3>
+                  {dashboard?.breakSuggestions && (
+                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                      <Coffee size={12} className="text-warning" />
+                      <span className="text-[9px] font-black uppercase tracking-widest text-warning">{dashboard.breakSuggestions}</span>
+                    </div>
+                  )}
+                </div>
                 <div className="space-y-3">
                   {(dashboard?.aiCoach || []).map((msg: string, i: number) => (
                     <motion.div 
@@ -78,13 +122,42 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
           </div>
         </div>
 
-        {/* Right Column: Pet & Social */}
+        {/* Right Column: Pet & Mentorship */}
         <div className="space-y-12">
           <section aria-labelledby="pet-heading">
             <h2 id="pet-heading" className="text-xs font-black uppercase tracking-widest text-muted mb-6 flex items-center gap-2">
               <Activity size={14} className="text-success" /> Neural Companion
             </h2>
             <PetPanel pet={(dashboard?.user as any)?.pet || user.pet} xp={dashboard?.gamification?.xp || user.xp} />
+          </section>
+
+          {/* AI Mentorship Matching */}
+          <section className="glass-card p-8 border-white/5">
+            <div className="flex items-center gap-3 mb-6">
+              <Users className="text-primary" size={18} />
+              <h3 className="text-xs font-black uppercase tracking-widest text-white/50">Neural Mentors</h3>
+            </div>
+            <div className="space-y-4">
+              {(dashboard?.mentors || []).map((mentor, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-primary/30 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black border border-primary/30">
+                      {mentor.name[0]}
+                    </div>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-widest">{mentor.name}</p>
+                      <p className="text-[9px] text-white/40 uppercase">Level {mentor.level} • {mentor.college}</p>
+                    </div>
+                  </div>
+                  <button className="p-1.5 hover:bg-white/10 rounded-lg text-primary transition-all">
+                    <Plus size={14} />
+                  </button>
+                </div>
+              ))}
+              {(!dashboard?.mentors || dashboard.mentors.length === 0) && (
+                <p className="text-[10px] text-center italic text-white/20">Finding optimal matches...</p>
+              )}
+            </div>
           </section>
 
           <div className="glass-card p-8 text-center bg-white/5">
@@ -103,7 +176,6 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
               {7 - (dashboard?.streak?.current || 0)} Days to Unstoppable
             </p>
           </div>
-        </div>
       </div>
     </div>
   );

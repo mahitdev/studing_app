@@ -4,6 +4,7 @@ const router = express.Router();
 const authRoutes = require("./auth");
 const sessionRoutes = require("./sessions");
 const roomRoutes = require("./rooms");
+const integrationRoutes = require("./integrations");
 // Additional routes can be imported here
 
 router.get("/health", (_req, res) => {
@@ -13,6 +14,7 @@ router.get("/health", (_req, res) => {
 router.use("/auth", authRoutes);
 router.use("/sessions", sessionRoutes);
 router.use("/rooms", roomRoutes);
+router.use("/integrations", integrationRoutes);
 
 // Legacy/Misc routes can be kept here or moved further
 router.post("/waitlist/subscribe", async (req, res, next) => {
