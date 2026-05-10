@@ -16,11 +16,15 @@ const SessionSchema = z.object({
   startedAt: z.string(),
   lastStartedAt: z.string().optional(),
   elapsedSeconds: z.number().default(0),
+  focusedMinutes: z.number().default(0),
+  pauseCount: z.number().default(0),
+  inactiveSeconds: z.number().default(0),
   subject: z.string().default("General"),
-  studyMode: z.string().default("custom"),
+  studyMode: z.enum(["pomodoro", "deep", "custom"]).default("custom"),
   plannedDurationMinutes: z.number().default(0),
   riskMode: z.boolean().default(false),
   pauses: z.array(z.any()).default([]),
+  date: z.string().default(() => new Date().toISOString().slice(0, 10))
 });
 
 export function useSessionManager() {

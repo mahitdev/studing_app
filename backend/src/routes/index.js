@@ -7,6 +7,7 @@ const roomRoutes = require("./rooms");
 const integrationRoutes = require("./integrations");
 const userRoutes = require("./users");
 const duelRoutes = require("./duels");
+const waitlistRoutes = require("./waitlist");
 const { getLeaderboard } = require("../services/trackerService");
 
 router.get("/health", (_req, res) => {
@@ -19,6 +20,7 @@ router.use("/rooms", roomRoutes);
 router.use("/integrations", integrationRoutes);
 router.use("/users", userRoutes);
 router.use("/duels", duelRoutes);
+router.use("/waitlist", waitlistRoutes);
 
 router.get("/leaderboard", async (req, res, next) => {
   try {
@@ -31,9 +33,5 @@ router.get("/leaderboard", async (req, res, next) => {
 });
 
 // Legacy/Misc routes can be kept here or moved further
-router.post("/waitlist/subscribe", async (req, res, next) => {
-  // Existing waitlist logic...
-  res.json({ ok: true }); 
-});
 
 module.exports = router;

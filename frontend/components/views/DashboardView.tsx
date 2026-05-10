@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, Target, Activity, Flame, MessageSquare, Brain } from "lucide-react";
+import { TrendingUp, Target, Activity, Flame, MessageSquare, Brain, Plus } from "lucide-react";
 import { Dashboard, User } from "../../lib/types";
 import PetPanel from "../ui/PetPanel";
 import ChallengeList from "../ui/ChallengeList";
@@ -128,7 +128,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
             <h2 id="pet-heading" className="text-xs font-black uppercase tracking-widest text-muted mb-6 flex items-center gap-2">
               <Activity size={14} className="text-success" /> Neural Companion
             </h2>
-            <PetPanel pet={(dashboard?.user as any)?.pet || user.pet} xp={dashboard?.gamification?.xp || user.xp} />
+            <PetPanel pet={(dashboard?.user as any)?.pet || user.pet} xp={dashboard?.gamification?.xp || user.xp || 0} />
           </section>
 
           {/* AI Mentorship Matching */}
@@ -176,6 +176,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
               {7 - (dashboard?.streak?.current || 0)} Days to Unstoppable
             </p>
           </div>
+        </div>
       </div>
     </div>
   );

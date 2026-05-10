@@ -46,14 +46,14 @@ export function useSocketSync() {
 
       socket.on("duel-update", async () => {
         try {
-          const { duels } = await fetchDuels(user._id);
+          const duels = await fetchDuels(user._id);
           setDuels(duels);
         } catch {}
       });
 
       socket.on("room-update", async () => {
         try {
-          const { rooms } = await fetchRooms();
+          const rooms = await fetchRooms();
           setRooms(rooms);
         } catch {}
       });

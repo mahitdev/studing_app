@@ -23,7 +23,7 @@ interface AppStore {
   sessions: StudySession[];
   setSessions: (sessions: StudySession[]) => void;
   activeSession: StudySession | null;
-  setActiveSession: (session: StudySession | null) => void;
+  setActiveSession: (val: StudySession | null | ((prev: StudySession | null) => StudySession | null)) => void;
   
   // Real-time Data
   liveFriends: LiveFriend[];
@@ -74,7 +74,9 @@ export const useStore = create<AppStore>()(
       sessions: [],
       setSessions: (sessions) => set({ sessions }),
       activeSession: null,
-      setActiveSession: (activeSession) => set({ activeSession }),
+      setActiveSession: (val) => set((state) => ({ 
+        activeSession: typeof val === 'function' ? val(state.activeSession) : val 
+      })),
       
       liveFriends: [],
       setLiveFriends: (liveFriends) => set({ liveFriends }),
