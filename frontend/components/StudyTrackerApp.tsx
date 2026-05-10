@@ -363,6 +363,47 @@ export default function StudyTrackerApp() {
     }
   };
 
+  const handleGoalUpdate = async () => {
+    if (!user) return;
+    try {
+      setIsActionLoading(true);
+      await setGoalConfig(user._id, { dailyMinutes: goalDaily, weeklyTargetMinutes: goalWeekly });
+      await refreshAll(user._id);
+    } catch {
+      setError("Failed to calibrate goals. Protocol rejected.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleIdentityUpdate = async () => {
+    if (!user) return;
+    try {
+      setIsActionLoading(true);
+      await setModes(user._id, settings.roastMode, identityType, motivationWhy);
+      await refreshAll(user._id);
+    } catch {
+      setError("Identity shift failed. Neural resistance detected.");
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!user) return;
+    try {
+      setEmailStatus("transmitting");
+      const res = await sendProgressEmail(user._id, summaryEmail);
+      if (res.ok) {
+        setEmailStatus("delivered");
+        setTimeout(() => setEmailStatus(""), 5000);
+      }
+    } catch {
+      setEmailStatus("error");
+      setError("Data transmission to external node failed.");
+    }
+  };
+
   useEffect(() => {
     document.body.dataset.theme = settings.darkMode ? "dark" : "light";
     localStorage.setItem(settingsKey, JSON.stringify(settings));
@@ -427,8 +468,7 @@ export default function StudyTrackerApp() {
 
       recognitionRef.current.onresult = (event: any) => {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
-        console.log("Neural Voice Intel:", transcript);
-
+        
         if (transcript.includes("start timer") || transcript.includes("begin focus")) {
           handleStart();
         } else if (transcript.includes("pause session") || transcript.includes("hold focus")) {
