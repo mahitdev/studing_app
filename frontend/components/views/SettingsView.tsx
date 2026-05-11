@@ -43,11 +43,25 @@ const SettingsView: React.FC<SettingsViewProps> = ({
         <div className="grid grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-muted">Daily Target (Min)</label>
-            <input type="number" className="w-full bg-white/5 border-white/10" value={goalDaily} onChange={(e) => setGoalDaily(Number(e.target.value))} />
+            <input 
+              type="number" 
+              min="0"
+              className="w-full bg-white/5 border-white/10" 
+              value={goalDaily} 
+              onChange={(e) => setGoalDaily(Math.max(0, Number(e.target.value)))} 
+              aria-label="Daily mission target in minutes"
+            />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-muted">Weekly Quota (Min)</label>
-            <input type="number" className="w-full bg-white/5 border-white/10" value={goalWeekly} onChange={(e) => setGoalWeekly(Number(e.target.value))} />
+            <input 
+              type="number" 
+              min="0"
+              className="w-full bg-white/5 border-white/10" 
+              value={goalWeekly} 
+              onChange={(e) => setGoalWeekly(Math.max(0, Number(e.target.value)))} 
+              aria-label="Weekly mission quota in minutes"
+            />
           </div>
         </div>
         <button className="btn-primary px-8 py-3 rounded-xl font-bold text-xs" onClick={onGoalUpdate}>Sync Config</button>

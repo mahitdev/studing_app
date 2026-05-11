@@ -37,8 +37,8 @@ const ColosseumView: React.FC<ColosseumViewProps> = ({ rooms, currentRoom, onJoi
             <h3 className="text-xl font-bold mb-2 uppercase tracking-tight">{room.name}</h3>
             <p className="text-[10px] text-muted mb-8 line-clamp-2 italic uppercase tracking-widest font-black">Commanded by {room.ownerId?.name || "Unknown Agent"}</p>
             <button 
-              className={`w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
-                currentRoom?._id === room._id ? "bg-success/20 text-success border border-success/40" : "bg-white/5 hover:bg-white/10 text-white"
+              className={`btn-secondary w-full py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+                currentRoom?._id === room._id ? "bg-success/20 text-success border border-success/40" : ""
               }`}
               onClick={() => onJoinRoom(room._id)}
             >

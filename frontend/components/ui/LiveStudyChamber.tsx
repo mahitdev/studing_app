@@ -115,7 +115,7 @@ export default function LiveStudyChamber({ onClose, room, socket, userId }: Live
               <button onClick={() => handleAlert("burnout")} className="nav-btn p-3 bg-danger/10 text-danger border-danger/20 hover:bg-danger/20">
                 <AlertTriangle size={18} />
               </button>
-              <button onClick={onClose} className="nav-btn px-6 py-3 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-widest">Disconnect</button>
+              <button onClick={onClose} className="btn-secondary px-6 py-3 text-xs font-black uppercase tracking-widest">Disconnect</button>
             </div>
           </div>
 

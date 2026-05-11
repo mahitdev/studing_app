@@ -6,49 +6,63 @@ interface NeuralAnalyticsProps {
 }
 
 export default function NeuralAnalytics({ data }: NeuralAnalyticsProps) {
-  if (!data || data.error) return (
-    <div className="p-20 text-center opacity-40">
-      <RefreshCw className="mx-auto mb-4 animate-spin" size={32} />
-      <p className="text-xs font-black uppercase tracking-widest">Neural Link Synchronizing...</p>
-    </div>
+  const isLoading = !data || data.loading;
+
+  const Skeleton = ({ className }: { className?: string }) => (
+    <div className={`bg-white/5 animate-pulse rounded-xl ${className}`} />
   );
 
   return (
-    <div className="grid grid-cols-2 gap-10">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
       <div className="space-y-10">
         <div className="grid grid-cols-2 gap-6">
           <div className="glass-card p-6">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Efficiency Rating</p>
-            <p className="text-3xl font-black">{data.focus_score}%</p>
+            {isLoading ? <Skeleton className="h-8 w-16" /> : <p className="text-3xl font-black">{data.focus_score || 0}%</p>}
           </div>
           <div className="glass-card p-6">
             <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-2">Consistency Index</p>
-            <p className="text-3xl font-black">{data.consistency_score}%</p>
+            {isLoading ? <Skeleton className="h-8 w-16" /> : <p className="text-3xl font-black">{data.consistency_score || 0}%</p>}
           </div>
         </div>
-        <div className="glass-card p-8">
+        <div className="glass-card p-8 min-h-[300px] flex flex-col">
           <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-6">ML Focus Trajectory</h3>
-          {data.graphs?.focus_trend ? (
-            <img src={`data:image/png;base64,${data.graphs.focus_trend}`} className="w-full rounded-xl border border-white/5" />
-          ) : (
-             <div className="h-48 bg-white/5 rounded-xl animate-pulse flex items-center justify-center text-[10px] font-black uppercase text-muted">Awaiting Neural Map...</div>
-          )}
+          <div className="flex-1 relative min-h-[200px]">
+            {isLoading ? (
+              <Skeleton className="absolute inset-0" />
+            ) : data.graphs?.focus_trend ? (
+              <img src={`data:image/png;base64,${data.graphs.focus_trend}`} className="w-full h-full object-contain rounded-xl border border-white/5" alt="Focus trend chart" />
+            ) : (
+               <div className="absolute inset-0 bg-white/5 rounded-xl flex items-center justify-center text-[10px] font-black uppercase text-muted">Awaiting Neural Map...</div>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="space-y-10">
-        <div className="glass-card p-8">
+        <div className="glass-card p-8 min-h-[300px] flex flex-col">
           <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-6">Knowledge Cluster Distribution</h3>
-          {data.graphs?.subject_distribution ? (
-            <img src={`data:image/png;base64,${data.graphs.subject_distribution}`} className="w-full max-w-[300px] mx-auto" />
-          ) : (
-            <div className="h-48 bg-white/5 rounded-xl animate-pulse" />
-          )}
+          <div className="flex-1 relative min-h-[200px]">
+            {isLoading ? (
+              <Skeleton className="absolute inset-0" />
+            ) : data.graphs?.subject_distribution ? (
+              <img src={`data:image/png;base64,${data.graphs.subject_distribution}`} className="w-full h-full object-contain mx-auto" alt="Subject distribution chart" />
+            ) : (
+              <div className="absolute inset-0 bg-white/5 rounded-xl flex items-center justify-center text-[10px] font-black uppercase text-muted">No Cluster Data</div>
+            )}
+          </div>
         </div>
 
         <div className="glass-card p-8 bg-gradient-to-br from-accent/20 to-transparent border-none">
            <h3 className="text-xs font-black uppercase tracking-widest text-accent mb-4">Neural Insight</h3>
-           <p className="text-sm font-bold italic leading-relaxed text-white">"{data.message}"</p>
+           {isLoading ? (
+             <div className="space-y-2">
+               <Skeleton className="h-4 w-full" />
+               <Skeleton className="h-4 w-3/4" />
+             </div>
+           ) : (
+             <p className="text-sm font-bold italic leading-relaxed text-white">"{data.message || "Awaiting intelligence downlink..."}"</p>
+           )}
         </div>
       </div>
     </div>

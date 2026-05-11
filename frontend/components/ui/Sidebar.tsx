@@ -8,20 +8,29 @@ interface SidebarProps {
   activeScreen: string;
   onScreenChange: (screen: any) => void;
   onLogout: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScreenChange, onLogout }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScreenChange, onLogout, isOpen = true, onClose }) => {
   const navItems = [
-    { id: "dashboard", label: "Overview", icon: LayoutDashboard, hotkey: "Alt+D" },
-    { id: "timer", label: "Focus Timer", icon: Timer, hotkey: "Alt+T" },
-    { id: "analytics", label: "Neural Engine", icon: BarChart3, hotkey: "Alt+A" },
-    { id: "streak", label: "Momentum", icon: Flame, hotkey: "Alt+M" },
-    { id: "colosseum", label: "Colosseum", icon: Swords, hotkey: "Alt+C" },
-    { id: "settings", label: "System Config", icon: Settings, hotkey: "Alt+S" },
+    { id: "dashboard", label: "Neural Core", icon: LayoutDashboard, hotkey: "Alt+D" },
+    { id: "timer", label: "Neural Sync", icon: Timer, hotkey: "Alt+T" },
+    { id: "analytics", label: "Neural Map", icon: BarChart3, hotkey: "Alt+A" },
+    { id: "streak", label: "Neural Persistence", icon: Flame, hotkey: "Alt+M" },
+    { id: "colosseum", label: "Tactical Center", icon: Swords, hotkey: "Alt+C" },
+    { id: "settings", label: "Neural Config", icon: Settings, hotkey: "Alt+S" },
   ];
 
   return (
-    <aside className="w-80 h-screen fixed left-0 top-0 glass-card border-r border-white/5 flex flex-col p-8 z-50">
+    <>
+      {/* Mobile Overlay */}
+      <div 
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] transition-opacity duration-300 lg:hidden ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClose}
+      />
+      
+      <aside className={`w-80 h-screen fixed left-0 top-0 glass-card border-r border-white/5 flex flex-col p-8 z-[110] transition-transform duration-300 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="flex items-center gap-3 mb-16">
         <div className="p-2 bg-accent/20 rounded-xl">
           <Zap className="text-accent" size={24} />
@@ -71,6 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScre
         </button>
       </div>
     </aside>
+    </>
   );
 };
 

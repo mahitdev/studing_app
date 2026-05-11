@@ -138,7 +138,6 @@ async function updateStreak(userId) {
   
   await user.save();
   
-  // Check for achievements
   await awardAchievement(userId, "streak", user.streak.current);
   await awardAchievement(userId, "pet_level", user.pet.level);
 

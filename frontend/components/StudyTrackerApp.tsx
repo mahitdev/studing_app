@@ -195,6 +195,7 @@ export default function StudyTrackerApp() {
   const [webcamEnabled, setWebcamEnabled] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>("default");
   const [isCoachOpen, setIsCoachOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -500,12 +501,12 @@ export default function StudyTrackerApp() {
   };
 
   const navItems = [
-    { id: "dashboard", label: "Overview", icon: LayoutDashboard, aria: "Navigate to Dashboard (Alt+D)" },
-    { id: "timer", label: "Focus Timer", icon: Timer, aria: "Navigate to Focus Timer (Alt+T)" },
-    { id: "analytics", label: "Neural Engine", icon: BarChart3, aria: "Navigate to Analytics (Alt+A)" },
-    { id: "streak", label: "Momentum", icon: Flame, aria: "View Momentum and Streaks" },
-    { id: "colosseum", label: "Colosseum", icon: Swords, aria: "Enter Colosseum Duels" },
-    { id: "settings", label: "Config", icon: Settings, aria: "Navigate to Settings (Alt+S)" }
+    { id: "dashboard", label: "Neural Core", icon: LayoutDashboard, aria: "Navigate to Dashboard (Alt+D)" },
+    { id: "timer", label: "Neural Sync", icon: Timer, aria: "Navigate to Focus Timer (Alt+T)" },
+    { id: "analytics", label: "Neural Map", icon: BarChart3, aria: "Navigate to Analytics (Alt+A)" },
+    { id: "streak", label: "Neural Persistence", icon: Flame, aria: "View Momentum and Streaks" },
+    { id: "colosseum", label: "Tactical Center", icon: Swords, aria: "Enter Colosseum Duels" },
+    { id: "settings", label: "Neural Config", icon: Settings, aria: "Navigate to Settings (Alt+S)" }
   ];
 
   if (isInitializing && !user) return (
@@ -524,7 +525,7 @@ export default function StudyTrackerApp() {
         <h1 className="display-lg mb-4">Neural Auth Required</h1>
         <p className="text-muted mb-8 italic">{error || "Protocol identity not confirmed."}</p>
         <button onClick={() => router.push("/signin")} className="btn-primary w-full py-4 font-bold tracking-widest">INITIALIZE NEURAL LINK</button>
-        <button onClick={handleGuestLogin} disabled={isActionLoading} className="w-full mt-4 py-3 text-xs font-black uppercase tracking-widest border border-white/10 rounded-xl hover:bg-white/5 transition-all">ENTER AS GUEST</button>
+        <button onClick={handleGuestLogin} disabled={isActionLoading} className="btn-secondary w-full mt-4 py-3 text-xs font-black uppercase tracking-widest">ENTER AS GUEST</button>
       </div>
     </div>
   );
@@ -535,29 +536,44 @@ export default function StudyTrackerApp() {
         user={user!} 
         dashboard={dashboard} 
         activeScreen={screen as any} 
-        onScreenChange={setScreen as any} 
+        onScreenChange={(s) => { setScreen(s); setIsSidebarOpen(false); }} 
         onLogout={handleLogout} 
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
-      <main className="flex-1 ml-80 p-12">
-        <header className="flex items-center justify-between mb-16">
-          <div>
-            <h2 className="display-md text-4xl uppercase tracking-tighter">{navItems.find(n => n.id === screen)?.label}</h2>
-            <p className="text-[10px] text-muted font-black uppercase tracking-widest mt-2">
-              System Health: <span className="text-success animate-pulse">Optimal</span> • Last Sync: {new Date(lastSyncAt).toLocaleTimeString()}
-            </p>
+      <main className="flex-1 lg:ml-80 p-6 lg:p-12 transition-all duration-300">
+        <header className="flex items-center justify-between mb-8 lg:mb-16">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 hover:bg-white/5 rounded-lg text-muted"
+              aria-label="Open Sidebar"
+            >
+              <LayoutDashboard size={24} />
+            </button>
+            <div>
+              <h2 className="display-md text-2xl lg:text-4xl uppercase tracking-tighter">{navItems.find(n => n.id === screen)?.label}</h2>
+              <p className="text-[10px] text-muted font-black uppercase tracking-widest mt-1 lg:mt-2">
+                System Health: <span className="text-success animate-pulse">Optimal</span> • Last Sync: {new Date(lastSyncAt).toLocaleTimeString()}
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 lg:gap-6">
             <div className="text-right">
               <p className="text-[10px] font-bold text-muted uppercase tracking-widest mb-1">XP Points</p>
               <p className="text-xl font-black">{dashboard?.gamification?.xp || 0}</p>
             </div>
             <button 
               onClick={toggleVoiceControl}
-              className={`p-2 rounded-lg transition-all ${isListening ? 'bg-danger/20 border-danger text-danger animate-pulse' : 'nav-btn hover:bg-white/5 text-white/50'}`}
-              title={isListening ? "Voice Protocol Active" : "Initialize Voice Protocol"}
+              className={`p-2 rounded-lg transition-all flex items-center gap-2 ${isListening ? 'bg-danger/20 border-danger text-danger animate-pulse shadow-[0_0_15px_rgba(229,72,77,0.3)]' : 'nav-btn hover:bg-white/5 text-white/50'}`}
+              title={isListening ? "Voice Protocol Active" : "Initialize Voice Protocol (Start Timer/Pause/Stop)"}
+              aria-label={isListening ? "Voice Protocol Active" : "Initialize Voice Protocol"}
             >
               {isListening ? <Mic size={20} /> : <MicOff size={20} />}
+              <span className="text-[10px] font-black uppercase tracking-widest hidden md:block">
+                {isListening ? "Listening" : "Voice"}
+              </span>
             </button>
             <button 
               className={`p-2 rounded-lg transition-all ${isCoachOpen ? "bg-accent/20 text-accent" : "nav-btn hover:bg-white/5"}`}
@@ -566,7 +582,7 @@ export default function StudyTrackerApp() {
               <MessageSquare size={20} />
             </button>
             <button 
-              className={`btn-primary text-xs py-2 px-6 transition-all ${activeSession ? "bg-danger/20 border-danger/40 text-danger hover:bg-danger/30" : ""}`} 
+              className={`btn-primary text-[10px] lg:text-xs py-2 px-4 lg:px-6 transition-all ${activeSession ? "bg-danger/20 border border-danger/40 text-danger hover:bg-danger/30 shadow-none" : ""}`} 
               onClick={() => {
                 if (activeSession) setScreen("timer");
                 else { handleStart(); setScreen("timer"); }
@@ -644,7 +660,7 @@ export default function StudyTrackerApp() {
         {isCoachOpen && <NeuralCoach userId={user!._id} isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />}
 
         {error && (
-          <div className="fixed bottom-10 right-10 z-[100] max-w-sm">
+          <div className="fixed bottom-6 right-6 left-6 lg:left-auto lg:bottom-10 lg:right-10 z-[200] lg:max-w-sm">
             <div className="p-6 glass border-l-4 border-l-danger shadow-2xl">
               <div className="flex gap-4">
                 <AlertTriangle className="text-danger shrink-0" size={20} />

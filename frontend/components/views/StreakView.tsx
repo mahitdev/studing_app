@@ -13,7 +13,13 @@ const StreakView: React.FC<StreakViewProps> = ({ dashboard }) => {
       animate={{ opacity: 1, scale: 1 }}
       className="flex flex-col items-center justify-center p-20 text-center min-h-[60vh]"
     >
-      <div className="text-8xl mb-8 filter drop-shadow-[0_0_40px_rgba(255,80,0,0.5)] animate-pulse">🔥</div>
+      <div 
+        role="img" 
+        aria-label="Current mission streak"
+        className="text-8xl mb-8 filter drop-shadow-[0_0_40px_rgba(255,80,0,0.5)] animate-pulse"
+      >
+        🔥
+      </div>
       <h2 className="display-lg text-8xl mb-4 font-black">{dashboard?.streak?.current || 0}</h2>
       <p className="text-xs font-black tracking-[0.5em] uppercase text-accent mb-16">Consecutive Mission Days</p>
       

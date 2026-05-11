@@ -39,12 +39,12 @@ const TimerView: React.FC<TimerViewProps> = ({
         ) : (
           <div className="glass-card p-12 text-center">
             <div className="relative inline-block mb-12">
-              <svg className="w-80 h-80 -rotate-90">
-                <circle cx="160" cy="160" r="150" className="stroke-white/5 fill-none" strokeWidth="4" />
+              <svg className="w-full max-w-[320px] aspect-square -rotate-90" viewBox="0 0 320 320">
+                <circle cx="160" cy="160" r="150" className="stroke-white/5 fill-none" strokeWidth="8" />
                 <motion.circle 
                   cx="160" cy="160" r="150" 
                   className="stroke-accent fill-none" 
-                  strokeWidth="4" 
+                  strokeWidth="8" 
                   strokeDasharray={942}
                   animate={{ strokeDashoffset: 942 - (942 * Math.min(100, progress)) / 100 }}
                   strokeLinecap="round"

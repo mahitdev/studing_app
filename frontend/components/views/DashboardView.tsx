@@ -160,20 +160,33 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
             </div>
           </section>
 
-          <div className="glass-card p-8 text-center bg-white/5">
-            <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-6">Daily Momentum</h3>
-            <div className="flex justify-center gap-2">
-              {Array.from({ length: 7 }).map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black ${i < (dashboard?.streak?.current || 0) ? 'bg-warning text-black' : 'bg-white/5 text-muted'}`}
-                >
-                  {i + 1}
-                </div>
-              ))}
+          <div className="glass-card p-8 text-center bg-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Flame size={40} className="text-warning" />
+            </div>
+            <h3 className="text-xs font-black uppercase tracking-widest text-muted mb-6">Neural Consistency (7D)</h3>
+            <div className="flex justify-center gap-3">
+              {Array.from({ length: 7 }).map((_, i) => {
+                const isCompleted = i < (dashboard?.streak?.current || 0);
+                return (
+                  <div 
+                    key={i} 
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all duration-500 ${
+                      isCompleted 
+                        ? 'bg-warning text-black shadow-[0_0_15px_rgba(245,158,11,0.3)] scale-110' 
+                        : 'bg-white/5 text-muted border border-white/5'
+                    }`}
+                    title={isCompleted ? "Protocol Fulfilled" : "Awaiting Synchronization"}
+                  >
+                    {isCompleted ? <Shield size={14} fill="currentColor" /> : i + 1}
+                  </div>
+                );
+              })}
             </div>
             <p className="text-[10px] font-bold text-muted uppercase tracking-widest mt-6">
-              {7 - (dashboard?.streak?.current || 0)} Days to Unstoppable
+              {dashboard?.streak?.current && dashboard.streak.current >= 7 
+                ? "Neural Link Stabilized" 
+                : `${7 - (dashboard?.streak?.current || 0)} Cycles to Stabilization`}
             </p>
           </div>
         </div>

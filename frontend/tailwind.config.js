@@ -19,6 +19,7 @@ module.exports = {
           2: "var(--accent-2)",
         },
         danger: "var(--danger)",
+        warning: "var(--warning)",
         success: "var(--success)",
       },
       animation: {
