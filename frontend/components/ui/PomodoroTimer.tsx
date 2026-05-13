@@ -11,6 +11,9 @@ export default function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
 
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
@@ -19,8 +22,11 @@ export default function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
         setTimeLeft((prev) => prev - 1);
       }, 1000);
     } else if (timeLeft === 0) {
+      const audio = new Audio("https://cdn.pixabay.com/download/audio/2022/03/10/audio_c0c3a26a57.mp3?filename=level-up-109254.mp3");
+      audio.play().catch(err => console.warn("Audio autoplay blocked or failed:", err));
+      
       if (mode === 'work') {
-        onComplete();
+        onCompleteRef.current();
         setMode('break');
         setTimeLeft(5 * 60);
       } else {
@@ -28,7 +34,6 @@ export default function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
         setTimeLeft(25 * 60);
       }
       setIsActive(false);
-      // Play sound alert here
       const audio = new Audio('/sounds/alert.mp3');
       audio.play().catch(() => {});
     }

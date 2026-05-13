@@ -292,4 +292,6 @@ export type LiveFriend = {
   name: string;
   level: number;
   studyingNow: boolean;
+  isLive?: boolean;
+  currentSubject?: string;
 };

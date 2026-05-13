@@ -15,12 +15,17 @@ interface DashboardViewProps {
 }
 
 const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDaily }) => {
+  const isLoading = !dashboard;
   const stats = [
     { label: "Neural XP", value: dashboard?.gamification?.xp || user.xp || 0, icon: <TrendingUp size={20} />, color: "text-accent" },
     { label: "Neural Level", value: dashboard?.gamification?.level || user.level || 1, icon: <Activity size={20} />, color: "text-success" },
     { label: "Mission Streak", value: `${dashboard?.streak?.current || user.streak?.current || 0} Days`, icon: <Flame size={20} />, color: "text-warning" },
     { label: "Goal Progress", value: `${dashboard?.todayGoal?.completionPercent || 0}%`, icon: <Target size={20} />, color: "text-danger" },
   ];
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-screen text-muted uppercase font-black tracking-widest text-xs">Synchronizing Neural Link...</div>;
+  }
 
   return (
     <div className="space-y-12">
@@ -79,7 +84,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
 
           <section aria-labelledby="challenges-heading">
             <h2 id="challenges-heading" className="sr-only">Active Challenges</h2>
-            <ChallengeList challenges={(dashboard as any)?.challenges || []} />
+            <ChallengeList challenges={dashboard?.challenges || []} />
           </section>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -128,7 +133,7 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
             <h2 id="pet-heading" className="text-xs font-black uppercase tracking-widest text-muted mb-6 flex items-center gap-2">
               <Activity size={14} className="text-success" /> Neural Companion
             </h2>
-            <PetPanel pet={(dashboard?.user as any)?.pet || user.pet} xp={dashboard?.gamification?.xp || user.xp || 0} />
+            <PetPanel pet={dashboard?.user?.pet || user.pet} xp={dashboard?.gamification?.xp || user.xp || 0} />
           </section>
 
           {/* AI Mentorship Matching */}

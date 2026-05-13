@@ -83,7 +83,9 @@ export function useSessionManager() {
     try {
       setIsActionLoading(true);
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
-      const { session } = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
+      const response = await startSession(user._id, subject, studyMode, modeMinutes, riskMode);
+      if (!response || !response.session) throw new Error("Invalid response from neural uplink.");
+      const { session } = response;
       const validated = SessionSchema.parse(session);
       setActiveSession(validated);
       localStorage.setItem("gl-active-session", JSON.stringify(validated));
@@ -99,12 +101,14 @@ export function useSessionManager() {
     try {
       setIsActionLoading(true);
       if (activeSession.status === "running") {
-        const { session } = await pauseSession(user._id, activeSession._id, "manual");
-        const validated = SessionSchema.parse(session);
+        const response = await pauseSession(user._id, activeSession._id, "manual");
+        if (!response || !response.session) throw new Error("Pause protocol failed.");
+        const validated = SessionSchema.parse(response.session);
         setActiveSession(validated);
       } else {
-        const { session } = await resumeSession(user._id, activeSession._id);
-        const validated = SessionSchema.parse(session);
+        const response = await resumeSession(user._id, activeSession._id);
+        if (!response || !response.session) throw new Error("Resume protocol failed.");
+        const validated = SessionSchema.parse(response.session);
         setActiveSession(validated);
       }
     } catch (err: any) {
@@ -119,7 +123,7 @@ export function useSessionManager() {
     try {
       setIsActionLoading(true);
       const modeMinutes = studyMode === "pomodoro" ? 25 : studyMode === "deep" ? 50 : plannedDuration;
-      const { dashboard: updated } = await endSession(
+      const response = await endSession(
         user._id,
         activeSession._id,
         inactiveSeconds,
@@ -132,6 +136,8 @@ export function useSessionManager() {
         modeMinutes,
         riskMode
       );
+      if (!response || !response.dashboard) throw new Error("End protocol synchronization failed.");
+      const { dashboard: updated } = response;
       setDashboard(updated);
       setActiveSession(null);
       localStorage.removeItem("gl-active-session");

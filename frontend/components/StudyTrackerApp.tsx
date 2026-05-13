@@ -253,11 +253,11 @@ export default function StudyTrackerApp() {
       if (sessionsRes.status === "fulfilled" && sessionsRes.value) {
         const { sessions: sessionList, serverTime } = sessionsRes.value;
         setSessions(sessionList);
+        
         if (serverTime) {
           const skew = Date.now() - new Date(serverTime).getTime();
           (window as any).__grindlock_skew = skew;
         }
-        setSessions(sessionList);
         
         const running = sessionList.find((s: StudySession) => s.status === "running" || s.status === "paused") || null;
         setActiveSession((currentActive: StudySession | null) => {
@@ -295,7 +295,13 @@ export default function StudyTrackerApp() {
   useEffect(() => {
     const rawSettings = localStorage.getItem(settingsKey);
     if (rawSettings) {
-      try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(rawSettings) }); } catch {}
+      try { 
+        const parsed = JSON.parse(rawSettings);
+        setSettings({ ...DEFAULT_SETTINGS, ...parsed }); 
+      } catch (e) {
+        console.error("Failed to parse settings:", e);
+        setError("Local configuration corrupted. Resetting to defaults.");
+      }
     }
 
     if ("Notification" in window) {
@@ -425,17 +431,19 @@ export default function StudyTrackerApp() {
       }
     };
 
-    window.addEventListener("blur", onInactive);
-    window.addEventListener("focus", onActive);
-    document.addEventListener("visibilitychange", () => {
+    const handleVisibilityChange = () => {
       if (document.hidden) onInactive();
       else onActive();
-    });
+    };
+
+    window.addEventListener("blur", onInactive);
+    window.addEventListener("focus", onActive);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("blur", onInactive);
       window.removeEventListener("focus", onActive);
-      document.removeEventListener("visibilitychange", onActive);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [activeSession, user, setInactiveSeconds]);
 
@@ -462,12 +470,13 @@ export default function StudyTrackerApp() {
   useEffect(() => {
     if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = "en-US";
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.lang = "en-US";
 
-      recognitionRef.current.onresult = (event: any) => {
+      recognition.onresult = (event: any) => {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
         
         if (transcript.includes("start timer") || transcript.includes("begin focus")) {
@@ -483,9 +492,21 @@ export default function StudyTrackerApp() {
         }
       };
 
-      recognitionRef.current.onerror = () => setIsListening(false);
-      recognitionRef.current.onend = () => {
-        if (isListening) recognitionRef.current.start();
+      recognition.onerror = (event: any) => {
+        console.error("Speech Recognition Error:", event.error);
+        if (event.error === 'not-allowed') setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        // Only restart if explicitly listening and not ended due to error
+        if (isListening) {
+          try {
+            recognition.start();
+          } catch (e) {
+            console.error("Speech restart failed:", e);
+            setIsListening(false);
+          }
+        }
       };
     }
   }, [handleStart, handlePauseResume, handleEnd, setScreen, isListening]);
@@ -553,7 +574,9 @@ export default function StudyTrackerApp() {
               <LayoutDashboard size={24} />
             </button>
             <div>
-              <h2 className="display-md text-2xl lg:text-4xl uppercase tracking-tighter">{navItems.find(n => n.id === screen)?.label}</h2>
+              <h2 className="display-md text-2xl lg:text-4xl uppercase tracking-tighter">
+                {navItems.find(n => n.id === screen)?.label || "Neural Node"}
+              </h2>
               <p className="text-[10px] text-muted font-black uppercase tracking-widest mt-1 lg:mt-2">
                 System Health: <span className="text-success animate-pulse">Optimal</span> • Last Sync: {new Date(lastSyncAt).toLocaleTimeString()}
               </p>
@@ -684,7 +707,14 @@ export default function StudyTrackerApp() {
       {ambientTrack !== "none" && (
         <audio 
           ref={audioRef} 
-          src={ambientTrack === "brown" ? "https://cdn.pixabay.com/download/audio/2021/04/10/audio_50b0b8c6ab.mp3?filename=brown-noise-10-minutes-76077.mp3" : "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"} 
+          src={ambientTrack === "brown" 
+            ? "https://cdn.pixabay.com/download/audio/2021/04/10/audio_50b0b8c6ab.mp3?filename=brown-noise-10-minutes-76077.mp3" 
+            : "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-study-112191.mp3"
+          } 
+          onError={() => {
+            setError("Ambient uplink failed. CDNs may be restricted.");
+            setAmbientTrack("none");
+          }}
           loop 
           className="hidden" 
         />

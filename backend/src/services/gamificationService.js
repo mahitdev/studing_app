@@ -77,7 +77,7 @@ async function updateChallengeProgress(userId, type, value) {
     if (!user) return;
 
     for (const challenge of challenges) {
-      if (challenge.type === type || (type === "minutes" && challenge.type === "minutes")) {
+      if (challenge.type === type) {
         challenge.currentValue += value;
         if (challenge.currentValue >= challenge.targetValue) {
           challenge.isCompleted = true;

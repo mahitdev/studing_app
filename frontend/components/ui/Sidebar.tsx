@@ -6,13 +6,13 @@ interface SidebarProps {
   user: User | null;
   dashboard: Dashboard | null;
   activeScreen: string;
-  onScreenChange: (screen: any) => void;
+  onScreenChange: (screen: string) => void;
   onLogout: () => void;
   isOpen?: boolean;
   onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScreenChange, onLogout, isOpen = true, onClose }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, dashboard, activeScreen, onScreenChange, onLogout, isOpen = false, onClose }) => {
   const navItems = [
     { id: "dashboard", label: "Neural Core", icon: LayoutDashboard, hotkey: "Alt+D" },
     { id: "timer", label: "Neural Sync", icon: Timer, hotkey: "Alt+T" },

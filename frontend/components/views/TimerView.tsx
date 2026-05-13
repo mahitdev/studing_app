@@ -29,7 +29,7 @@ const TimerView: React.FC<TimerViewProps> = ({
   formatHMS
 }) => {
   const [showMusic, setShowMusic] = useState(false);
-  const progress = (elapsed / (plannedDuration * 60)) * 100;
+  const progress = plannedDuration > 0 ? (elapsed / (plannedDuration * 60)) * 100 : 0;
   
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 py-12 items-start">

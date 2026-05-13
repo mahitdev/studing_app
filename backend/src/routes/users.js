@@ -384,7 +384,7 @@ router.post("/:userId/sessions/:sessionId/end", requireAuth, requireSelf, async 
     session.antiCheatFlags = antiCheatFlags || 0;
     session.sessionQualityTag = sessionQualityTag || "";
     if (studyMode) session.studyMode = studyMode;
-    if (plannedDurationMinutes) session.plannedDurationMinutes = plannedDurationMinutes;
+    if (plannedDurationMinutes !== undefined) session.plannedDurationMinutes = plannedDurationMinutes;
     if (typeof riskMode === "boolean") session.riskMode = riskMode;
 
     await session.save();

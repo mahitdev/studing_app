@@ -18,8 +18,9 @@ const ensureDailyGoal = async (userId, date = todayKey(), dbSession = null) => {
   if (!goal) {
     const user = await User.findById(userId).session(dbSession);
     const dailyMinutes = user?.goalConfig?.dailyMinutes || 180;
-    goal = await DailyGoal.create([{ userId, date, targetMinutes: dailyMinutes }], { session: dbSession });
-    goal = goal[0];
+    const created = await DailyGoal.create([{ userId, date, targetMinutes: dailyMinutes }], { session: dbSession });
+    if (!created || !created[0]) throw new Error("Daily goal creation failed.");
+    goal = created[0];
   }
   return goal;
 };

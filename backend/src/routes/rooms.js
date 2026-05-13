@@ -17,7 +17,7 @@ router.post("/", requireAuth, async (req, res, next) => {
     const { name, ambientSettings } = req.body;
     const room = await StudyRoom.create({
       name,
-      createdBy: req.auth.sub,
+      ownerId: req.auth.sub,
       members: [req.auth.sub],
       ambientSettings: ambientSettings || "default"
     });
@@ -29,13 +29,12 @@ router.post("/", requireAuth, async (req, res, next) => {
 
 router.post("/:roomId/join", requireAuth, async (req, res, next) => {
   try {
-    const room = await StudyRoom.findById(req.params.roomId);
+    const room = await StudyRoom.findOneAndUpdate(
+      { _id: req.params.roomId },
+      { $addToSet: { members: req.auth.sub } },
+      { new: true }
+    );
     if (!room) return res.status(404).json({ message: "Room not found" });
-    
-    if (!room.members.includes(req.auth.sub)) {
-      room.members.push(req.auth.sub);
-      await room.save();
-    }
     res.json(room);
   } catch (err) {
     next(err);

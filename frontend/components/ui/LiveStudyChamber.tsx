@@ -53,6 +53,8 @@ export default function LiveStudyChamber({ onClose, room, socket, userId }: Live
       }
     });
     return () => {
+      socket.emit("leave-room", { roomId: room._id, userId });
+      socket.off("room-update");
       socket.off("notes-updated");
       socket.off("ambient-changed");
       socket.off("emergency-alert");
@@ -62,10 +64,14 @@ export default function LiveStudyChamber({ onClose, room, socket, userId }: Live
     };
   }, [socket, room?._id, userId]);
 
+  const notesTimeoutRef = useRef<NodeJS.Timeout>();
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newNotes = e.target.value;
     setSharedNotes(newNotes);
-    updateRoomNotes(room._id, userId, newNotes);
+    if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+    notesTimeoutRef.current = setTimeout(() => {
+      updateRoomNotes(room._id, userId, newNotes);
+    }, 1000);
   };
 
   const sendChat = () => {

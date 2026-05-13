@@ -111,7 +111,10 @@ export const useStore = create<AppStore>()(
         subject: state.subject,
         studyMode: state.studyMode,
         plannedDuration: state.plannedDuration,
-        riskMode: state.riskMode
+        riskMode: state.riskMode,
+        activeSession: state.activeSession,
+        sessions: state.sessions,
+        lastSyncAt: state.lastSyncAt
       }),
     }
   )

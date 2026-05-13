@@ -68,7 +68,15 @@ async function request<T>(path: string, init?: RequestInit, retries = 3): Promis
       return res.json();
     } catch (err: any) {
       clearTimeout(timeoutId);
-      if (attempt < retries && (err.name === 'AbortError' || !err.message.includes('401'))) {
+      
+      const isTimeout = err.name === 'AbortError' && controller.signal.aborted;
+      const isRetryableStatus = !err.message.includes('401') && 
+                               !err.message.includes('403') && 
+                               !err.message.includes('422') && 
+                               !err.message.includes('400') && 
+                               !err.message.includes('404');
+
+      if (attempt < retries && (isTimeout || isRetryableStatus)) {
         const delay = Math.pow(2, attempt) * 1000;
         await new Promise(resolve => setTimeout(resolve, delay));
         return executeRequest(attempt + 1);
