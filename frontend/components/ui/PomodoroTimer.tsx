@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, RotateCcw, Coffee, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -34,12 +34,12 @@ export default function PomodoroTimer({ onComplete }: PomodoroTimerProps) {
         setTimeLeft(25 * 60);
       }
       setIsActive(false);
-      const audio = new Audio('/sounds/alert.mp3');
-      audio.play().catch(() => {});
+      const alertAudio = new Audio('/sounds/alert.mp3');
+      alertAudio.play().catch(err => console.warn("Alert sound failed:", err));
     }
 
     return () => clearInterval(interval);
-  }, [isActive, timeLeft, mode, onComplete]);
+  }, [isActive, timeLeft, mode]);
 
   const toggleTimer = () => setIsActive(!isActive);
   const resetTimer = () => {

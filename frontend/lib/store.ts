@@ -114,7 +114,10 @@ export const useStore = create<AppStore>()(
         riskMode: state.riskMode,
         activeSession: state.activeSession,
         sessions: state.sessions,
-        lastSyncAt: state.lastSyncAt
+        lastSyncAt: state.lastSyncAt,
+        liveFriends: state.liveFriends,
+        rooms: state.rooms,
+        duels: state.duels
       }),
     }
   )

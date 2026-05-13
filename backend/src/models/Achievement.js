@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const achievementSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  title: { type: String, required: true, unique: true },
   description: { type: String, required: true },
   icon: { type: String }, // Icon name or URL
   criteriaType: { 

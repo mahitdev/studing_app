@@ -5,6 +5,17 @@ const app = require("./app");
 const connectDB = require("./config/db");
 const logger = require("./utils/logger");
 
+process.on("uncaughtException", (err) => {
+  logger.error(`[GrindLock] UNCAUGHT EXCEPTION: ${err.message}`);
+  logger.error(err.stack);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  logger.error("[GrindLock] UNHANDLED REJECTION at:", promise, "reason:", reason);
+  process.exit(1);
+});
+
 // Simple home route for connection testing
 app.get("/", (req, res) => res.send("GrindLock API Grid Online."));
 

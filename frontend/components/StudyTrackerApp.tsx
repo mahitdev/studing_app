@@ -467,6 +467,19 @@ export default function StudyTrackerApp() {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // Use refs for handlers to avoid effect re-runs when handlers change
+  const handleStartRef = useRef(handleStart);
+  const handlePauseResumeRef = useRef(handlePauseResume);
+  const handleEndRef = useRef(handleEnd);
+  const setScreenRef = useRef(setScreen);
+
+  useEffect(() => {
+    handleStartRef.current = handleStart;
+    handlePauseResumeRef.current = handlePauseResume;
+    handleEndRef.current = handleEnd;
+    setScreenRef.current = setScreen;
+  });
+
   useEffect(() => {
     if (typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -480,15 +493,15 @@ export default function StudyTrackerApp() {
         const transcript = event.results[event.results.length - 1][0].transcript.toLowerCase();
         
         if (transcript.includes("start timer") || transcript.includes("begin focus")) {
-          handleStart();
+          handleStartRef.current();
         } else if (transcript.includes("pause session") || transcript.includes("hold focus")) {
-          handlePauseResume();
+          handlePauseResumeRef.current();
         } else if (transcript.includes("stop focus") || transcript.includes("finish session")) {
-          handleEnd();
+          handleEndRef.current();
         } else if (transcript.includes("go to dashboard")) {
-          setScreen("dashboard");
+          setScreenRef.current("dashboard");
         } else if (transcript.includes("open analytics")) {
-          setScreen("analytics");
+          setScreenRef.current("analytics");
         }
       };
 
@@ -498,7 +511,7 @@ export default function StudyTrackerApp() {
       };
 
       recognition.onend = () => {
-        // Only restart if explicitly listening and not ended due to error
+        // Only restart if explicitly listening and not ended due to intentional stop
         if (isListening) {
           try {
             recognition.start();
@@ -508,8 +521,13 @@ export default function StudyTrackerApp() {
           }
         }
       };
+
+      return () => {
+        recognition.onend = null;
+        recognition.stop();
+      };
     }
-  }, [handleStart, handlePauseResume, handleEnd, setScreen, isListening]);
+  }, [isListening]);
 
   const toggleVoiceControl = () => {
     if (isListening) {

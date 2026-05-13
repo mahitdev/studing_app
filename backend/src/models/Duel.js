@@ -9,7 +9,7 @@ const duelSchema = new mongoose.Schema(
     challengerProgress: { type: Number, default: 0 },
     opponentProgress: { type: Number, default: 0 },
     winnerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    xpPrize: { type: Number, default: 100 }
+    xpPrize: { type: Number, default: 100, min: 0 }
   },
   { timestamps: true }
 );

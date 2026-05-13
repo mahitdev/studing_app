@@ -27,9 +27,7 @@ const sanitizeUser = (userDoc) => {
 const signToken = (user) =>
   jwt.sign(
     {
-      sub: String(user._id),
-      email: user.email || "",
-      name: user.name || "Focused Student"
+      sub: String(user._id)
     },
     JWT_SECRET,
     { expiresIn: "7d" }

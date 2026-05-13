@@ -34,4 +34,11 @@ const studyRoomSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+studyRoomSchema.pre("save", function(next) {
+  if (!this.roomCode) {
+    this.roomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  }
+  next();
+});
+
 module.exports = mongoose.model("StudyRoom", studyRoomSchema);

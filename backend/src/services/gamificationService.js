@@ -42,32 +42,34 @@ async function awardAchievement(userId, criteriaType, value) {
 
 async function ensureDailyChallenges(userId) {
   const today = new Date().toISOString().slice(0, 10);
-  const existing = await Challenge.find({ userId, date: today });
   
-  if (existing.length === 0) {
-    const challenges = [
-      {
-        userId,
-        title: "Deep Focus Master",
-        description: "Focus for 2 hours today",
-        targetValue: 120,
-        type: "minutes",
-        rewardXp: 200,
-        date: today
-      },
-      {
-        userId,
-        title: "Subject Diver",
-        description: "Study 3 different subjects",
-        targetValue: 3,
-        type: "subjects",
-        rewardXp: 150,
-        date: today
-      }
-    ];
-    await Challenge.insertMany(challenges);
-    logger.info(`Generated daily challenges for user ${userId}`);
+  const dailyTasks = [
+    {
+      title: "Deep Focus Master",
+      description: "Focus for 2 hours today",
+      targetValue: 120,
+      type: "minutes",
+      rewardXp: 200,
+      date: today
+    },
+    {
+      title: "Subject Diver",
+      description: "Study 3 different subjects",
+      targetValue: 3,
+      type: "subjects",
+      rewardXp: 150,
+      date: today
+    }
+  ];
+
+  for (const task of dailyTasks) {
+    await Challenge.findOneAndUpdate(
+      { userId, date: today, type: task.type },
+      { $setOnInsert: { ...task, isCompleted: false, currentValue: 0 } },
+      { upsert: true, new: true }
+    );
   }
+  logger.info(`Verified daily challenges for user ${userId}`);
 }
 
 async function updateChallengeProgress(userId, type, value) {

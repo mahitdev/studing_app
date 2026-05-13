@@ -24,7 +24,7 @@ const SessionSchema = z.object({
   plannedDurationMinutes: z.number().default(0),
   riskMode: z.boolean().default(false),
   pauses: z.array(z.any()).default([]),
-  date: z.string().default(() => new Date().toISOString().slice(0, 10))
+  date: z.string().default(new Date().toISOString().slice(0, 10))
 });
 
 export function useSessionManager() {

@@ -83,6 +83,7 @@ router.put("/:userId/goals/config", requireAuth, requireSelf, async (req, res, n
     if (weeklyTargetMinutes !== undefined) user.goalConfig.weeklyTargetMinutes = weeklyTargetMinutes;
     if (weeklySessionTarget !== undefined) user.goalConfig.weeklySessionTarget = weeklySessionTarget;
 
+    user.markModified('goalConfig');
     await user.save();
     const dashboard = await trackerService.dashboardForUser(req.params.userId);
     res.json({ dashboard });
@@ -376,9 +377,9 @@ router.post("/:userId/sessions/:sessionId/end", requireAuth, requireSelf, async 
     session.status = "completed";
     session.lastStartedAt = null;
     session.endedAt = now.toISOString();
-    session.focusedMinutes = Math.floor(session.elapsedSeconds / 60);
+    session.focusedMinutes = Math.floor((session.elapsedSeconds || 0) / 60);
     session.inactiveSeconds = inactiveSeconds || 0;
-    session.notes = notes || session.notes;
+    session.notes = notes !== undefined ? notes : session.notes;
     session.subject = subject || session.subject;
     session.stopReason = stopReason || "";
     session.antiCheatFlags = antiCheatFlags || 0;

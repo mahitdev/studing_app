@@ -180,7 +180,8 @@ export async function pauseSession(userId: string, sessionId: string, reason = "
 
 export async function resumeSession(userId: string, sessionId: string): Promise<{ session: StudySession }> {
   return request(`/users/${userId}/sessions/${sessionId}/resume`, {
-    method: "POST"
+    method: "POST",
+    body: JSON.stringify({})
   });
 }
 

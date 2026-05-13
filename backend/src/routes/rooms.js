@@ -5,7 +5,7 @@ const router = express.Router();
 
 router.get("/", requireAuth, async (req, res, next) => {
   try {
-    const rooms = await StudyRoom.find({}).limit(20);
+    const rooms = await StudyRoom.find({}).populate("ownerId", "name level college").limit(20);
     res.json(rooms);
   } catch (err) {
     next(err);

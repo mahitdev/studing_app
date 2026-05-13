@@ -24,7 +24,7 @@ export default function NeuralCoach({ userId, isOpen, onClose }: NeuralCoachProp
     setLoading(true);
     try {
       const reply = await getAICoachReply(userId, userMsg);
-      setMessages(prev => [...prev, { role: "assistant", content: reply.reply }]);
+      setMessages(prev => [...prev, { role: "assistant", content: reply?.reply || "Neural engine recalibrating. Continue focus." }]);
     } catch (err) {
       console.error("Neural Coach Error:", err);
       setMessages(prev => [...prev, { role: "assistant", content: "Neural transmission failed. Focus on the core mission." }]);
