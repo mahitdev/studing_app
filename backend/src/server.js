@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : true,
+    origin: process.env.NODE_ENV === "production" ? process.env.APP_URL : ["http://localhost:3000", "http://127.0.0.1:3000"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -80,15 +80,18 @@ io.on("connection", (socket) => {
 
   socket.on("room-action", (data) => {
     try {
-      const { roomId, action, ...rest } = data || {};
-      if (!roomId || !action || typeof roomId !== "string" || typeof action !== "string") {
-        return;
-      }
+    const { roomId, action, ...rest } = data || {};
+    if (!roomId || !action || typeof roomId !== "string" || typeof action !== "string") {
+      return;
+    }
 
-      // Sanitization: Only broadcast to recognized room formats
-      if (!/^[a-f\d]{24}$/i.test(roomId) && roomId.length < 10) return;
+    // Verify room membership before broadcasting
+    if (!socket.rooms.has(roomId)) {
+      logger.warn(`[GrindLock] Spoof attempt: Socket ${socket.id} tried to act in room ${roomId} without joining.`);
+      return;
+    }
 
-      io.to(roomId).emit("room-action", { action, ...rest, timestamp: Date.now() });
+    io.to(roomId).emit("room-action", { action, ...rest, userId: data.userId, timestamp: Date.now() });
     } catch (err) {
       logger.error(`[GrindLock] Socket Action Error: ${err.message}`);
     }

@@ -20,7 +20,6 @@ export default function LiveStudyChamber({ onClose, room, socket, userId }: Live
   const [alerts, setAlerts] = useState<any[]>([]);
   const [isBettingOpen, setIsBettingOpen] = useState(false);
   const [betAmount, setBetAmount] = useState(100);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     if (!socket || !room?._id) return;
@@ -126,7 +125,7 @@ export default function LiveStudyChamber({ onClose, room, socket, userId }: Live
           </div>
 
           <div className="flex-1 relative overflow-hidden">
-            <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transition-all duration-1000 ${ambientSetting === "focus-deep" ? "grayscale contrast-125" : ""}`} />
+            <video autoPlay playsInline muted className={`w-full h-full object-cover transition-all duration-1000 ${ambientSetting === "focus-deep" ? "grayscale contrast-125" : ""}`} />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40 pointer-events-none" />
             
             <div className="absolute top-24 left-6 z-30 space-y-3">

@@ -445,7 +445,7 @@ export default function StudyTrackerApp() {
       window.removeEventListener("focus", onActive);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [activeSession, user, setInactiveSeconds]);
+  }, [activeSession?.status, setInactiveSeconds]); // Minimal dependencies to prevent re-subscriptions
 
   useEffect(() => {
     const handleKeys = (e: KeyboardEvent) => {
@@ -511,13 +511,15 @@ export default function StudyTrackerApp() {
       };
 
       recognition.onend = () => {
-        // Only restart if explicitly listening and not ended due to intentional stop
         if (isListening) {
           try {
+            // Check if still listening via ref to avoid stale closures
             recognition.start();
           } catch (e) {
             console.error("Speech restart failed:", e);
-            setIsListening(false);
+          }
+        }
+      };
           }
         }
       };

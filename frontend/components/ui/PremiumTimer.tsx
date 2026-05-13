@@ -45,11 +45,27 @@ export default function PremiumTimer({
 
   return (
     <div className="relative flex items-center justify-center">
+      <style jsx>{`
+        .timer-circle {
+          width: 320px;
+          height: 320px;
+          border-radius: 50%;
+          background: conic-gradient(var(--accent) var(--progress), transparent 0);
+          mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #fff 0);
+          -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 8px), #fff 0);
+          transition: --progress 1s linear;
+        }
+        @property --progress {
+          syntax: '<percentage>';
+          inherits: false;
+          initial-value: 0%;
+        }
+      `}</style>
       <div 
         className="timer-circle" 
         style={{ ["--progress" as string]: `${progress}%` }} 
       />
-      <div className={`timer-display ${activeSession?.status === "running" ? "animate-pulse-timer" : ""}`}>
+      <div className={`timer-display absolute inset-0 flex items-center justify-center text-6xl font-black tabular-nums ${activeSession?.status === "running" ? "animate-pulse" : ""}`}>
         {formatHMS(elapsed)}
       </div>
     </div>

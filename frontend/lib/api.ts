@@ -70,11 +70,10 @@ async function request<T>(path: string, init?: RequestInit, retries = 3): Promis
       clearTimeout(timeoutId);
       
       const isTimeout = err.name === 'AbortError' && controller.signal.aborted;
-      const isRetryableStatus = !err.message.includes('401') && 
-                               !err.message.includes('403') && 
-                               !err.message.includes('422') && 
-                               !err.message.includes('400') && 
-                               !err.message.includes('404');
+      // Intentionally aborted requests should NOT be retried. 
+      // isTimeout is only true if OUR controller.abort() was called.
+      
+      const isRetryableStatus = ![400, 401, 403, 404, 422].some(code => err.message.includes(code.toString()));
 
       if (attempt < retries && (isTimeout || isRetryableStatus)) {
         const delay = Math.pow(2, attempt) * 1000;
@@ -181,7 +180,7 @@ export async function pauseSession(userId: string, sessionId: string, reason = "
 export async function resumeSession(userId: string, sessionId: string): Promise<{ session: StudySession }> {
   return request(`/users/${userId}/sessions/${sessionId}/resume`, {
     method: "POST",
-    body: JSON.stringify({})
+    body: JSON.stringify({ sessionId })
   });
 }
 

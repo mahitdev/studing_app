@@ -62,8 +62,8 @@ const DashboardView: React.FC<DashboardViewProps> = ({ user, dashboard, goalDail
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
-                { label: "Neural Setup", target: 30, current: dashboard?.todayGoal?.studiedMinutes || 0 },
-                { label: "Core Execution", target: 90, current: dashboard?.todayGoal?.studiedMinutes || 0 },
+                { label: "Neural Setup", target: Math.round(goalDaily / 6), current: dashboard?.todayGoal?.studiedMinutes || 0 },
+                { label: "Core Execution", target: Math.round(goalDaily / 2), current: dashboard?.todayGoal?.studiedMinutes || 0 },
                 { label: "Final Validation", target: goalDaily, current: dashboard?.todayGoal?.studiedMinutes || 0 },
               ].map((m, idx) => (
                 <div key={idx} className={`p-4 rounded-xl border transition-all ${m.current >= m.target ? 'bg-success/10 border-success/30' : 'bg-white/5 border-white/10'}`}>

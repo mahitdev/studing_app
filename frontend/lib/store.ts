@@ -117,7 +117,8 @@ export const useStore = create<AppStore>()(
         lastSyncAt: state.lastSyncAt,
         liveFriends: state.liveFriends,
         rooms: state.rooms,
-        duels: state.duels
+        duels: state.duels,
+        dashboard: state.dashboard
       }),
     }
   )

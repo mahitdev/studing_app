@@ -129,6 +129,8 @@ async function updateStreak(userId) {
     user.streak.current += 1;
   } else {
     user.streak.current = 1;
+    // Streak lost! Pet becomes sad.
+    user.pet.happiness = Math.max(10, user.pet.happiness - 40);
   }
 
   if (user.streak.current > user.streak.longest) {
