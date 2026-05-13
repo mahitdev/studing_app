@@ -1,32 +1,38 @@
-const app = require("../src/app");
-let connected = false;
-
+// Minimal diagnostic route that bypasses all requirements
 module.exports = async (req, res) => {
-  try {
-    const url = req.url || "";
-    const isHealthRoute = url.startsWith("/api/health") || url === "/health";
+  const url = req.url || "";
+  if (url.includes("neural-diagnostic")) {
+    return res.status(200).json({ 
+      status: "Neural Diagnostic Active",
+      node: process.version,
+      env: process.env.NODE_ENV,
+      hasMongo: !!process.env.MONGODB_URI,
+      hasJwt: !!process.env.JWT_SECRET
+    });
+  }
 
-    // 2. Connect to Database if not connected
-    if (!connected && !isHealthRoute) {
-      const connectDB = require("../src/config/db");
-      await connectDB();
-      connected = true;
+  try {
+    console.log("[Diagnostic] Attempting to load app...");
+    const app = require("../src/app");
+    console.log("[Diagnostic] App loaded. Attempting DB connection...");
+    
+    if (!process.env.MONGODB_URI) {
+       throw new Error("Missing MONGODB_URI");
     }
 
-    // 3. Handle request
+    const connectDB = require("../src/config/db");
+    await connectDB();
+    console.log("[Diagnostic] DB connected. Routing request...");
+
     return app(req, res);
   } catch (err) {
-    console.error("Vercel Function Initialization Error:", err);
-    res.statusCode = 500;
-    res.setHeader("Content-Type", "application/json");
-    res.end(
-      JSON.stringify({
-        ok: false,
-        code: "FUNCTION_INITIALIZATION_FAILED",
-        message: "Neural link initialization failed. Likely missing Environment Variables.",
-        error: err.message,
-        hint: "Ensure JWT_SECRET and MONGODB_URI are configured in Vercel Dashboard."
-      })
-    );
+    console.error("[Neural Crash]", err);
+    res.status(500).json({
+      error: "Neural link initialization failed",
+      message: err.message,
+      code: err.code,
+      stack: err.stack,
+      hint: "Check Vercel logs for [Neural Crash] prefix."
+    });
   }
 };
