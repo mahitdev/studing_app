@@ -1,13 +1,8 @@
-let app;
+const app = require("../src/app");
 let connected = false;
 
 module.exports = async (req, res) => {
   try {
-    // 1. Lazy load app to catch initialization errors (like missing JWT_SECRET)
-    if (!app) {
-      app = require("../src/app");
-    }
-
     const url = req.url || "";
     const isHealthRoute = url.startsWith("/api/health") || url === "/health";
 
